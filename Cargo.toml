@@ -1,6 +1,9 @@
 [package]
 name = "mavkit"
 version = "0.1.0"
+authors = [
+    "Alexander Averyanov"
+]
 edition = "2021"
 description = "Async MAVLink SDK for vehicle control, missions, and parameters"
 license = "MIT"
