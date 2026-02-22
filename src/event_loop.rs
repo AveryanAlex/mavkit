@@ -370,7 +370,7 @@ async fn handle_command(
                 handle_set_mode(custom_mode, connection, vehicle_target, config, cancel).await;
             let _ = reply.send(result);
         }
-        Command::CommandLong {
+        Command::Long {
             command,
             params,
             reply,
@@ -498,12 +498,7 @@ async fn send_message(
         )
         .await
         .map(|_| ())
-        .map_err(|err| {
-            VehicleError::Io(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                err.to_string(),
-            ))
-        })
+        .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))
 }
 
 /// Wait for a message matching `predicate`, continuing to update state for
@@ -528,9 +523,8 @@ where
             _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
             _ = &mut deadline => return Err(VehicleError::Timeout),
             result = connection.recv() => {
-                let (header, msg) = result.map_err(|err| {
-                    VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                })?;
+                let (header, msg) =
+                    result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                 update_vehicle_target(vehicle_target, &header, &msg);
                 update_state(&header, &msg, writers, vehicle_target);
                 if let Some(val) = predicate(&header, &msg) {
@@ -623,9 +617,8 @@ async fn send_command_long_ack(
                 _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
                 _ = &mut deadline => break, // retry
                 result = connection.recv() => {
-                    let (header, msg) = result.map_err(|err| {
-                        VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                    })?;
+                    let (header, msg) = result
+                        .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                     update_vehicle_target(vehicle_target, &header, &msg);
                     if let common::MavMessage::COMMAND_ACK(ack) = &msg {
                         if ack.command == command {
@@ -691,9 +684,8 @@ async fn handle_set_mode(
                 });
             }
             result = connection.recv() => {
-                let (header, msg) = result.map_err(|err| {
-                    VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                })?;
+                let (header, msg) =
+                    result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                 update_vehicle_target(vehicle_target, &header, &msg);
                 if let common::MavMessage::HEARTBEAT(hb) = &msg {
                     if hb.custom_mode == custom_mode {
@@ -1002,9 +994,8 @@ async fn handle_mission_upload(
                     break None;
                 }
                 result = connection.recv() => {
-                    let (header, msg) = result.map_err(|err| {
-                        VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                    })?;
+                    let (header, msg) = result
+                        .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                     update_vehicle_target(vehicle_target, &header, &msg);
                     update_state(&header, &msg, writers, vehicle_target);
 
@@ -1057,6 +1048,7 @@ async fn handle_mission_upload(
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn wait_for_mission_ack<F>(
     machine: &mut MissionTransferMachine,
     mission_type: MissionType,
@@ -1095,9 +1087,8 @@ where
                 send_message(connection, config, retry_msg()).await?;
             }
             result = connection.recv() => {
-                let (header, msg) = result.map_err(|err| {
-                    VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                })?;
+                let (header, msg) =
+                    result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                 update_vehicle_target(vehicle_target, &header, &msg);
                 update_state(&header, &msg, writers, vehicle_target);
 
@@ -1171,9 +1162,8 @@ async fn handle_mission_download(
                 send_message(connection, config, request_list_msg.clone()).await?;
             }
             result = connection.recv() => {
-                let (header, msg) = result.map_err(|err| {
-                    VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                })?;
+                let (header, msg) =
+                    result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                 update_vehicle_target(vehicle_target, &header, &msg);
                 update_state(&header, &msg, writers, vehicle_target);
 
@@ -1245,9 +1235,8 @@ async fn handle_mission_download(
                     send_message(connection, config, make_request_msg(use_int_request)).await?;
                 }
                 result = connection.recv() => {
-                    let (header, msg) = result.map_err(|err| {
-                        VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                    })?;
+                    let (header, msg) = result
+                        .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                     update_vehicle_target(vehicle_target, &header, &msg);
                     update_state(&header, &msg, writers, vehicle_target);
 
@@ -1377,9 +1366,8 @@ async fn handle_mission_set_current(
                 _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
                 _ = &mut deadline => break, // retry outer loop
                 result = connection.recv() => {
-                    let (header, msg) = result.map_err(|err| {
-                        VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                    })?;
+                    let (header, msg) = result
+                        .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                     update_vehicle_target(vehicle_target, &header, &msg);
                     update_state(&header, &msg, writers, vehicle_target);
 
@@ -1504,9 +1492,8 @@ async fn handle_param_download_all(
                 }
                 _ = &mut deadline => break,
                 result = connection.recv() => {
-                    let (header, msg) = result.map_err(|err| {
-                        VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                    })?;
+                    let (header, msg) = result
+                        .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                     update_vehicle_target(vehicle_target, &header, &msg);
                     update_state(&header, &msg, writers, vehicle_target);
 
@@ -1672,9 +1659,8 @@ async fn handle_param_write(
                 _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
                 _ = &mut deadline => break, // retry
                 result = connection.recv() => {
-                    let (header, msg) = result.map_err(|err| {
-                        VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string()))
-                    })?;
+                    let (header, msg) = result
+                        .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                     update_vehicle_target(vehicle_target, &header, &msg);
                     update_state(&header, &msg, writers, vehicle_target);
 
