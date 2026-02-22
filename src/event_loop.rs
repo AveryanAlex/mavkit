@@ -76,11 +76,12 @@ pub(crate) async fn run_event_loop(
                 match result {
                     Ok((header, msg)) => {
                         update_vehicle_target(&mut vehicle_target, &header, &msg);
-                        if !home_requested && config.auto_request_home {
-                            if let Some(ref target) = vehicle_target {
-                                request_home_position(&*connection, target, &config).await;
-                                home_requested = true;
-                            }
+                        if !home_requested
+                            && config.auto_request_home
+                            && let Some(ref target) = vehicle_target
+                        {
+                            request_home_position(&*connection, target, &config).await;
+                            home_requested = true;
                         }
                         update_state(&header, &msg, &state_writers, &vehicle_target);
                     }
@@ -620,16 +621,16 @@ async fn send_command_long_ack(
                     let (header, msg) = result
                         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                     update_vehicle_target(vehicle_target, &header, &msg);
-                    if let common::MavMessage::COMMAND_ACK(ack) = &msg {
-                        if ack.command == command {
-                            if ack.result == common::MavResult::MAV_RESULT_ACCEPTED {
-                                return Ok(());
-                            }
-                            return Err(VehicleError::CommandRejected {
-                                command: format!("{command:?}"),
-                                result: format!("{:?}", ack.result),
-                            });
+                    if let common::MavMessage::COMMAND_ACK(ack) = &msg
+                        && ack.command == command
+                    {
+                        if ack.result == common::MavResult::MAV_RESULT_ACCEPTED {
+                            return Ok(());
                         }
+                        return Err(VehicleError::CommandRejected {
+                            command: format!("{command:?}"),
+                            result: format!("{:?}", ack.result),
+                        });
                     }
                 }
             }
@@ -687,10 +688,10 @@ async fn handle_set_mode(
                 let (header, msg) =
                     result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                 update_vehicle_target(vehicle_target, &header, &msg);
-                if let common::MavMessage::HEARTBEAT(hb) = &msg {
-                    if hb.custom_mode == custom_mode {
-                        return Ok(());
-                    }
+                if let common::MavMessage::HEARTBEAT(hb) = &msg
+                    && hb.custom_mode == custom_mode
+                {
+                    return Ok(());
                 }
             }
         }
@@ -1167,10 +1168,10 @@ async fn handle_mission_download(
                 update_vehicle_target(vehicle_target, &header, &msg);
                 update_state(&header, &msg, writers, vehicle_target);
 
-                if let common::MavMessage::MISSION_COUNT(data) = &msg {
-                    if mission_type_matches(data.mission_type, mission_type) {
-                        break data.count;
-                    }
+                if let common::MavMessage::MISSION_COUNT(data) = &msg
+                    && mission_type_matches(data.mission_type, mission_type)
+                {
+                    break data.count;
                 }
             }
         }
