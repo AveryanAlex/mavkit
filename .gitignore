@@ -1,0 +1,14 @@
+target/
+
+# Rust libraries typically do not commit Cargo.lock
+Cargo.lock
+
+# Local SITL/MAVProxy runtime artifacts
+*.log
+*.pid
+
+# Editor and OS files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
