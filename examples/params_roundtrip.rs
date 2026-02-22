@@ -1,4 +1,4 @@
-use mavkit::{format_param_file, parse_param_file, Vehicle};
+use mavkit::{Vehicle, format_param_file, parse_param_file};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -10,11 +10,11 @@ pub use transfer::{
 pub use types::{
     HomePosition, IssueSeverity, MissionFrame, MissionIssue, MissionItem, MissionPlan, MissionType,
 };
-pub use validation::{normalize_for_compare, plans_equivalent, validate_plan, CompareTolerance};
+pub use validation::{CompareTolerance, normalize_for_compare, plans_equivalent, validate_plan};
 pub use wire::{items_for_wire_upload, plan_from_wire_download};
 
-use crate::error::VehicleError;
 use crate::Vehicle;
+use crate::error::VehicleError;
 
 /// Handle to mission operations on a `Vehicle`.
 pub struct MissionHandle<'a> {

@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = [
     "Alexander Averyanov"
 ]
-edition = "2021"
+edition = "2024"
 description = "Async MAVLink SDK for vehicle control, missions, and parameters"
 license = "MIT"
 readme = "README.md"

@@ -5,8 +5,8 @@ use crate::event_loop::run_event_loop;
 use crate::mission::{HomePosition, MissionHandle, TransferProgress};
 use crate::params::{ParamProgress, ParamStore, ParamsHandle};
 use crate::state::{
-    create_channels, FlightMode, LinkState, MissionState, StateChannels, StatusMessage, Telemetry,
-    VehicleIdentity, VehicleState,
+    FlightMode, LinkState, MissionState, StateChannels, StatusMessage, Telemetry, VehicleIdentity,
+    VehicleState, create_channels,
 };
 use mavlink::common::{self, MavCmd};
 use std::sync::Arc;

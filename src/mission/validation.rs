@@ -204,9 +204,11 @@ mod tests {
         };
 
         let issues = validate_plan(&plan);
-        assert!(issues
-            .iter()
-            .any(|issue| issue.code == "plan.non_contiguous_sequence"));
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.code == "plan.non_contiguous_sequence")
+        );
     }
 
     #[test]
@@ -220,12 +222,16 @@ mod tests {
         };
 
         let issues = validate_plan(&plan);
-        assert!(issues
-            .iter()
-            .any(|issue| issue.code == "item.latitude_out_of_range"));
-        assert!(issues
-            .iter()
-            .any(|issue| issue.code == "item.non_finite_value"));
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.code == "item.latitude_out_of_range")
+        );
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.code == "item.non_finite_value")
+        );
     }
 
     #[test]
@@ -241,9 +247,11 @@ mod tests {
         };
 
         let issues = validate_plan(&plan);
-        assert!(issues
-            .iter()
-            .any(|issue| issue.code == "home.latitude_out_of_range"));
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.code == "home.latitude_out_of_range")
+        );
     }
 
     #[test]
