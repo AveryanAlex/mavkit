@@ -76,7 +76,10 @@ const ROVER_MODES: &[(u32, &str)] = &[
     (15, "GUIDED"),
 ];
 
-fn mode_table(autopilot: AutopilotType, vehicle_type: VehicleType) -> &'static [(u32, &'static str)] {
+fn mode_table(
+    autopilot: AutopilotType,
+    vehicle_type: VehicleType,
+) -> &'static [(u32, &'static str)] {
     if autopilot != AutopilotType::ArduPilotMega {
         return &[];
     }
@@ -87,7 +90,11 @@ fn mode_table(autopilot: AutopilotType, vehicle_type: VehicleType) -> &'static [
     }
 }
 
-pub(crate) fn mode_name(autopilot: AutopilotType, vehicle_type: VehicleType, custom_mode: u32) -> String {
+pub(crate) fn mode_name(
+    autopilot: AutopilotType,
+    vehicle_type: VehicleType,
+    custom_mode: u32,
+) -> String {
     if autopilot != AutopilotType::ArduPilotMega {
         return format!("MODE({custom_mode})");
     }
@@ -100,7 +107,11 @@ pub(crate) fn mode_name(autopilot: AutopilotType, vehicle_type: VehicleType, cus
     format!("UNKNOWN({custom_mode})")
 }
 
-pub(crate) fn mode_number(autopilot: AutopilotType, vehicle_type: VehicleType, name: &str) -> Option<u32> {
+pub(crate) fn mode_number(
+    autopilot: AutopilotType,
+    vehicle_type: VehicleType,
+    name: &str,
+) -> Option<u32> {
     let table = mode_table(autopilot, vehicle_type);
     let upper = name.to_uppercase();
     for &(num, mode_name) in table {
@@ -111,7 +122,10 @@ pub(crate) fn mode_number(autopilot: AutopilotType, vehicle_type: VehicleType, n
     None
 }
 
-pub(crate) fn available_modes(autopilot: AutopilotType, vehicle_type: VehicleType) -> Vec<FlightMode> {
+pub(crate) fn available_modes(
+    autopilot: AutopilotType,
+    vehicle_type: VehicleType,
+) -> Vec<FlightMode> {
     mode_table(autopilot, vehicle_type)
         .iter()
         .map(|&(num, name)| FlightMode {
@@ -136,7 +150,11 @@ mod tests {
     #[test]
     fn copter_guided_number_case_insensitive() {
         assert_eq!(
-            mode_number(AutopilotType::ArduPilotMega, VehicleType::Quadrotor, "guided"),
+            mode_number(
+                AutopilotType::ArduPilotMega,
+                VehicleType::Quadrotor,
+                "guided"
+            ),
             Some(4)
         );
     }
@@ -180,7 +198,11 @@ mod tests {
     #[test]
     fn rover_guided_number() {
         assert_eq!(
-            mode_number(AutopilotType::ArduPilotMega, VehicleType::GroundRover, "GUIDED"),
+            mode_number(
+                AutopilotType::ArduPilotMega,
+                VehicleType::GroundRover,
+                "GUIDED"
+            ),
             Some(15)
         );
     }

@@ -7,7 +7,7 @@ use std::time::Duration;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 
 fn sitl_bind_addr() -> String {
-    std::env::var("MP_SITL_UDP_BIND").unwrap_or_else(|_| String::from("0.0.0.0:14550"))
+    std::env::var("MAVKIT_SITL_UDP_BIND").unwrap_or_else(|_| String::from("0.0.0.0:14550"))
 }
 
 fn is_optional_type_unsupported(mission_type: MissionType, error: &VehicleError) -> bool {
@@ -74,7 +74,10 @@ async fn run_roundtrip_case(plan: MissionPlan) {
                 );
                 return Ok(());
             }
-            return Err(format!("failed to clear before upload for {:?}: {err}", plan.mission_type));
+            return Err(format!(
+                "failed to clear before upload for {:?}: {err}",
+                plan.mission_type
+            ));
         }
 
         // Upload
@@ -86,7 +89,10 @@ async fn run_roundtrip_case(plan: MissionPlan) {
                 );
                 return Ok(());
             }
-            return Err(format!("failed to upload {:?} plan: {err}", plan.mission_type));
+            return Err(format!(
+                "failed to upload {:?} plan: {err}",
+                plan.mission_type
+            ));
         }
 
         tokio::time::sleep(Duration::from_millis(500)).await;
@@ -122,7 +128,12 @@ async fn run_roundtrip_case(plan: MissionPlan) {
             .mission()
             .clear(plan.mission_type)
             .await
-            .map_err(|err| format!("failed to clear after roundtrip for {:?}: {err}", plan.mission_type))?;
+            .map_err(|err| {
+                format!(
+                    "failed to clear after roundtrip for {:?}: {err}",
+                    plan.mission_type
+                )
+            })?;
 
         Ok(())
     }
@@ -139,7 +150,7 @@ async fn download_with_retries(
     vehicle: &Vehicle,
     mission_type: MissionType,
 ) -> Result<MissionPlan, String> {
-    let strict = std::env::var("MP_SITL_STRICT")
+    let strict = std::env::var("MAVKIT_SITL_STRICT")
         .map(|v| v == "1")
         .unwrap_or(false);
     let mut last_error: Option<String> = None;
@@ -174,7 +185,7 @@ async fn download_with_retries(
         && err_msg.to_ascii_lowercase().contains("transfer.timeout")
     {
         eprintln!(
-            "Skipping Mission download timeout in non-strict SITL mode: {err_msg}. Set MP_SITL_STRICT=1 to enforce failure."
+            "Skipping Mission download timeout in non-strict SITL mode: {err_msg}. Set MAVKIT_SITL_STRICT=1 to enforce failure."
         );
         return Err(String::from("skip_optional_mission_type"));
     }
@@ -415,7 +426,10 @@ async fn sitl_get_available_modes() {
         let modes = vehicle.available_modes();
 
         if modes.len() < 10 {
-            return Err(format!("expected at least 10 copter modes, got {}", modes.len()));
+            return Err(format!(
+                "expected at least 10 copter modes, got {}",
+                modes.len()
+            ));
         }
 
         let has_mode = |name: &str, id: u32| -> bool {

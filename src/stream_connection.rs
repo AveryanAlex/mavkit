@@ -63,8 +63,7 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send>
         } else {
             ReadVersion::Single(self.protocol_version)
         };
-        read_versioned_raw_message_async::<common::MavMessage, _>(reader.deref_mut(), version)
-            .await
+        read_versioned_raw_message_async::<common::MavMessage, _>(reader.deref_mut(), version).await
     }
 
     async fn send(
@@ -114,7 +113,6 @@ mod tests {
         fn assert_send_sync<T: Send + Sync>(_: &T) {}
         assert_send_sync(&conn);
         // Verify it satisfies AsyncMavConnection
-        let _boxed: Box<dyn AsyncMavConnection<common::MavMessage> + Send + Sync> =
-            Box::new(conn);
+        let _boxed: Box<dyn AsyncMavConnection<common::MavMessage> + Send + Sync> = Box::new(conn);
     }
 }

@@ -54,7 +54,8 @@ mod tests {
 
     #[test]
     fn parse_with_comments_and_blanks() {
-        let contents = "# This is a comment\n\nBATT_CAPACITY,5000\n# Another comment\nBATT_MONITOR,4\n";
+        let contents =
+            "# This is a comment\n\nBATT_CAPACITY,5000\n# Another comment\nBATT_MONITOR,4\n";
         let result = parse_param_file(contents).unwrap();
         assert_eq!(result.len(), 2);
     }
@@ -88,11 +89,21 @@ mod tests {
         let mut store = ParamStore::default();
         store.params.insert(
             "BATT_MONITOR".to_string(),
-            Param { name: "BATT_MONITOR".to_string(), value: 4.0, param_type: ParamType::Int32, index: 1 },
+            Param {
+                name: "BATT_MONITOR".to_string(),
+                value: 4.0,
+                param_type: ParamType::Int32,
+                index: 1,
+            },
         );
         store.params.insert(
             "ATC_RAT_PIT_P".to_string(),
-            Param { name: "ATC_RAT_PIT_P".to_string(), value: 0.135, param_type: ParamType::Real32, index: 0 },
+            Param {
+                name: "ATC_RAT_PIT_P".to_string(),
+                value: 0.135,
+                param_type: ParamType::Real32,
+                index: 0,
+            },
         );
 
         let formatted = format_param_file(&store);
@@ -107,11 +118,21 @@ mod tests {
         let mut store = ParamStore::default();
         store.params.insert(
             "ZEBRA".to_string(),
-            Param { name: "ZEBRA".to_string(), value: 1.0, param_type: ParamType::Real32, index: 0 },
+            Param {
+                name: "ZEBRA".to_string(),
+                value: 1.0,
+                param_type: ParamType::Real32,
+                index: 0,
+            },
         );
         store.params.insert(
             "ALPHA".to_string(),
-            Param { name: "ALPHA".to_string(), value: 2.0, param_type: ParamType::Real32, index: 1 },
+            Param {
+                name: "ALPHA".to_string(),
+                value: 2.0,
+                param_type: ParamType::Real32,
+                index: 1,
+            },
         );
 
         let formatted = format_param_file(&store);

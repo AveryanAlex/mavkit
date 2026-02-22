@@ -118,7 +118,10 @@ impl Vehicle {
         let mut vs_rx = vehicle.state();
         let heartbeat_wait = async {
             loop {
-                vs_rx.changed().await.map_err(|_| VehicleError::Disconnected)?;
+                vs_rx
+                    .changed()
+                    .await
+                    .map_err(|_| VehicleError::Disconnected)?;
                 let state = vs_rx.borrow().clone();
                 // A heartbeat sets autopilot to something (at minimum Generic from target update)
                 if state.custom_mode != 0 || state.armed || state.mode_name != "" {
@@ -178,15 +181,18 @@ impl Vehicle {
     // --- Vehicle commands ---
 
     pub async fn arm(&self, force: bool) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Arm { force, reply }).await
+        self.send_command(|reply| Command::Arm { force, reply })
+            .await
     }
 
     pub async fn disarm(&self, force: bool) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Disarm { force, reply }).await
+        self.send_command(|reply| Command::Disarm { force, reply })
+            .await
     }
 
     pub async fn set_mode(&self, custom_mode: u32) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::SetMode { custom_mode, reply }).await
+        self.send_command(|reply| Command::SetMode { custom_mode, reply })
+            .await
     }
 
     pub async fn set_mode_by_name(&self, name: &str) -> Result<(), VehicleError> {
@@ -216,11 +222,7 @@ impl Vehicle {
         .await
     }
 
-    pub async fn command_long(
-        &self,
-        cmd: MavCmd,
-        params: [f32; 7],
-    ) -> Result<(), VehicleError> {
+    pub async fn command_long(&self, cmd: MavCmd, params: [f32; 7]) -> Result<(), VehicleError> {
         self.send_command(|reply| Command::CommandLong {
             command: cmd,
             params,
@@ -239,13 +241,13 @@ impl Vehicle {
         self.command_long(
             MavCmd::MAV_CMD_PREFLIGHT_CALIBRATION,
             [
-                if gyro { 1.0 } else { 0.0 },      // param1: gyro
-                0.0,                                  // param2: magnetometer
-                0.0,                                  // param3: ground pressure
-                if radio_trim { 1.0 } else { 0.0 },  // param4: radio trim
-                if accel { 1.0 } else { 0.0 },       // param5: accel
-                0.0,                                  // param6: compass/motor
-                0.0,                                  // param7: esc
+                if gyro { 1.0 } else { 0.0 },       // param1: gyro
+                0.0,                                // param2: magnetometer
+                0.0,                                // param3: ground pressure
+                if radio_trim { 1.0 } else { 0.0 }, // param4: radio trim
+                if accel { 1.0 } else { 0.0 },      // param5: accel
+                0.0,                                // param6: compass/motor
+                0.0,                                // param7: esc
             ],
         )
         .await
@@ -256,12 +258,13 @@ impl Vehicle {
         crate::modes::available_modes(state.autopilot, state.vehicle_type)
     }
 
+    /// Returns a best-effort identity from currently tracked state.
+    ///
+    /// `system_id` and `component_id` are currently not exposed via public
+    /// watch channels and are returned as `0`.
     pub fn identity(&self) -> Option<VehicleIdentity> {
         let state = self.inner.channels.vehicle_state.borrow().clone();
-        if state.mode_name.is_empty()
-            && !state.armed
-            && state.custom_mode == 0
-        {
+        if state.mode_name.is_empty() && !state.armed && state.custom_mode == 0 {
             return None;
         }
         Some(VehicleIdentity {
