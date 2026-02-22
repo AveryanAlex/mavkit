@@ -6,8 +6,8 @@ pub use types::{
     Param, ParamProgress, ParamStore, ParamTransferPhase, ParamType, ParamWriteResult,
 };
 
-use crate::error::VehicleError;
 use crate::Vehicle;
+use crate::error::VehicleError;
 
 /// Handle to parameter operations on a `Vehicle`.
 pub struct ParamsHandle<'a> {

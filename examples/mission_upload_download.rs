@@ -1,6 +1,6 @@
 use mavkit::{
-    normalize_for_compare, plans_equivalent, CompareTolerance, HomePosition, MissionFrame,
-    MissionItem, MissionPlan, MissionType, Vehicle,
+    CompareTolerance, HomePosition, MissionFrame, MissionItem, MissionPlan, MissionType, Vehicle,
+    normalize_for_compare, plans_equivalent,
 };
 
 fn waypoint(seq: u16, lat: f64, lon: f64, alt: f32) -> MissionItem {

@@ -1,6 +1,6 @@
 use mavkit::{
-    normalize_for_compare, plans_equivalent, CompareTolerance, HomePosition, MissionFrame,
-    MissionItem, MissionPlan, MissionType, Vehicle, VehicleError,
+    CompareTolerance, HomePosition, MissionFrame, MissionItem, MissionPlan, MissionType, Vehicle,
+    VehicleError, normalize_for_compare, plans_equivalent,
 };
 use std::time::Duration;
 

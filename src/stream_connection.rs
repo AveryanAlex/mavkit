@@ -3,8 +3,8 @@ use futures::lock::Mutex;
 use mavlink::async_peek_reader::AsyncPeekReader;
 use mavlink::common;
 use mavlink::{
-    read_versioned_msg_async, read_versioned_raw_message_async, write_versioned_msg_async,
-    MAVLinkMessageRaw, MavHeader, MavlinkVersion, ReadVersion,
+    MAVLinkMessageRaw, MavHeader, MavlinkVersion, ReadVersion, read_versioned_msg_async,
+    read_versioned_raw_message_async, write_versioned_msg_async,
 };
 use tokio::io::{AsyncRead, AsyncWrite};
 

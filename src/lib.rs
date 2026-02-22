@@ -24,13 +24,13 @@ pub use state::{
 };
 
 pub use mission::{
-    items_for_wire_upload, normalize_for_compare, plan_from_wire_download, plans_equivalent,
-    validate_plan, CompareTolerance, HomePosition, IssueSeverity, MissionFrame, MissionHandle,
-    MissionIssue, MissionItem, MissionPlan, MissionTransferMachine, MissionType, RetryPolicy,
-    TransferDirection, TransferError, TransferEvent, TransferPhase, TransferProgress,
+    CompareTolerance, HomePosition, IssueSeverity, MissionFrame, MissionHandle, MissionIssue,
+    MissionItem, MissionPlan, MissionTransferMachine, MissionType, RetryPolicy, TransferDirection,
+    TransferError, TransferEvent, TransferPhase, TransferProgress, items_for_wire_upload,
+    normalize_for_compare, plan_from_wire_download, plans_equivalent, validate_plan,
 };
 
 pub use params::{
-    format_param_file, parse_param_file, Param, ParamProgress, ParamStore, ParamTransferPhase,
-    ParamType, ParamWriteResult, ParamsHandle,
+    Param, ParamProgress, ParamStore, ParamTransferPhase, ParamType, ParamWriteResult,
+    ParamsHandle, format_param_file, parse_param_file,
 };
