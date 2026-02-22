@@ -72,6 +72,25 @@ Run an example:
 cargo run --example connect_udp
 ```
 
+## Development
+
+Common local checks:
+
+```bash
+cargo check
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test
+```
+
+SITL helper targets:
+
+```bash
+make bridge-up
+make test-sitl
+make test-sitl-strict
+make bridge-down
+```
+
 ## SITL integration testing
 
 Ignored integration tests in `tests/sitl_roundtrip.rs` can be run against ArduPilot SITL.
