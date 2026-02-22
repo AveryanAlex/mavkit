@@ -2,13 +2,15 @@ use crate::command::Command;
 use crate::config::VehicleConfig;
 use crate::error::VehicleError;
 use crate::mission::{
-    self, IssueSeverity, MissionFrame, MissionItem, MissionPlan, MissionTransferMachine, MissionType,
-    TransferPhase,
+    self, IssueSeverity, MissionFrame, MissionItem, MissionPlan, MissionTransferMachine,
+    MissionType, TransferPhase,
 };
-use crate::params::{Param, ParamProgress, ParamStore, ParamTransferPhase, ParamType, ParamWriteResult};
+use crate::params::{
+    Param, ParamProgress, ParamStore, ParamTransferPhase, ParamType, ParamWriteResult,
+};
 use crate::state::{
-    AutopilotType, GpsFixType, LinkState, MissionState, StateWriters, SystemStatus,
-    VehicleState, VehicleType,
+    AutopilotType, GpsFixType, LinkState, MissionState, StateWriters, SystemStatus, VehicleState,
+    VehicleType,
 };
 use mavlink::common::{self, MavCmd, MavModeFlag, MavParamType};
 use mavlink::{AsyncMavConnection, MavHeader};
@@ -228,13 +230,11 @@ fn update_state(
             });
         }
         common::MavMessage::HOME_POSITION(data) => {
-            let _ = writers
-                .home_position
-                .send(Some(mission::HomePosition {
-                    latitude_deg: data.latitude as f64 / 1e7,
-                    longitude_deg: data.longitude as f64 / 1e7,
-                    altitude_m: (data.altitude as f64 / 1000.0) as f32,
-                }));
+            let _ = writers.home_position.send(Some(mission::HomePosition {
+                latitude_deg: data.latitude as f64 / 1e7,
+                longitude_deg: data.longitude as f64 / 1e7,
+                altitude_m: (data.altitude as f64 / 1000.0) as f32,
+            }));
         }
         common::MavMessage::ATTITUDE(data) => {
             writers.telemetry.send_modify(|t| {
@@ -356,55 +356,120 @@ async fn handle_command(
 ) {
     match cmd {
         Command::Arm { force, reply } => {
-            let result = handle_arm_disarm(true, force, connection, vehicle_target, config, cancel).await;
+            let result =
+                handle_arm_disarm(true, force, connection, vehicle_target, config, cancel).await;
             let _ = reply.send(result);
         }
         Command::Disarm { force, reply } => {
-            let result = handle_arm_disarm(false, force, connection, vehicle_target, config, cancel).await;
+            let result =
+                handle_arm_disarm(false, force, connection, vehicle_target, config, cancel).await;
             let _ = reply.send(result);
         }
         Command::SetMode { custom_mode, reply } => {
-            let result = handle_set_mode(custom_mode, connection, vehicle_target, config, cancel).await;
+            let result =
+                handle_set_mode(custom_mode, connection, vehicle_target, config, cancel).await;
             let _ = reply.send(result);
         }
-        Command::CommandLong { command, params, reply } => {
-            let result = handle_command_long(command, params, connection, vehicle_target, config, cancel).await;
+        Command::CommandLong {
+            command,
+            params,
+            reply,
+        } => {
+            let result =
+                handle_command_long(command, params, connection, vehicle_target, config, cancel)
+                    .await;
             let _ = reply.send(result);
         }
-        Command::GuidedGoto { lat_e7, lon_e7, alt_m, reply } => {
-            let result = handle_guided_goto(lat_e7, lon_e7, alt_m, connection, vehicle_target, config).await;
+        Command::GuidedGoto {
+            lat_e7,
+            lon_e7,
+            alt_m,
+            reply,
+        } => {
+            let result =
+                handle_guided_goto(lat_e7, lon_e7, alt_m, connection, vehicle_target, config).await;
             let _ = reply.send(result);
         }
         Command::MissionUpload { plan, reply } => {
-            let result = handle_mission_upload(plan, connection, writers, vehicle_target, config, cancel).await;
+            let result =
+                handle_mission_upload(plan, connection, writers, vehicle_target, config, cancel)
+                    .await;
             let _ = reply.send(result);
         }
-        Command::MissionDownload { mission_type, reply } => {
-            let result = handle_mission_download(mission_type, connection, writers, vehicle_target, config, cancel).await;
+        Command::MissionDownload {
+            mission_type,
+            reply,
+        } => {
+            let result = handle_mission_download(
+                mission_type,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
-        Command::MissionClear { mission_type, reply } => {
-            let result = handle_mission_clear(mission_type, connection, writers, vehicle_target, config, cancel).await;
+        Command::MissionClear {
+            mission_type,
+            reply,
+        } => {
+            let result = handle_mission_clear(
+                mission_type,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
         Command::MissionSetCurrent { seq, reply } => {
-            let result = handle_mission_set_current(seq, connection, writers, vehicle_target, config, cancel).await;
+            let result = handle_mission_set_current(
+                seq,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
         Command::MissionCancelTransfer => {
-            // Cancel is signaled through the cancellation token on the vehicle side;
-            // for now this is a placeholder.
+            // Transfer cancellation currently relies on outer cancellation.
         }
         Command::ParamDownloadAll { reply } => {
-            let result = handle_param_download_all(connection, writers, vehicle_target, config, cancel).await;
+            let result =
+                handle_param_download_all(connection, writers, vehicle_target, config, cancel)
+                    .await;
             let _ = reply.send(result);
         }
         Command::ParamWrite { name, value, reply } => {
-            let result = handle_param_write(&name, value, connection, writers, vehicle_target, config, cancel).await;
+            let result = handle_param_write(
+                &name,
+                value,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
         Command::ParamWriteBatch { params, reply } => {
-            let result = handle_param_write_batch(params, connection, writers, vehicle_target, config, cancel).await;
+            let result = handle_param_write_batch(
+                params,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
         Command::Shutdown => {
@@ -433,7 +498,12 @@ async fn send_message(
         )
         .await
         .map(|_| ())
-        .map_err(|err| VehicleError::Io(std::io::Error::new(std::io::ErrorKind::Other, err.to_string())))
+        .map_err(|err| {
+            VehicleError::Io(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                err.to_string(),
+            ))
+        })
 }
 
 /// Wait for a message matching `predicate`, continuing to update state for
@@ -490,7 +560,11 @@ async fn handle_arm_disarm(
     let target = get_target(vehicle_target)?;
     let param1 = if arm { 1.0 } else { 0.0 };
     let param2 = if force {
-        if arm { MAGIC_FORCE_ARM_VALUE } else { MAGIC_FORCE_DISARM_VALUE }
+        if arm {
+            MAGIC_FORCE_ARM_VALUE
+        } else {
+            MAGIC_FORCE_DISARM_VALUE
+        }
     } else {
         0.0
     };
@@ -500,8 +574,6 @@ async fn handle_arm_disarm(
         [param1, param2, 0.0, 0.0, 0.0, 0.0, 0.0],
         target,
         connection,
-        // We don't have writers here for the simple command path, so we pass
-        // a stub StateWriters — but actually we need access. Let's restructure.
         vehicle_target,
         config,
         cancel,
@@ -518,13 +590,7 @@ async fn send_command_long_ack(
     config: &VehicleConfig,
     cancel: &CancellationToken,
 ) -> Result<(), VehicleError> {
-    // We create a temporary pair of state writers just for the wait_for_response
-    // helper. This is wasteful; instead we'll accept StateWriters by ref.
-    // Actually we need to thread StateWriters through. Let me fix this.
-    //
-    // For now, we'll do a simplified version that doesn't update state
-    // during the ACK wait. The main event loop will pick up any messages
-    // after the command returns.
+    // ACK wait path intentionally does not update watch state.
 
     let retry_policy = &config.retry_policy;
     for _attempt in 0..=retry_policy.max_retries {
@@ -652,7 +718,16 @@ async fn handle_command_long(
     cancel: &CancellationToken,
 ) -> Result<(), VehicleError> {
     let target = get_target(vehicle_target)?;
-    send_command_long_ack(command, params, target, connection, vehicle_target, config, cancel).await
+    send_command_long_ack(
+        command,
+        params,
+        target,
+        connection,
+        vehicle_target,
+        config,
+        cancel,
+    )
+    .await
 }
 
 // ---------------------------------------------------------------------------
@@ -775,8 +850,16 @@ fn from_mission_item_float(data: &common::MISSION_ITEM_DATA) -> MissionItem {
         param2: data.param2,
         param3: data.param3,
         param4: data.param4,
-        x: if is_global { (data.x as f64 * 1e7) as i32 } else { data.x as i32 },
-        y: if is_global { (data.y as f64 * 1e7) as i32 } else { data.y as i32 },
+        x: if is_global {
+            (data.x as f64 * 1e7) as i32
+        } else {
+            data.x as i32
+        },
+        y: if is_global {
+            (data.y as f64 * 1e7) as i32
+        } else {
+            data.y as i32
+        },
         z: data.z,
     }
 }
@@ -803,11 +886,12 @@ fn send_requested_item_msg(
             message: format!("requested item {seq} out of range"),
         })?;
 
-    let command = num_traits::FromPrimitive::from_u16(item.command)
-        .ok_or_else(|| VehicleError::MissionTransfer {
+    let command = num_traits::FromPrimitive::from_u16(item.command).ok_or_else(|| {
+        VehicleError::MissionTransfer {
             code: "unsupported_command".to_string(),
             message: format!("unsupported MAV_CMD value {}", item.command),
-        })?;
+        }
+    })?;
     let frame = to_mav_frame(item.frame);
 
     Ok(common::MavMessage::MISSION_ITEM_INT(
@@ -1054,13 +1138,12 @@ async fn handle_mission_download(
     let mut machine = MissionTransferMachine::new_download(mission_type, config.retry_policy);
     let _ = writers.mission_progress.send(Some(machine.progress()));
 
-    let request_list_msg = common::MavMessage::MISSION_REQUEST_LIST(
-        common::MISSION_REQUEST_LIST_DATA {
+    let request_list_msg =
+        common::MavMessage::MISSION_REQUEST_LIST(common::MISSION_REQUEST_LIST_DATA {
             target_system: target.system_id,
             target_component: target.component_id,
             mission_type: mav_mission_type,
-        },
-    );
+        });
     send_message(connection, config, request_list_msg.clone()).await?;
 
     // Wait for MISSION_COUNT
@@ -1111,22 +1194,19 @@ async fn handle_mission_download(
     for seq in 0..count {
         let mut use_int_request = true;
 
-        let request_int_msg = common::MavMessage::MISSION_REQUEST_INT(
-            common::MISSION_REQUEST_INT_DATA {
+        let request_int_msg =
+            common::MavMessage::MISSION_REQUEST_INT(common::MISSION_REQUEST_INT_DATA {
                 seq,
                 target_system: target.system_id,
                 target_component: target.component_id,
                 mission_type: mav_mission_type,
-            },
-        );
-        let request_float_msg = common::MavMessage::MISSION_REQUEST(
-            common::MISSION_REQUEST_DATA {
-                seq,
-                target_system: target.system_id,
-                target_component: target.component_id,
-                mission_type: mav_mission_type,
-            },
-        );
+            });
+        let request_float_msg = common::MavMessage::MISSION_REQUEST(common::MISSION_REQUEST_DATA {
+            seq,
+            target_system: target.system_id,
+            target_component: target.component_id,
+            mission_type: mav_mission_type,
+        });
 
         let make_request_msg = |use_int: bool| -> common::MavMessage {
             if use_int {
@@ -1519,7 +1599,10 @@ async fn handle_param_download_all(
                     }
                 }
             }
-            debug!("param download: requested {} missing params (retry {})", missing_requested, retries);
+            debug!(
+                "param download: requested {} missing params (retry {})",
+                missing_requested, retries
+            );
         }
     }
 
@@ -1643,7 +1726,16 @@ async fn handle_param_write_batch(
     });
 
     for (i, (name, value)) in params.into_iter().enumerate() {
-        let result = handle_param_write(&name, value, connection, writers, vehicle_target, config, cancel).await;
+        let result = handle_param_write(
+            &name,
+            value,
+            connection,
+            writers,
+            vehicle_target,
+            config,
+            cancel,
+        )
+        .await;
         match result {
             Ok(confirmed) => {
                 results.push(ParamWriteResult {
@@ -1680,7 +1772,11 @@ async fn handle_param_write_batch(
 
     let all_ok = results.iter().all(|r| r.success);
     let _ = writers.param_progress.send(ParamProgress {
-        phase: if all_ok { ParamTransferPhase::Completed } else { ParamTransferPhase::Failed },
+        phase: if all_ok {
+            ParamTransferPhase::Completed
+        } else {
+            ParamTransferPhase::Failed
+        },
         received: results.iter().filter(|r| r.success).count() as u16,
         expected: total,
     });

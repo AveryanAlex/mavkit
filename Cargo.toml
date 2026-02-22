@@ -2,6 +2,14 @@
 name = "mavkit"
 version = "0.1.0"
 edition = "2021"
+description = "Async MAVLink SDK for vehicle control, missions, and parameters"
+license = "MIT"
+readme = "README.md"
+repository = "https://github.com/averyanalex/mavkit"
+homepage = "https://github.com/averyanalex/mavkit"
+documentation = "https://docs.rs/mavkit"
+keywords = ["mavlink", "uav", "drone", "ardupilot", "px4"]
+categories = ["aerospace", "asynchronous", "api-bindings"]
 
 [features]
 default = ["udp", "serial", "ardupilot"]

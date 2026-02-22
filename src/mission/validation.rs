@@ -119,11 +119,7 @@ pub fn normalize_for_compare(plan: &MissionPlan) -> MissionPlan {
     normalized
 }
 
-pub fn plans_equivalent(
-    lhs: &MissionPlan,
-    rhs: &MissionPlan,
-    tolerance: CompareTolerance,
-) -> bool {
+pub fn plans_equivalent(lhs: &MissionPlan, rhs: &MissionPlan, tolerance: CompareTolerance) -> bool {
     if lhs.mission_type != rhs.mission_type {
         return false;
     }

@@ -7,7 +7,9 @@ pub use transfer::{
     MissionTransferMachine, RetryPolicy, TransferDirection, TransferError, TransferEvent,
     TransferPhase, TransferProgress,
 };
-pub use types::{HomePosition, IssueSeverity, MissionFrame, MissionItem, MissionIssue, MissionPlan, MissionType};
+pub use types::{
+    HomePosition, IssueSeverity, MissionFrame, MissionIssue, MissionItem, MissionPlan, MissionType,
+};
 pub use validation::{normalize_for_compare, plans_equivalent, validate_plan, CompareTolerance};
 pub use wire::{items_for_wire_upload, plan_from_wire_download};
 

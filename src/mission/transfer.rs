@@ -266,11 +266,8 @@ mod tests {
 
     #[test]
     fn cancel_sets_cancelled_phase() {
-        let mut machine = MissionTransferMachine::new_upload(
-            MissionType::Mission,
-            3,
-            RetryPolicy::default(),
-        );
+        let mut machine =
+            MissionTransferMachine::new_upload(MissionType::Mission, 3, RetryPolicy::default());
         assert_eq!(machine.progress().phase, TransferPhase::RequestCount);
         machine.cancel();
         assert_eq!(machine.progress().phase, TransferPhase::Cancelled);
@@ -278,11 +275,8 @@ mod tests {
 
     #[test]
     fn timeout_after_cancel_is_noop() {
-        let mut machine = MissionTransferMachine::new_upload(
-            MissionType::Mission,
-            3,
-            RetryPolicy::default(),
-        );
+        let mut machine =
+            MissionTransferMachine::new_upload(MissionType::Mission, 3, RetryPolicy::default());
         machine.cancel();
         assert_eq!(machine.progress().phase, TransferPhase::Cancelled);
         assert!(machine.on_timeout().is_none());
@@ -291,11 +285,8 @@ mod tests {
 
     #[test]
     fn is_terminal_for_end_states() {
-        let mut completed = MissionTransferMachine::new_upload(
-            MissionType::Mission,
-            2,
-            RetryPolicy::default(),
-        );
+        let mut completed =
+            MissionTransferMachine::new_upload(MissionType::Mission, 2, RetryPolicy::default());
         completed.on_item_transferred();
         completed.on_item_transferred();
         completed.on_ack_success();
@@ -314,19 +305,14 @@ mod tests {
         assert!(failed.is_terminal());
         assert_eq!(failed.progress().phase, TransferPhase::Failed);
 
-        let mut cancelled = MissionTransferMachine::new_download(
-            MissionType::Fence,
-            RetryPolicy::default(),
-        );
+        let mut cancelled =
+            MissionTransferMachine::new_download(MissionType::Fence, RetryPolicy::default());
         cancelled.cancel();
         assert!(cancelled.is_terminal());
         assert_eq!(cancelled.progress().phase, TransferPhase::Cancelled);
 
-        let active = MissionTransferMachine::new_upload(
-            MissionType::Mission,
-            3,
-            RetryPolicy::default(),
-        );
+        let active =
+            MissionTransferMachine::new_upload(MissionType::Mission, 3, RetryPolicy::default());
         assert!(!active.is_terminal());
     }
 }
