@@ -31,7 +31,7 @@ tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 
 ## Quick start
 
-```rust
+```rust,no_run
 use mavkit::Vehicle;
 
 #[tokio::main]
