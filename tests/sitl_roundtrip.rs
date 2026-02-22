@@ -129,7 +129,7 @@ async fn sitl_takeoff_and_land() {
     let result: Result<(), String> = async {
         vehicle.set_mode(4).await.map_err(|e| e.to_string())?; // GUIDED
         common::arm_with_retries(&vehicle, false, Duration::from_secs(30)).await?;
-        vehicle.takeoff(10.0).await.map_err(|e| e.to_string())?;
+        vehicle.takeoff(1.0).await.map_err(|e| e.to_string())?;
 
         common::wait_for_state(&vehicle, |s| s.armed, Duration::from_secs(15)).await;
 
@@ -159,13 +159,13 @@ async fn sitl_guided_goto() {
     let result: Result<(), String> = async {
         vehicle.set_mode(4).await.map_err(|e| e.to_string())?; // GUIDED
         common::arm_with_retries(&vehicle, false, Duration::from_secs(30)).await?;
-        vehicle.takeoff(25.0).await.map_err(|e| e.to_string())?;
+        vehicle.takeoff(1.0).await.map_err(|e| e.to_string())?;
         common::wait_for_state(&vehicle, |s| s.armed, Duration::from_secs(15)).await;
 
         tokio::time::sleep(Duration::from_secs(5)).await;
 
         vehicle
-            .goto(42.390_000, -71.147_000, 25.0)
+            .goto(42.390_000, -71.147_000, 20.0)
             .await
             .map_err(|e| e.to_string())?;
 
