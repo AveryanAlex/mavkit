@@ -93,7 +93,7 @@ make bridge-down
 
 ## SITL integration testing
 
-Ignored integration tests in `tests/sitl_roundtrip.rs` can be run against ArduPilot SITL.
+Ignored integration tests in `tests/sitl_*.rs` can be run against ArduPilot SITL.
 
 Environment variables:
 - `MAVKIT_SITL_UDP_BIND` (default: `0.0.0.0:14550`)
@@ -103,7 +103,7 @@ Run:
 
 ```bash
 MAVKIT_SITL_UDP_BIND=0.0.0.0:14550 \
-cargo test --test sitl_roundtrip -- --ignored --nocapture --test-threads=1
+cargo test --tests -- --ignored --nocapture --test-threads=1
 ```
 
 ## Notes

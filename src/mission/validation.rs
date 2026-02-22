@@ -168,29 +168,12 @@ fn round_to(value: f32, step: f32) -> f32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mission::{HomePosition, MissionFrame, MissionItem, MissionType};
-
-    fn sample_item(seq: u16) -> MissionItem {
-        MissionItem {
-            seq,
-            command: 16,
-            frame: MissionFrame::GlobalRelativeAltInt,
-            current: seq == 0,
-            autocontinue: true,
-            param1: 0.0,
-            param2: 1.0,
-            param3: 0.0,
-            param4: f32::NAN,
-            x: 473977420,
-            y: 85455970,
-            z: 42.123456,
-        }
-    }
+    use crate::mission::test_support::sample_item;
+    use crate::mission::{HomePosition, MissionItem, MissionType};
 
     #[test]
     fn detects_non_contiguous_sequence() {
-        let mut second = sample_item(2);
-        second.param4 = 0.0;
+        let second = sample_item(2);
         let plan = MissionPlan {
             mission_type: MissionType::Mission,
             home: None,
@@ -215,6 +198,7 @@ mod tests {
     fn detects_invalid_global_coordinates_and_nan() {
         let mut item = sample_item(0);
         item.x = 999_000_000;
+        item.param4 = f32::NAN;
         let plan = MissionPlan {
             mission_type: MissionType::Mission,
             home: None,
@@ -256,8 +240,7 @@ mod tests {
 
     #[test]
     fn normalize_and_equivalent_tolerates_small_float_drift() {
-        let mut base = sample_item(0);
-        base.param4 = 0.0;
+        let base = sample_item(0);
 
         let mut changed = base.clone();
         changed.param2 += 0.00005;

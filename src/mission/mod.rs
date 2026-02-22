@@ -3,6 +3,9 @@ pub mod types;
 pub mod validation;
 pub mod wire;
 
+#[cfg(test)]
+pub(crate) mod test_support;
+
 pub use transfer::{
     MissionTransferMachine, RetryPolicy, TransferDirection, TransferError, TransferEvent,
     TransferPhase, TransferProgress,

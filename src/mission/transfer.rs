@@ -265,6 +265,36 @@ mod tests {
     }
 
     #[test]
+    fn download_with_zero_items_goes_to_await_ack_and_can_complete() {
+        let mut machine =
+            MissionTransferMachine::new_download(MissionType::Mission, RetryPolicy::default());
+        assert_eq!(machine.progress().phase, TransferPhase::RequestCount);
+        machine.set_download_total(0);
+        assert_eq!(machine.progress().phase, TransferPhase::AwaitAck);
+        machine.on_ack_success();
+        assert_eq!(machine.progress().phase, TransferPhase::Completed);
+    }
+
+    #[test]
+    fn timeout_ms_uses_request_timeout_outside_item_phase() {
+        let policy = RetryPolicy {
+            request_timeout_ms: 111,
+            item_timeout_ms: 222,
+            max_retries: 0,
+        };
+        let mut machine = MissionTransferMachine::new_upload(MissionType::Mission, 2, policy);
+        assert_eq!(machine.timeout_ms(), 111);
+
+        machine.on_item_transferred();
+        assert_eq!(machine.progress().phase, TransferPhase::TransferItems);
+        assert_eq!(machine.timeout_ms(), 222);
+
+        machine.on_item_transferred();
+        assert_eq!(machine.progress().phase, TransferPhase::AwaitAck);
+        assert_eq!(machine.timeout_ms(), 111);
+    }
+
+    #[test]
     fn cancel_sets_cancelled_phase() {
         let mut machine =
             MissionTransferMachine::new_upload(MissionType::Mission, 3, RetryPolicy::default());

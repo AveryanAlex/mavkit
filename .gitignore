@@ -7,6 +7,9 @@ Cargo.lock
 *.log
 *.pid
 
+# MAVProxy telemetry artifacts
+mav.*
+
 # Editor and OS files
 .idea/
 .vscode/
