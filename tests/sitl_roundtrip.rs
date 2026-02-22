@@ -62,8 +62,7 @@ async fn run_roundtrip_case(plan: MissionPlan) {
             }
         })
         .await
-        .map_err(|_| String::from("timed out waiting for telemetry"))?
-        .map_err(|e| e)?;
+        .map_err(|_| String::from("timed out waiting for telemetry"))??;
 
         // Clear
         if let Err(err) = vehicle.mission().clear(plan.mission_type).await {

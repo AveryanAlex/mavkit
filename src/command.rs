@@ -17,7 +17,7 @@ pub(crate) enum Command {
         custom_mode: u32,
         reply: oneshot::Sender<Result<(), VehicleError>>,
     },
-    CommandLong {
+    Long {
         command: MavCmd,
         params: [f32; 7],
         reply: oneshot::Sender<Result<(), VehicleError>>,
