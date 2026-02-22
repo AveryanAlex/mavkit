@@ -124,7 +124,7 @@ impl Vehicle {
                     .map_err(|_| VehicleError::Disconnected)?;
                 let state = vs_rx.borrow().clone();
                 // A heartbeat sets autopilot to something (at minimum Generic from target update)
-                if state.custom_mode != 0 || state.armed || state.mode_name != "" {
+                if state.custom_mode != 0 || state.armed || !state.mode_name.is_empty() {
                     return Ok::<(), VehicleError>(());
                 }
             }
@@ -223,7 +223,7 @@ impl Vehicle {
     }
 
     pub async fn command_long(&self, cmd: MavCmd, params: [f32; 7]) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::CommandLong {
+        self.send_command(|reply| Command::Long {
             command: cmd,
             params,
             reply,

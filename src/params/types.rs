@@ -27,20 +27,15 @@ pub struct ParamStore {
     pub expected_count: u16,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ParamTransferPhase {
+    #[default]
     Idle,
     Downloading,
     Writing,
     Completed,
     Failed,
-}
-
-impl Default for ParamTransferPhase {
-    fn default() -> Self {
-        ParamTransferPhase::Idle
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
