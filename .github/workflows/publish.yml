@@ -24,25 +24,7 @@ jobs:
       - name: Verify tag matches crate version
         env:
           GIT_TAG: ${{ github.ref_name }}
-        run: |
-          python - <<'PY'
-          import os
-          import pathlib
-          import tomllib
-
-          tag = os.environ["GIT_TAG"]
-          if not tag.startswith("v"):
-              raise SystemExit(f"Tag must start with 'v', got: {tag}")
-
-          cargo_toml = tomllib.loads(pathlib.Path("Cargo.toml").read_text())
-          version = cargo_toml["package"]["version"]
-          if tag[1:] != version:
-              raise SystemExit(
-                  f"Tag version {tag[1:]} does not match Cargo.toml version {version}"
-              )
-
-          print(f"Tag {tag} matches Cargo.toml version {version}")
-          PY
+        run: ./scripts/check_tag_version.py
 
       - name: Publish to crates.io
         run: cargo publish --locked
