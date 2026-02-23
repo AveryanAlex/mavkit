@@ -12,6 +12,8 @@ Scope: repository root (`**`).
 
 ## Build, Lint, and Test Commands
 
+### Rust (workspace root)
+
 - `cargo check`
 - `cargo clippy --all-targets --all-features -- -D warnings`
 - `cargo test`
@@ -29,6 +31,13 @@ Useful one-off test commands:
 - `MAVKIT_SITL_UDP_BIND=0.0.0.0:14550 cargo test --test sitl_roundtrip -- --ignored --nocapture --test-threads=1`
 - `MAVKIT_SITL_STRICT=1 cargo test --test sitl_roundtrip -- --ignored --nocapture --test-threads=1`
 
+### Python bindings (`mavkit-python/`)
+
+- `cd mavkit-python && uv sync` — install dev dependencies (includes ruff).
+- `cd mavkit-python && uv run maturin develop` — build and install the extension into the venv.
+- `cd mavkit-python && uv run ruff format .` — format Python files.
+- `cd mavkit-python && uv run ruff check .` — lint Python files.
+
 ## Architecture Constraints to Preserve
 
 - `Vehicle` remains `Clone + Send + Sync` via shared inner state.
@@ -36,6 +45,15 @@ Useful one-off test commands:
 - Reactive state is exposed via `tokio::sync::watch` channels.
 - Mission APIs stay under `mission`; param APIs stay under `params`.
 - Keep optional stream integration behind the `stream` feature.
+
+### Python Bindings (`mavkit-python/`)
+
+- The `mavkit-python` crate is a `cdylib` in the Cargo workspace, built with `maturin`.
+- PyO3 `#[pyclass]` wrappers live in `mavkit-python/src/` (one file per domain).
+- Async Rust methods are bridged to Python awaitables via `pyo3-async-runtimes` + Tokio.
+- Lifetime-bound handles (`MissionHandle`, `ParamsHandle`) are flattened onto `PyVehicle`.
+- Reactive `watch` channels are exposed as sync property getters + async `wait_*` methods.
+- Python examples in `mavkit-python/examples/` mirror Rust `examples/`.
 
 ## Mission Wire Boundary Rules
 
@@ -60,6 +78,7 @@ Useful one-off test commands:
 - Run targeted tests for touched mission/params/event-loop behavior.
 - Run SITL for mission-transfer/transport changes when environment is available.
 - Keep optional firmware-capability behavior graceful (skip/partial where intended).
+- For Python binding changes: run `ruff format .` and `ruff check .` in `mavkit-python/`.
 
 ## Commit Message Conventions
 
@@ -86,4 +105,5 @@ Useful one-off test commands:
 - Reuse existing mission/params helpers before introducing new abstractions.
 - Preserve wire contracts and event-loop ownership boundaries.
 - Keep platform/transport optionality behind feature flags (`stream`, transport features).
+- Keep Python bindings in sync when public Rust API changes.
 - Update docs when behavior, feature flags, or developer commands change.

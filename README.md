@@ -10,6 +10,7 @@ It provides a transport-agnostic `Vehicle` API for:
 - parameter download and write operations
 
 The crate is designed to be embedded in desktop/mobile apps, CLIs, or backend services.
+Python bindings are available via the `mavkit-python` sub-crate (built with PyO3 + maturin).
 
 ## Features
 
@@ -60,7 +61,46 @@ These semantics are implemented in:
 - `items_for_wire_upload`
 - `plan_from_wire_download`
 
-## Examples
+## Python bindings
+
+The `mavkit-python/` sub-crate provides an async-first Python API via PyO3.
+
+### Install
+
+```bash
+cd mavkit-python
+uv sync            # install dev deps (ruff, etc.)
+uv run maturin develop   # build + install into venv
+```
+
+### Quick start
+
+```python
+import asyncio
+import mavkit
+
+async def main():
+    vehicle = await mavkit.Vehicle.connect_udp("0.0.0.0:14550")
+
+    state = await vehicle.wait_state()
+    print(f"mode={state.mode_name} armed={state.armed}")
+
+    await vehicle.disconnect()
+
+asyncio.run(main())
+```
+
+### Python examples
+
+See `mavkit-python/examples/` for full examples mirroring the Rust ones:
+
+```bash
+cd mavkit-python
+source .venv/bin/activate
+python examples/connect_udp.py
+```
+
+## Rust examples
 
 - `examples/connect_udp.rs`
 - `examples/mission_upload_download.rs`
@@ -74,7 +114,7 @@ cargo run --example connect_udp
 
 ## Development
 
-Common local checks:
+### Rust
 
 ```bash
 cargo check
@@ -89,6 +129,14 @@ make bridge-up
 make test-sitl
 make test-sitl-strict
 make bridge-down
+```
+
+### Python
+
+```bash
+cd mavkit-python
+uv run ruff format .
+uv run ruff check .
 ```
 
 ## SITL integration testing

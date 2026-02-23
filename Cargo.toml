@@ -1,3 +1,6 @@
+[workspace]
+members = [".", "mavkit-python"]
+
 [package]
 name = "mavkit"
 version = "0.1.0"
