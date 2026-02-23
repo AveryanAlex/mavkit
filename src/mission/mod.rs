@@ -29,12 +29,14 @@ impl<'a> MissionHandle<'a> {
         Self { vehicle }
     }
 
+    /// Upload a mission plan to the vehicle.
     pub async fn upload(&self, plan: MissionPlan) -> Result<(), VehicleError> {
         self.vehicle
             .send_command(|reply| crate::command::Command::MissionUpload { plan, reply })
             .await
     }
 
+    /// Download the current mission plan from the vehicle.
     pub async fn download(&self, mission_type: MissionType) -> Result<MissionPlan, VehicleError> {
         self.vehicle
             .send_command(|reply| crate::command::Command::MissionDownload {
@@ -44,6 +46,7 @@ impl<'a> MissionHandle<'a> {
             .await
     }
 
+    /// Clear the mission of the given type on the vehicle.
     pub async fn clear(&self, mission_type: MissionType) -> Result<(), VehicleError> {
         self.vehicle
             .send_command(|reply| crate::command::Command::MissionClear {
@@ -53,6 +56,7 @@ impl<'a> MissionHandle<'a> {
             .await
     }
 
+    /// Upload a plan, download it back, and check equivalence.
     pub async fn verify_roundtrip(&self, plan: MissionPlan) -> Result<bool, VehicleError> {
         self.upload(plan.clone()).await?;
         let readback = self.download(plan.mission_type).await?;
@@ -64,12 +68,14 @@ impl<'a> MissionHandle<'a> {
         Ok(plans_equivalent(&lhs, &rhs, CompareTolerance::default()))
     }
 
+    /// Set the current mission item sequence number on the vehicle.
     pub async fn set_current(&self, seq: u16) -> Result<(), VehicleError> {
         self.vehicle
             .send_command(|reply| crate::command::Command::MissionSetCurrent { seq, reply })
             .await
     }
 
+    /// Cancel any in-progress mission transfer.
     pub fn cancel_transfer(&self) {
         let _ = self
             .vehicle

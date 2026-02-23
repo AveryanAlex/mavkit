@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify that a git tag matches the version in Cargo.toml."""
+"""Verify that a git tag matches the versions in all manifests."""
 
 import os
 import pathlib
@@ -13,17 +13,28 @@ def main() -> int:
         print(f"Tag must start with 'v', got: {tag}", file=sys.stderr)
         return 1
 
-    cargo_toml = tomllib.loads(pathlib.Path("Cargo.toml").read_text())
-    version = cargo_toml["package"]["version"]
-    if tag[1:] != version:
-        print(
-            f"Tag version {tag[1:]} does not match Cargo.toml version {version}",
-            file=sys.stderr,
-        )
-        return 1
+    tag_version = tag[1:]
+    ok = True
 
-    print(f"Tag {tag} matches Cargo.toml version {version}")
-    return 0
+    manifests = {
+        "Cargo.toml": ("package", "version"),
+        "mavkit-python/Cargo.toml": ("package", "version"),
+        "mavkit-python/pyproject.toml": ("project", "version"),
+    }
+
+    for path, keys in manifests.items():
+        data = tomllib.loads(pathlib.Path(path).read_text())
+        version = data[keys[0]][keys[1]]
+        if tag_version != version:
+            print(
+                f"Tag version {tag_version} does not match {path} version {version}",
+                file=sys.stderr,
+            )
+            ok = False
+        else:
+            print(f"Tag {tag} matches {path} version {version}")
+
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":

@@ -19,18 +19,21 @@ impl<'a> ParamsHandle<'a> {
         Self { vehicle }
     }
 
+    /// Download all parameters from the vehicle.
     pub async fn download_all(&self) -> Result<ParamStore, VehicleError> {
         self.vehicle
             .send_command(|reply| crate::command::Command::ParamDownloadAll { reply })
             .await
     }
 
+    /// Write a single parameter value and return the confirmed parameter.
     pub async fn write(&self, name: String, value: f32) -> Result<Param, VehicleError> {
         self.vehicle
             .send_command(|reply| crate::command::Command::ParamWrite { name, value, reply })
             .await
     }
 
+    /// Write multiple parameters in sequence, returning results for each.
     pub async fn write_batch(
         &self,
         params: Vec<(String, f32)>,

@@ -1,8 +1,11 @@
 use super::types::{IssueSeverity, MissionIssue, MissionPlan};
 
+/// Floating-point tolerances used when comparing two mission plans.
 #[derive(Debug, Clone, Copy)]
 pub struct CompareTolerance {
+    /// Maximum allowed difference for param1–param4 values.
     pub param_epsilon: f32,
+    /// Maximum allowed difference for altitude (z) values in meters.
     pub altitude_epsilon_m: f32,
 }
 
@@ -15,6 +18,7 @@ impl Default for CompareTolerance {
     }
 }
 
+/// Validate a mission plan, returning any issues found.
 pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
     let mut issues = Vec::new();
 
@@ -103,6 +107,7 @@ pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
     issues
 }
 
+/// Normalize a plan for comparison by rounding floats and resequencing items.
 pub fn normalize_for_compare(plan: &MissionPlan) -> MissionPlan {
     let mut normalized = plan.clone();
     for (index, item) in normalized.items.iter_mut().enumerate() {
@@ -119,6 +124,7 @@ pub fn normalize_for_compare(plan: &MissionPlan) -> MissionPlan {
     normalized
 }
 
+/// Check whether two mission plans are equivalent within the given tolerance.
 pub fn plans_equivalent(lhs: &MissionPlan, rhs: &MissionPlan, tolerance: CompareTolerance) -> bool {
     if lhs.mission_type != rhs.mission_type {
         return false;

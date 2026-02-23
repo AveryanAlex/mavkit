@@ -69,12 +69,12 @@ impl Vehicle {
         Self::from_connection(connection, config).await
     }
 
-    /// Create a `Vehicle` from a pre-built [`AsyncMavConnection`].
+    /// Create a `Vehicle` from a pre-built `AsyncMavConnection`.
     ///
     /// This is the transport-agnostic entry point: any connection that
     /// implements `AsyncMavConnection<common::MavMessage>` can be used,
-    /// including the [`StreamConnection`](crate::stream_connection::StreamConnection)
-    /// adapter for BLE / SPP byte streams.
+    /// including the `StreamConnection` adapter for BLE / SPP byte streams
+    /// (behind the `stream` feature flag).
     ///
     /// Waits for the first HEARTBEAT before returning.
     pub async fn from_connection(
@@ -142,59 +142,72 @@ impl Vehicle {
 
     // --- Reactive state (watch channels) ---
 
+    /// Subscribe to vehicle state changes (armed, mode, status).
     pub fn state(&self) -> watch::Receiver<VehicleState> {
         self.inner.channels.vehicle_state.clone()
     }
 
+    /// Subscribe to telemetry updates (position, altitude, battery, etc.).
     pub fn telemetry(&self) -> watch::Receiver<Telemetry> {
         self.inner.channels.telemetry.clone()
     }
 
+    /// Subscribe to home position updates.
     pub fn home_position(&self) -> watch::Receiver<Option<HomePosition>> {
         self.inner.channels.home_position.clone()
     }
 
+    /// Subscribe to mission execution state (current seq, total items).
     pub fn mission_state(&self) -> watch::Receiver<MissionState> {
         self.inner.channels.mission_state.clone()
     }
 
+    /// Subscribe to connection lifecycle state changes.
     pub fn link_state(&self) -> watch::Receiver<LinkState> {
         self.inner.channels.link_state.clone()
     }
 
+    /// Subscribe to mission transfer progress updates.
     pub fn mission_progress(&self) -> watch::Receiver<Option<TransferProgress>> {
         self.inner.channels.mission_progress.clone()
     }
 
+    /// Subscribe to the parameter store (all downloaded parameters).
     pub fn param_store(&self) -> watch::Receiver<ParamStore> {
         self.inner.channels.param_store.clone()
     }
 
+    /// Subscribe to parameter transfer progress updates.
     pub fn param_progress(&self) -> watch::Receiver<ParamProgress> {
         self.inner.channels.param_progress.clone()
     }
 
+    /// Subscribe to STATUSTEXT messages from the autopilot.
     pub fn statustext(&self) -> watch::Receiver<Option<StatusMessage>> {
         self.inner.channels.statustext.clone()
     }
 
     // --- Vehicle commands ---
 
+    /// Arm the vehicle. Set `force` to bypass pre-arm checks.
     pub async fn arm(&self, force: bool) -> Result<(), VehicleError> {
         self.send_command(|reply| Command::Arm { force, reply })
             .await
     }
 
+    /// Disarm the vehicle. Set `force` to bypass in-flight checks.
     pub async fn disarm(&self, force: bool) -> Result<(), VehicleError> {
         self.send_command(|reply| Command::Disarm { force, reply })
             .await
     }
 
+    /// Set flight mode by numeric custom_mode value.
     pub async fn set_mode(&self, custom_mode: u32) -> Result<(), VehicleError> {
         self.send_command(|reply| Command::SetMode { custom_mode, reply })
             .await
     }
 
+    /// Set flight mode by name (e.g. `"GUIDED"`, `"LOITER"`).
     pub async fn set_mode_by_name(&self, name: &str) -> Result<(), VehicleError> {
         let state = self.inner.channels.vehicle_state.borrow().clone();
         let custom_mode = crate::modes::mode_number(state.autopilot, state.vehicle_type, name)
@@ -202,6 +215,7 @@ impl Vehicle {
         self.set_mode(custom_mode).await
     }
 
+    /// Command the vehicle to take off to the given altitude (meters).
     pub async fn takeoff(&self, altitude_m: f32) -> Result<(), VehicleError> {
         self.command_long(
             MavCmd::MAV_CMD_NAV_TAKEOFF,
@@ -210,6 +224,7 @@ impl Vehicle {
         .await
     }
 
+    /// Fly to a GPS position in GUIDED mode.
     pub async fn goto(&self, lat_deg: f64, lon_deg: f64, alt_m: f32) -> Result<(), VehicleError> {
         let lat_e7 = (lat_deg * 1e7) as i32;
         let lon_e7 = (lon_deg * 1e7) as i32;
@@ -222,6 +237,7 @@ impl Vehicle {
         .await
     }
 
+    /// Send a MAV_CMD_LONG with arbitrary command ID and parameters.
     pub async fn command_long(&self, cmd: MavCmd, params: [f32; 7]) -> Result<(), VehicleError> {
         self.send_command(|reply| Command::Long {
             command: cmd,
@@ -253,6 +269,7 @@ impl Vehicle {
         .await
     }
 
+    /// List all flight modes available for the detected autopilot and vehicle type.
     pub fn available_modes(&self) -> Vec<FlightMode> {
         let state = self.inner.channels.vehicle_state.borrow().clone();
         crate::modes::available_modes(state.autopilot, state.vehicle_type)

@@ -1,3 +1,6 @@
+//! Error types returned by MAVKit operations.
+
+/// Errors that can occur during vehicle communication and operations.
 #[derive(Debug, thiserror::Error)]
 pub enum VehicleError {
     #[error("connection failed: {0}")]

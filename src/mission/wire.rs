@@ -41,7 +41,7 @@ pub fn items_for_wire_upload(plan: &MissionPlan) -> Vec<MissionItem> {
 
 /// Convert wire items from a MAVLink download into a semantic `MissionPlan`.
 ///
-/// For Mission type: extracts items[0] as home position and resequences the
+/// For Mission type: extracts the first item as home position and resequences the
 /// remaining items from 0.
 /// For Fence/Rally: no home extraction; items pass through unchanged.
 pub fn plan_from_wire_download(

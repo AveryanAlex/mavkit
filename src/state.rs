@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// High-level vehicle state derived from MAVLink HEARTBEAT messages.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct VehicleState {
     pub armed: bool,
@@ -10,6 +11,7 @@ pub struct VehicleState {
     pub autopilot: AutopilotType,
 }
 
+/// Telemetry data aggregated from multiple MAVLink messages.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct Telemetry {
     // Existing
@@ -62,12 +64,14 @@ pub struct Telemetry {
     pub servo_outputs: Option<Vec<u16>>,
 }
 
+/// Current mission execution state reported by the autopilot.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct MissionState {
     pub current_seq: u16,
     pub total_items: u16,
 }
 
+/// Connection lifecycle state.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LinkState {
@@ -78,6 +82,7 @@ pub enum LinkState {
     Error(String),
 }
 
+/// Identifies the connected vehicle (system/component IDs and firmware type).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct VehicleIdentity {
     pub system_id: u8,
@@ -86,6 +91,7 @@ pub struct VehicleIdentity {
     pub vehicle_type: VehicleType,
 }
 
+/// A named flight mode with its numeric custom_mode value.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FlightMode {
     pub custom_mode: u32,
@@ -94,6 +100,7 @@ pub struct FlightMode {
 
 // --- Simple enums mapping from MAVLink values ---
 
+/// MAVLink system status.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SystemStatus {
@@ -124,6 +131,7 @@ impl SystemStatus {
     }
 }
 
+/// MAVLink vehicle airframe type.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum VehicleType {
@@ -158,6 +166,7 @@ impl VehicleType {
     }
 }
 
+/// MAVLink autopilot firmware type.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AutopilotType {
@@ -191,12 +200,14 @@ impl AutopilotType {
     }
 }
 
+/// A STATUSTEXT message received from the autopilot.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StatusMessage {
     pub text: String,
     pub severity: u8,
 }
 
+/// GPS fix quality level.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GpsFixType {

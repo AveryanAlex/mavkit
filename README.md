@@ -1,79 +1,31 @@
 # MAVKit
 
-MAVKit (crate name: `mavkit`) is an async Rust SDK for MAVLink vehicles.
+[![Crates.io](https://img.shields.io/crates/v/mavkit)](https://crates.io/crates/mavkit)
+[![PyPI](https://img.shields.io/pypi/v/mavkit)](https://pypi.org/project/mavkit/)
+[![docs.rs](https://img.shields.io/docsrs/mavkit)](https://docs.rs/mavkit)
+[![CI](https://github.com/averyanalex/mavkit/actions/workflows/ci.yml/badge.svg)](https://github.com/averyanalex/mavkit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/averyanalex/mavkit/blob/main/LICENSE)
 
-It provides a transport-agnostic `Vehicle` API for:
-- connection and link state
-- telemetry and status watches
-- vehicle actions (arm/disarm, mode, takeoff, guided goto)
-- mission upload/download/clear/set-current
-- parameter download and write operations
-
-The crate is designed to be embedded in desktop/mobile apps, CLIs, or backend services.
-Python bindings are available via the `mavkit-python` sub-crate (built with PyO3 + maturin).
-
-## Features
-
-- `udp` (default): enable MAVLink UDP transport strings (via `mavlink`)
-- `tcp`: enable MAVLink TCP transport strings
-- `serial` (default): enable MAVLink direct serial transport strings
-- `ardupilot` (default): ArduPilot mode-name mapping helpers
-- `stream`: byte-stream transport adapters for BLE/SPP/custom links
-
-Default features: `udp`, `serial`, `ardupilot`.
+Async MAVLink SDK for vehicle control, telemetry, missions, and parameters.
+Available as a Rust crate and a Python package with full async support.
 
 ## Install
 
+**Python**
+```bash
+pip install mavkit
+```
+
+**Rust**
 ```toml
 [dependencies]
-mavkit = "0.1"
+mavkit = "0.2"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
-## Quick start
+## Quick Start
 
-```rust,no_run
-use mavkit::Vehicle;
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-  let vehicle = Vehicle::connect_udp("0.0.0.0:14550").await?;
-
-  let mut state_rx = vehicle.state();
-  state_rx.changed().await?;
-  let state = state_rx.borrow().clone();
-  println!("mode={} armed={}", state.mode_name, state.armed);
-
-  vehicle.disconnect().await?;
-  Ok(())
-}
-```
-
-## Mission wire semantics
-
-For `MissionType::Mission`, MAVLink wire transfer is normalized as:
-- upload: a home item is prepended at `seq=0` (or placeholder if missing)
-- download: wire `seq=0` is extracted as home and remaining items are resequenced from `0`
-
-For `MissionType::Fence` and `MissionType::Rally`, items pass through unchanged.
-
-These semantics are implemented in:
-- `items_for_wire_upload`
-- `plan_from_wire_download`
-
-## Python bindings
-
-The `mavkit-python/` sub-crate provides an async-first Python API via PyO3.
-
-### Install
-
-```bash
-cd mavkit-python
-uv sync            # install dev deps (ruff, etc.)
-uv run maturin develop   # build + install into venv
-```
-
-### Quick start
+### Python
 
 ```python
 import asyncio
@@ -85,31 +37,70 @@ async def main():
     state = await vehicle.wait_state()
     print(f"mode={state.mode_name} armed={state.armed}")
 
+    telem = await vehicle.wait_telemetry()
+    print(f"alt={telem.altitude_m} bat={telem.battery_pct}")
+
     await vehicle.disconnect()
 
 asyncio.run(main())
 ```
 
-### Python examples
+### Rust
 
-See `mavkit-python/examples/` for full examples mirroring the Rust ones:
+```rust,no_run
+use mavkit::Vehicle;
 
-```bash
-cd mavkit-python
-source .venv/bin/activate
-python examples/connect_udp.py
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let vehicle = Vehicle::connect_udp("0.0.0.0:14550").await?;
+
+    let mut state_rx = vehicle.state();
+    state_rx.changed().await?;
+    let state = state_rx.borrow().clone();
+    println!("mode={} armed={}", state.mode_name, state.armed);
+
+    vehicle.disconnect().await?;
+    Ok(())
+}
 ```
 
-## Rust examples
+## Features
 
-- `examples/connect_udp.rs`
-- `examples/mission_upload_download.rs`
-- `examples/params_roundtrip.rs`
+- **Connections** -- UDP, TCP, serial, BLE/SPP via byte-stream adapters
+- **Telemetry** -- reactive watch channels (Rust) / sync properties + async waiters (Python)
+- **Commands** -- arm, disarm, set mode, takeoff, guided goto, arbitrary COMMAND_LONG
+- **Missions** -- upload, download, clear, set current, verify roundtrip
+- **Parameters** -- download all, write single, batch write, `.param` file I/O
+- **Validation** -- plan validation, normalization, tolerance-based comparison
 
-Run an example:
+## Feature Flags (Rust)
 
+| Flag | Default | Description |
+|---|---|---|
+| `udp` | Yes | MAVLink UDP transport |
+| `tcp` | No | MAVLink TCP transport |
+| `serial` | Yes | MAVLink direct serial transport |
+| `ardupilot` | Yes | ArduPilot mode-name mapping |
+| `stream` | No | Byte-stream adapters for BLE/SPP/custom links |
+
+## Mission Wire Semantics
+
+For `MissionType::Mission`, MAVLink wire transfer is normalized:
+- **Upload**: a home item is prepended at `seq=0` (or a zero placeholder if missing)
+- **Download**: wire `seq=0` is extracted as home; remaining items are resequenced from 0
+
+For `Fence` and `Rally` types, items pass through unchanged.
+
+## Examples
+
+**Rust** -- see [`examples/`](examples/):
 ```bash
 cargo run --example connect_udp
+```
+
+**Python** -- see [`mavkit-python/examples/`](mavkit-python/examples/):
+```bash
+cd mavkit-python && uv run python examples/connect_udp.py
 ```
 
 ## Development
@@ -120,41 +111,31 @@ cargo run --example connect_udp
 cargo check
 cargo clippy --all-targets --all-features -- -D warnings
 cargo test
-```
-
-SITL helper targets:
-
-```bash
-make bridge-up
-make test-sitl
-make test-sitl-strict
-make bridge-down
+cargo fmt --all -- --check
 ```
 
 ### Python
 
 ```bash
 cd mavkit-python
-uv run ruff format .
+uv sync
+uv run maturin develop
+uv run ruff format --check .
 uv run ruff check .
 ```
 
-## SITL integration testing
+### SITL Integration Tests
 
-Ignored integration tests in `tests/sitl_*.rs` can be run against ArduPilot SITL.
-
-Environment variables:
-- `MAVKIT_SITL_UDP_BIND` (default: `0.0.0.0:14550`)
-- `MAVKIT_SITL_STRICT` (`1` to fail on strict timeout/unsupported behavior)
-
-Run:
+Requires Docker + ArduPilot SITL:
 
 ```bash
-MAVKIT_SITL_UDP_BIND=0.0.0.0:14550 \
-cargo test --tests -- --ignored --nocapture --test-threads=1
+make bridge-up        # start SITL + MAVProxy bridge
+make test-sitl        # run integration tests
+make bridge-down      # cleanup
 ```
 
-## Notes
+Environment: `MAVKIT_SITL_UDP_BIND` (default `0.0.0.0:14550`), `MAVKIT_SITL_STRICT` (set `1` for strict mode).
 
-- `Vehicle::from_connection(...)` is the transport-agnostic entry point for custom links.
-- `Vehicle::identity()` currently reflects autopilot and vehicle type; system/component ids are not yet exposed from the current state channels.
+## License
+
+MIT

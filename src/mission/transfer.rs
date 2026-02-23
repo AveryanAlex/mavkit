@@ -1,6 +1,7 @@
 use super::types::MissionType;
 use serde::{Deserialize, Serialize};
 
+/// Direction of a mission transfer operation.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TransferDirection {
@@ -8,6 +9,7 @@ pub enum TransferDirection {
     Download,
 }
 
+/// Current phase of a mission transfer state machine.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TransferPhase {
@@ -20,10 +22,14 @@ pub enum TransferPhase {
     Cancelled,
 }
 
+/// Timeout and retry configuration for mission transfers.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RetryPolicy {
+    /// Timeout for request-level messages (count, ack) in milliseconds.
     pub request_timeout_ms: u64,
+    /// Timeout for individual item transfers in milliseconds.
     pub item_timeout_ms: u64,
+    /// Maximum number of retries before declaring failure.
     pub max_retries: u8,
 }
 
@@ -37,6 +43,7 @@ impl Default for RetryPolicy {
     }
 }
 
+/// Snapshot of mission transfer progress.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TransferProgress {
     pub direction: TransferDirection,
@@ -47,6 +54,7 @@ pub struct TransferProgress {
     pub retries_used: u8,
 }
 
+/// Error reported during a mission transfer.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TransferError {
     pub code: String,

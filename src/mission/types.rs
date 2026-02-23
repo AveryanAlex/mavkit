@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// MAVLink mission storage type.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MissionType {
@@ -8,6 +9,7 @@ pub enum MissionType {
     Rally,
 }
 
+/// Coordinate frame for a mission item.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MissionFrame {
@@ -30,6 +32,7 @@ impl MissionFrame {
     }
 }
 
+/// A single mission item. Coordinates `x`/`y` are in degE7 for global frames.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MissionItem {
     pub seq: u16,
@@ -46,6 +49,7 @@ pub struct MissionItem {
     pub z: f32,
 }
 
+/// Home position in WGS84 coordinates.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HomePosition {
     pub latitude_deg: f64,
@@ -54,6 +58,7 @@ pub struct HomePosition {
 }
 
 impl HomePosition {
+    /// Convert to a MAV_CMD_NAV_WAYPOINT mission item at the given sequence number.
     pub fn to_mission_item(&self, seq: u16) -> MissionItem {
         MissionItem {
             seq,
@@ -71,6 +76,7 @@ impl HomePosition {
         }
     }
 
+    /// Extract a home position from a mission item, if it is a global waypoint.
     pub fn from_mission_item(item: &MissionItem) -> Option<Self> {
         if item.command == 16 && item.frame == MissionFrame::GlobalInt {
             Some(HomePosition {
@@ -84,6 +90,7 @@ impl HomePosition {
     }
 }
 
+/// A complete mission plan with optional home position and ordered items.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MissionPlan {
     pub mission_type: MissionType,
@@ -91,6 +98,7 @@ pub struct MissionPlan {
     pub items: Vec<MissionItem>,
 }
 
+/// Severity level of a mission validation issue.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum IssueSeverity {
@@ -98,6 +106,7 @@ pub enum IssueSeverity {
     Warning,
 }
 
+/// A validation issue found in a mission plan.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MissionIssue {
     pub code: String,
