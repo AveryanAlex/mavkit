@@ -29,10 +29,12 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            manylinux: "2_17"
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
+            manylinux: "2_28"
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-15-intel
           - target: aarch64-apple-darwin
             os: macos-latest
           - target: x86_64-pc-windows-msvc
@@ -46,8 +48,12 @@ jobs:
         uses: PyO3/maturin-action@v1
         with:
           target: ${{ matrix.target }}
-          args: --manifest-path mavkit-python/Cargo.toml --release --out dist
-          manylinux: auto
+          args: >-
+            --manifest-path mavkit-python/Cargo.toml
+            --release
+            --out dist
+            --find-interpreter
+          manylinux: ${{ matrix.manylinux || 'auto' }}
 
       - name: Upload wheel
         uses: actions/upload-artifact@v4
