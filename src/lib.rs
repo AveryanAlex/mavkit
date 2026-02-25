@@ -12,6 +12,8 @@ pub mod params;
 pub mod state;
 #[cfg(feature = "stream")]
 pub mod stream_connection;
+#[cfg(feature = "tlog")]
+pub mod tlog;
 pub mod vehicle;
 
 pub use config::VehicleConfig;

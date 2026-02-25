@@ -72,6 +72,7 @@ cd mavkit-python && uv run python -c "import mavkit" # Smoke test
 - **`src/mission/`** — Mission types, wire format (home normalization), validation, transfer state machine
 - **`src/params/`** — Parameter types and param-file parsing
 - **`src/modes.rs`** — ArduPilot mode-name mapping
+- **`src/tlog/`** — TLOG file parser: timestamped MAVLink message reader (behind `tlog` feature)
 - **`src/ble_transport.rs`**, **`src/stream_connection.rs`** — Stream adapters (behind `stream` feature)
 
 ### Python Bindings (`mavkit-python/`)
@@ -90,6 +91,7 @@ Uses maturin mixed Rust+Python layout (`python-source = "."` in pyproject.toml):
 - State exposure only through `tokio::sync::watch` channels
 - Optional transports behind feature flags: `udp`, `tcp`, `serial`, `stream`
 - Keep Python bindings in sync when public Rust API changes (update both `mavkit-python/src/*.rs` and `mavkit/__init__.pyi` type stubs)
+- Keep examples in sync: each Rust example in `examples/` should have a matching Python example in `mavkit-python/examples/` demonstrating the same functionality
 
 ## Mission Wire Boundary Rules
 
