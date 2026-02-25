@@ -40,6 +40,7 @@ futures = { version = "0.3", optional = true, default-features = false, features
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 tempfile = "3"
+async-trait = "0.1"
 
 [[example]]
 name = "tlog_parse"
