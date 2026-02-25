@@ -4,6 +4,7 @@ mod error;
 mod mission;
 mod params;
 mod state;
+mod tlog;
 mod vehicle;
 
 use pyo3::prelude::*;
@@ -53,6 +54,10 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
 
     // Config
     m.add_class::<config::PyVehicleConfig>()?;
+
+    // Tlog types
+    m.add_class::<tlog::PyTlogEntry>()?;
+    m.add_class::<tlog::PyTlogFile>()?;
 
     // Vehicle
     m.add_class::<vehicle::PyVehicle>()?;

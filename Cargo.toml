@@ -3,7 +3,7 @@ members = [".", "mavkit-python"]
 
 [package]
 name = "mavkit"
-version = "0.2.1"
+version = "0.3.0"
 authors = [
     "Alexander Averyanov"
 ]
@@ -24,6 +24,7 @@ tcp = ["mavlink/tcp"]
 serial = ["mavlink/direct-serial"]
 ardupilot = []
 stream = ["async-trait", "futures"]
+tlog = ["tokio/fs", "tokio/io-util"]
 
 [dependencies]
 mavlink = { version = "0.17", features = ["tokio-1", "emit-extensions"] }
@@ -38,3 +39,8 @@ futures = { version = "0.3", optional = true, default-features = false, features
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
+tempfile = "3"
+
+[[example]]
+name = "tlog_parse"
+required-features = ["tlog"]

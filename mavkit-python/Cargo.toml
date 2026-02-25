@@ -1,6 +1,6 @@
 [package]
 name = "mavkit-python"
-version = "0.2.1"
+version = "0.3.0"
 edition = "2024"
 license = "MIT"
 publish = false
@@ -10,7 +10,8 @@ name = "mavkit"
 crate-type = ["cdylib"]
 
 [dependencies]
-mavkit = { path = ".." }
+mavkit = { path = "..", features = ["tlog"] }
+serde_json = "1"
 pyo3 = "0.28"
 pyo3-async-runtimes = { version = "0.28", features = ["tokio-runtime"] }
 tokio = { version = "1", features = ["sync", "time", "rt", "rt-multi-thread"] }
