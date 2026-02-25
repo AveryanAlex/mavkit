@@ -1,16 +1,14 @@
-use super::{VehicleTarget, get_target, send_message, update_state, update_vehicle_target};
-use crate::config::VehicleConfig;
+use super::{
+    CommandContext, VehicleTarget, get_target, send_message, update_state, update_vehicle_target,
+};
 use crate::error::VehicleError;
 use crate::mission::{
     IssueSeverity, MissionFrame, MissionItem, MissionPlan, MissionTransferMachine, MissionType,
     TransferPhase, items_for_wire_upload, plan_from_wire_download, validate_plan,
 };
-use crate::state::StateWriters;
-use mavlink::AsyncMavConnection;
 use mavlink::common::{self, MavCmd};
 use std::collections::HashSet;
 use std::time::Duration;
-use tokio_util::sync::CancellationToken;
 
 pub(super) fn to_mav_mission_type(mission_type: MissionType) -> common::MavMissionType {
     match mission_type {
@@ -161,11 +159,7 @@ fn send_requested_item_msg(
 #[allow(deprecated)]
 pub(super) async fn handle_mission_upload(
     plan: MissionPlan,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
     // Validate
     let issues = validate_plan(&plan);
@@ -177,15 +171,15 @@ pub(super) async fn handle_mission_upload(
     }
 
     let wire_items = items_for_wire_upload(&plan);
-    let target = get_target(vehicle_target)?;
+    let target = get_target(ctx.vehicle_target)?;
     let mav_mission_type = to_mav_mission_type(plan.mission_type);
 
     let mut machine = MissionTransferMachine::new_upload(
         plan.mission_type,
         wire_items.len() as u16,
-        config.retry_policy,
+        ctx.config.retry_policy,
     );
-    let _ = writers.mission_progress.send(Some(machine.progress()));
+    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
 
     let count_msg = common::MavMessage::MISSION_COUNT(common::MISSION_COUNT_DATA {
         count: wire_items.len() as u16,
@@ -195,21 +189,12 @@ pub(super) async fn handle_mission_upload(
         opaque_id: 0,
     });
 
-    send_message(connection, config, count_msg.clone()).await?;
+    send_message(ctx.connection, ctx.config, count_msg.clone()).await?;
 
     // If empty plan, just wait for ACK
     if wire_items.is_empty() {
-        return wait_for_mission_ack(
-            &mut machine,
-            plan.mission_type,
-            connection,
-            writers,
-            vehicle_target,
-            config,
-            cancel,
-            || count_msg.clone(),
-        )
-        .await;
+        return wait_for_mission_ack(&mut machine, plan.mission_type, ctx, || count_msg.clone())
+            .await;
     }
 
     let mut acknowledged = HashSet::<u16>::new();
@@ -223,28 +208,28 @@ pub(super) async fn handle_mission_upload(
         let msg = loop {
             tokio::select! {
                 biased;
-                _ = cancel.cancelled() => {
+                _ = ctx.cancel.cancelled() => {
                     machine.cancel();
-                    let _ = writers.mission_progress.send(Some(machine.progress()));
+                    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                     return Err(VehicleError::Cancelled);
                 }
                 _ = &mut deadline => {
                     if let Some(err) = machine.on_timeout() {
-                        let _ = writers.mission_progress.send(Some(machine.progress()));
+                        let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                         return Err(VehicleError::MissionTransfer {
                             code: err.code,
                             message: err.message,
                         });
                     }
-                    let _ = writers.mission_progress.send(Some(machine.progress()));
-                    send_message(connection, config, count_msg.clone()).await?;
+                    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
+                    send_message(ctx.connection, ctx.config, count_msg.clone()).await?;
                     break None;
                 }
-                result = connection.recv() => {
+                result = ctx.connection.recv() => {
                     let (header, msg) = result
                         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                    update_vehicle_target(vehicle_target, &header, &msg);
-                    update_state(&header, &msg, writers, vehicle_target);
+                    update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                    update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
 
                     match &msg {
                         common::MavMessage::MISSION_REQUEST_INT(data) if data.mission_type == mav_mission_type => {
@@ -256,7 +241,7 @@ pub(super) async fn handle_mission_upload(
                         common::MavMessage::MISSION_ACK(data) if data.mission_type == mav_mission_type => {
                             if data.mavtype == common::MavMissionResult::MAV_MISSION_ACCEPTED {
                                 machine.on_ack_success();
-                                let _ = writers.mission_progress.send(Some(machine.progress()));
+                                let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                                 return Ok(());
                             }
                             return Err(VehicleError::MissionTransfer {
@@ -273,37 +258,22 @@ pub(super) async fn handle_mission_upload(
 
         if let Some((_kind, seq)) = msg {
             let item_msg = send_requested_item_msg(&wire_items, target, plan.mission_type, seq)?;
-            send_message(connection, config, item_msg).await?;
+            send_message(ctx.connection, ctx.config, item_msg).await?;
             if acknowledged.insert(seq) {
                 machine.on_item_transferred();
-                let _ = writers.mission_progress.send(Some(machine.progress()));
+                let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
             }
         }
     }
 
     // Await final ACK
-    wait_for_mission_ack(
-        &mut machine,
-        plan.mission_type,
-        connection,
-        writers,
-        vehicle_target,
-        config,
-        cancel,
-        || count_msg.clone(),
-    )
-    .await
+    wait_for_mission_ack(&mut machine, plan.mission_type, ctx, || count_msg.clone()).await
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn wait_for_mission_ack<F>(
     machine: &mut MissionTransferMachine,
     mission_type: MissionType,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
     retry_msg: F,
 ) -> Result<(), VehicleError>
 where
@@ -317,27 +287,27 @@ where
 
         tokio::select! {
             biased;
-            _ = cancel.cancelled() => {
+            _ = ctx.cancel.cancelled() => {
                 machine.cancel();
-                let _ = writers.mission_progress.send(Some(machine.progress()));
+                let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                 return Err(VehicleError::Cancelled);
             }
             _ = &mut deadline => {
                 if let Some(err) = machine.on_timeout() {
-                    let _ = writers.mission_progress.send(Some(machine.progress()));
+                    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                     return Err(VehicleError::MissionTransfer {
                         code: err.code,
                         message: err.message,
                     });
                 }
-                let _ = writers.mission_progress.send(Some(machine.progress()));
-                send_message(connection, config, retry_msg()).await?;
+                let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
+                send_message(ctx.connection, ctx.config, retry_msg()).await?;
             }
-            result = connection.recv() => {
+            result = ctx.connection.recv() => {
                 let (header, msg) =
                     result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                update_vehicle_target(vehicle_target, &header, &msg);
-                update_state(&header, &msg, writers, vehicle_target);
+                update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
 
                 if let common::MavMessage::MISSION_ACK(data) = &msg {
                     if data.mission_type != mav_mission_type {
@@ -345,7 +315,7 @@ where
                     }
                     if data.mavtype == common::MavMissionResult::MAV_MISSION_ACCEPTED {
                         machine.on_ack_success();
-                        let _ = writers.mission_progress.send(Some(machine.progress()));
+                        let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                         return Ok(());
                     }
                     return Err(VehicleError::MissionTransfer {
@@ -365,16 +335,12 @@ where
 #[allow(deprecated)]
 pub(super) async fn handle_mission_download(
     mission_type: MissionType,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<MissionPlan, VehicleError> {
-    let target = get_target(vehicle_target)?;
+    let target = get_target(ctx.vehicle_target)?;
     let mav_mission_type = to_mav_mission_type(mission_type);
-    let mut machine = MissionTransferMachine::new_download(mission_type, config.retry_policy);
-    let _ = writers.mission_progress.send(Some(machine.progress()));
+    let mut machine = MissionTransferMachine::new_download(mission_type, ctx.config.retry_policy);
+    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
 
     let request_list_msg =
         common::MavMessage::MISSION_REQUEST_LIST(common::MISSION_REQUEST_LIST_DATA {
@@ -382,7 +348,7 @@ pub(super) async fn handle_mission_download(
             target_component: target.component_id,
             mission_type: mav_mission_type,
         });
-    send_message(connection, config, request_list_msg.clone()).await?;
+    send_message(ctx.connection, ctx.config, request_list_msg.clone()).await?;
 
     // Wait for MISSION_COUNT
     let count = loop {
@@ -392,27 +358,27 @@ pub(super) async fn handle_mission_download(
 
         tokio::select! {
             biased;
-            _ = cancel.cancelled() => {
+            _ = ctx.cancel.cancelled() => {
                 machine.cancel();
-                let _ = writers.mission_progress.send(Some(machine.progress()));
+                let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                 return Err(VehicleError::Cancelled);
             }
             _ = &mut deadline => {
                 if let Some(err) = machine.on_timeout() {
-                    let _ = writers.mission_progress.send(Some(machine.progress()));
+                    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                     return Err(VehicleError::MissionTransfer {
                         code: err.code,
                         message: err.message,
                     });
                 }
-                let _ = writers.mission_progress.send(Some(machine.progress()));
-                send_message(connection, config, request_list_msg.clone()).await?;
+                let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
+                send_message(ctx.connection, ctx.config, request_list_msg.clone()).await?;
             }
-            result = connection.recv() => {
+            result = ctx.connection.recv() => {
                 let (header, msg) =
                     result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                update_vehicle_target(vehicle_target, &header, &msg);
-                update_state(&header, &msg, writers, vehicle_target);
+                update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
 
                 if let common::MavMessage::MISSION_COUNT(data) = &msg
                     && mission_type_matches(data.mission_type, mission_type)
@@ -424,7 +390,7 @@ pub(super) async fn handle_mission_download(
     };
 
     machine.set_download_total(count);
-    let _ = writers.mission_progress.send(Some(machine.progress()));
+    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
 
     // Request each item
     let mut items = Vec::with_capacity(count as usize);
@@ -453,7 +419,12 @@ pub(super) async fn handle_mission_download(
             }
         };
 
-        send_message(connection, config, make_request_msg(use_int_request)).await?;
+        send_message(
+            ctx.connection,
+            ctx.config,
+            make_request_msg(use_int_request),
+        )
+        .await?;
 
         let item = loop {
             let timeout = Duration::from_millis(machine.timeout_ms());
@@ -462,30 +433,30 @@ pub(super) async fn handle_mission_download(
 
             tokio::select! {
                 biased;
-                _ = cancel.cancelled() => {
+                _ = ctx.cancel.cancelled() => {
                     machine.cancel();
-                    let _ = writers.mission_progress.send(Some(machine.progress()));
+                    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                     return Err(VehicleError::Cancelled);
                 }
                 _ = &mut deadline => {
                     if let Some(err) = machine.on_timeout() {
-                        let _ = writers.mission_progress.send(Some(machine.progress()));
+                        let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                         return Err(VehicleError::MissionTransfer {
                             code: err.code,
                             message: err.message,
                         });
                     }
-                    let _ = writers.mission_progress.send(Some(machine.progress()));
+                    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
                     if use_int_request {
                         use_int_request = false;
                     }
-                    send_message(connection, config, make_request_msg(use_int_request)).await?;
+                    send_message(ctx.connection, ctx.config, make_request_msg(use_int_request)).await?;
                 }
-                result = connection.recv() => {
+                result = ctx.connection.recv() => {
                     let (header, msg) = result
                         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                    update_vehicle_target(vehicle_target, &header, &msg);
-                    update_state(&header, &msg, writers, vehicle_target);
+                    update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                    update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
 
                     match &msg {
                         common::MavMessage::MISSION_ITEM_INT(data)
@@ -506,13 +477,13 @@ pub(super) async fn handle_mission_download(
 
         items.push(item);
         machine.on_item_transferred();
-        let _ = writers.mission_progress.send(Some(machine.progress()));
+        let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
     }
 
     // Send ACK
     let _ = send_message(
-        connection,
-        config,
+        ctx.connection,
+        ctx.config,
         common::MavMessage::MISSION_ACK(common::MISSION_ACK_DATA {
             target_system: target.system_id,
             target_component: target.component_id,
@@ -524,7 +495,7 @@ pub(super) async fn handle_mission_download(
     .await;
 
     machine.on_ack_success();
-    let _ = writers.mission_progress.send(Some(machine.progress()));
+    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
 
     Ok(plan_from_wire_download(mission_type, items))
 }
@@ -535,17 +506,13 @@ pub(super) async fn handle_mission_download(
 
 pub(super) async fn handle_mission_clear(
     mission_type: MissionType,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
-    let target = get_target(vehicle_target)?;
+    let target = get_target(ctx.vehicle_target)?;
     let mav_mission_type = to_mav_mission_type(mission_type);
 
-    let mut machine = MissionTransferMachine::new_upload(mission_type, 0, config.retry_policy);
-    let _ = writers.mission_progress.send(Some(machine.progress()));
+    let mut machine = MissionTransferMachine::new_upload(mission_type, 0, ctx.config.retry_policy);
+    let _ = ctx.writers.mission_progress.send(Some(machine.progress()));
 
     let clear_msg = common::MavMessage::MISSION_CLEAR_ALL(common::MISSION_CLEAR_ALL_DATA {
         target_system: target.system_id,
@@ -553,19 +520,9 @@ pub(super) async fn handle_mission_clear(
         mission_type: mav_mission_type,
     });
 
-    send_message(connection, config, clear_msg.clone()).await?;
+    send_message(ctx.connection, ctx.config, clear_msg.clone()).await?;
 
-    wait_for_mission_ack(
-        &mut machine,
-        mission_type,
-        connection,
-        writers,
-        vehicle_target,
-        config,
-        cancel,
-        || clear_msg.clone(),
-    )
-    .await
+    wait_for_mission_ack(&mut machine, mission_type, ctx, || clear_msg.clone()).await
 }
 
 // ---------------------------------------------------------------------------
@@ -574,19 +531,15 @@ pub(super) async fn handle_mission_clear(
 
 pub(super) async fn handle_mission_set_current(
     seq: u16,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
-    let target = get_target(vehicle_target)?;
-    let retry_policy = &config.retry_policy;
+    let target = get_target(ctx.vehicle_target)?;
+    let retry_policy = &ctx.config.retry_policy;
 
     for _attempt in 0..=retry_policy.max_retries {
         send_message(
-            connection,
-            config,
+            ctx.connection,
+            ctx.config,
             common::MavMessage::COMMAND_LONG(common::COMMAND_LONG_DATA {
                 target_system: target.system_id,
                 target_component: target.component_id,
@@ -610,13 +563,13 @@ pub(super) async fn handle_mission_set_current(
         loop {
             tokio::select! {
                 biased;
-                _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
+                _ = ctx.cancel.cancelled() => return Err(VehicleError::Cancelled),
                 _ = &mut deadline => break, // retry outer loop
-                result = connection.recv() => {
+                result = ctx.connection.recv() => {
                     let (header, msg) = result
                         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                    update_vehicle_target(vehicle_target, &header, &msg);
-                    update_state(&header, &msg, writers, vehicle_target);
+                    update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                    update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
 
                     match &msg {
                         common::MavMessage::COMMAND_ACK(data) => {

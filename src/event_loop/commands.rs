@@ -1,14 +1,10 @@
 use super::{
-    MAGIC_FORCE_ARM_VALUE, MAGIC_FORCE_DISARM_VALUE, VehicleTarget, get_target, send_message,
-    update_state, update_vehicle_target,
+    CommandContext, MAGIC_FORCE_ARM_VALUE, MAGIC_FORCE_DISARM_VALUE, VehicleTarget, get_target,
+    send_message, update_state, update_vehicle_target,
 };
-use crate::config::VehicleConfig;
 use crate::error::VehicleError;
-use crate::state::StateWriters;
-use mavlink::AsyncMavConnection;
 use mavlink::common::{self, MavCmd};
 use std::time::Duration;
-use tokio_util::sync::CancellationToken;
 
 // ---------------------------------------------------------------------------
 // Arm / Disarm
@@ -17,13 +13,9 @@ use tokio_util::sync::CancellationToken;
 pub(super) async fn handle_arm_disarm(
     arm: bool,
     force: bool,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
-    let target = get_target(vehicle_target)?;
+    let target = get_target(ctx.vehicle_target)?;
     let param1 = if arm { 1.0 } else { 0.0 };
     let param2 = if force {
         if arm {
@@ -39,31 +31,22 @@ pub(super) async fn handle_arm_disarm(
         MavCmd::MAV_CMD_COMPONENT_ARM_DISARM,
         [param1, param2, 0.0, 0.0, 0.0, 0.0, 0.0],
         target,
-        connection,
-        writers,
-        vehicle_target,
-        config,
-        cancel,
+        ctx,
     )
     .await
 }
 
-#[allow(clippy::too_many_arguments)]
 async fn send_command_long_ack(
     command: MavCmd,
     params: [f32; 7],
     target: VehicleTarget,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
-    let retry_policy = &config.retry_policy;
+    let retry_policy = &ctx.config.retry_policy;
     for _attempt in 0..=retry_policy.max_retries {
         send_message(
-            connection,
-            config,
+            ctx.connection,
+            ctx.config,
             common::MavMessage::COMMAND_LONG(common::COMMAND_LONG_DATA {
                 target_system: target.system_id,
                 target_component: target.component_id,
@@ -87,13 +70,13 @@ async fn send_command_long_ack(
         loop {
             tokio::select! {
                 biased;
-                _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
+                _ = ctx.cancel.cancelled() => return Err(VehicleError::Cancelled),
                 _ = &mut deadline => break, // retry
-                result = connection.recv() => {
+                result = ctx.connection.recv() => {
                     let (header, msg) = result
                         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                    update_vehicle_target(vehicle_target, &header, &msg);
-                    update_state(&header, &msg, writers, vehicle_target);
+                    update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                    update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
                     if let common::MavMessage::COMMAND_ACK(ack) = &msg
                         && ack.command == command
                     {
@@ -119,24 +102,16 @@ async fn send_command_long_ack(
 
 pub(super) async fn handle_set_mode(
     custom_mode: u32,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
-    let target = get_target(vehicle_target)?;
+    let target = get_target(ctx.vehicle_target)?;
 
     // Try COMMAND_LONG(DO_SET_MODE) first
     let do_set_mode_result = send_command_long_ack(
         MavCmd::MAV_CMD_DO_SET_MODE,
         [1.0, custom_mode as f32, 0.0, 0.0, 0.0, 0.0, 0.0],
         target,
-        connection,
-        writers,
-        vehicle_target,
-        config,
-        cancel,
+        ctx,
     )
     .await;
 
@@ -152,18 +127,18 @@ pub(super) async fn handle_set_mode(
     loop {
         tokio::select! {
             biased;
-            _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
+            _ = ctx.cancel.cancelled() => return Err(VehicleError::Cancelled),
             _ = &mut deadline => {
                 return Err(VehicleError::CommandRejected {
                     command: format!("DO_SET_MODE({custom_mode})"),
                     result: "no confirming HEARTBEAT".to_string(),
                 });
             }
-            result = connection.recv() => {
+            result = ctx.connection.recv() => {
                 let (header, msg) =
                     result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                update_vehicle_target(vehicle_target, &header, &msg);
-                update_state(&header, &msg, writers, vehicle_target);
+                update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
                 if let common::MavMessage::HEARTBEAT(hb) = &msg
                     && hb.custom_mode == custom_mode
                 {
@@ -181,24 +156,10 @@ pub(super) async fn handle_set_mode(
 pub(super) async fn handle_command_long(
     command: MavCmd,
     params: [f32; 7],
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
-    let target = get_target(vehicle_target)?;
-    send_command_long_ack(
-        command,
-        params,
-        target,
-        connection,
-        writers,
-        vehicle_target,
-        config,
-        cancel,
-    )
-    .await
+    let target = get_target(ctx.vehicle_target)?;
+    send_command_long_ack(command, params, target, ctx).await
 }
 
 // ---------------------------------------------------------------------------
@@ -209,16 +170,14 @@ pub(super) async fn handle_guided_goto(
     lat_e7: i32,
     lon_e7: i32,
     alt_m: f32,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
-    let target = get_target(vehicle_target)?;
+    let target = get_target(ctx.vehicle_target)?;
     let type_mask = common::PositionTargetTypemask::from_bits_truncate(0x07F8);
 
     send_message(
-        connection,
-        config,
+        ctx.connection,
+        ctx.config,
         common::MavMessage::SET_POSITION_TARGET_GLOBAL_INT(
             common::SET_POSITION_TARGET_GLOBAL_INT_DATA {
                 time_boot_ms: 0,

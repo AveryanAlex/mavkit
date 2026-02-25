@@ -1,15 +1,11 @@
-use super::{VehicleTarget, get_target, send_message, update_state, update_vehicle_target};
-use crate::config::VehicleConfig;
+use super::{CommandContext, get_target, send_message, update_state, update_vehicle_target};
 use crate::error::VehicleError;
 use crate::params::{
     Param, ParamProgress, ParamStore, ParamTransferPhase, ParamType, ParamWriteResult,
 };
-use crate::state::StateWriters;
-use mavlink::AsyncMavConnection;
 use mavlink::common::{self, MavParamType};
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
-use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
 
 pub(super) fn from_mav_param_type(mav: MavParamType) -> ParamType {
@@ -49,16 +45,12 @@ pub(super) fn string_to_param_id(name: &str) -> mavlink::types::CharArray<16> {
 // ---------------------------------------------------------------------------
 
 pub(super) async fn handle_param_download_all(
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<ParamStore, VehicleError> {
-    let target = get_target(vehicle_target)?;
+    let target = get_target(ctx.vehicle_target)?;
 
     // Reset progress
-    let _ = writers.param_progress.send(ParamProgress {
+    let _ = ctx.writers.param_progress.send(ParamProgress {
         phase: ParamTransferPhase::Downloading,
         received: 0,
         expected: 0,
@@ -66,8 +58,8 @@ pub(super) async fn handle_param_download_all(
 
     // Send PARAM_REQUEST_LIST
     send_message(
-        connection,
-        config,
+        ctx.connection,
+        ctx.config,
         common::MavMessage::PARAM_REQUEST_LIST(common::PARAM_REQUEST_LIST_DATA {
             target_system: target.system_id,
             target_component: target.component_id,
@@ -93,8 +85,8 @@ pub(super) async fn handle_param_download_all(
         loop {
             tokio::select! {
                 biased;
-                _ = cancel.cancelled() => {
-                    let _ = writers.param_progress.send(ParamProgress {
+                _ = ctx.cancel.cancelled() => {
+                    let _ = ctx.writers.param_progress.send(ParamProgress {
                         phase: ParamTransferPhase::Failed,
                         received: params.len() as u16,
                         expected: expected_count,
@@ -102,11 +94,11 @@ pub(super) async fn handle_param_download_all(
                     return Err(VehicleError::Cancelled);
                 }
                 _ = &mut deadline => break,
-                result = connection.recv() => {
+                result = ctx.connection.recv() => {
                     let (header, msg) = result
                         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                    update_vehicle_target(vehicle_target, &header, &msg);
-                    update_state(&header, &msg, writers, vehicle_target);
+                    update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                    update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
 
                     if let common::MavMessage::PARAM_VALUE(data) = &msg {
                         let name = param_id_to_string(&data.param_id);
@@ -133,7 +125,7 @@ pub(super) async fn handle_param_download_all(
                         let received = params.len() as u16;
                         if received - last_progress_update >= 50 || received >= expected_count {
                             last_progress_update = received;
-                            let _ = writers.param_progress.send(ParamProgress {
+                            let _ = ctx.writers.param_progress.send(ParamProgress {
                                 phase: ParamTransferPhase::Downloading,
                                 received,
                                 expected: expected_count,
@@ -164,7 +156,7 @@ pub(super) async fn handle_param_download_all(
                     );
                     break;
                 }
-                let _ = writers.param_progress.send(ParamProgress {
+                let _ = ctx.writers.param_progress.send(ParamProgress {
                     phase: ParamTransferPhase::Failed,
                     received,
                     expected: expected_count,
@@ -181,8 +173,8 @@ pub(super) async fn handle_param_download_all(
             for idx in 0..expected_count {
                 if !received_indices.contains(&idx) {
                     send_message(
-                        connection,
-                        config,
+                        ctx.connection,
+                        ctx.config,
                         common::MavMessage::PARAM_REQUEST_READ(common::PARAM_REQUEST_READ_DATA {
                             param_index: idx as i16,
                             target_system: target.system_id,
@@ -209,8 +201,8 @@ pub(super) async fn handle_param_download_all(
         expected_count,
     };
 
-    let _ = writers.param_store.send(store.clone());
-    let _ = writers.param_progress.send(ParamProgress {
+    let _ = ctx.writers.param_store.send(store.clone());
+    let _ = ctx.writers.param_progress.send(ParamProgress {
         phase: ParamTransferPhase::Completed,
         received: store.params.len() as u16,
         expected: expected_count,
@@ -226,17 +218,13 @@ pub(super) async fn handle_param_download_all(
 pub(super) async fn handle_param_write(
     name: &str,
     value: f32,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<Param, VehicleError> {
-    let target = get_target(vehicle_target)?;
+    let target = get_target(ctx.vehicle_target)?;
 
     // Look up current param_type from store, or default to Real32
     let param_type = {
-        let store = writers.param_store.borrow();
+        let store = ctx.writers.param_store.borrow();
         store
             .params
             .get(name)
@@ -244,12 +232,12 @@ pub(super) async fn handle_param_write(
             .unwrap_or(ParamType::Real32)
     };
 
-    let retry_policy = &config.retry_policy;
+    let retry_policy = &ctx.config.retry_policy;
 
     for _attempt in 0..=retry_policy.max_retries {
         send_message(
-            connection,
-            config,
+            ctx.connection,
+            ctx.config,
             common::MavMessage::PARAM_SET(common::PARAM_SET_DATA {
                 param_value: value,
                 target_system: target.system_id,
@@ -267,13 +255,13 @@ pub(super) async fn handle_param_write(
         loop {
             tokio::select! {
                 biased;
-                _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
+                _ = ctx.cancel.cancelled() => return Err(VehicleError::Cancelled),
                 _ = &mut deadline => break, // retry
-                result = connection.recv() => {
+                result = ctx.connection.recv() => {
                     let (header, msg) = result
                         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                    update_vehicle_target(vehicle_target, &header, &msg);
-                    update_state(&header, &msg, writers, vehicle_target);
+                    update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                    update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
 
                     if let common::MavMessage::PARAM_VALUE(data) = &msg {
                         let received_name = param_id_to_string(&data.param_id);
@@ -286,7 +274,7 @@ pub(super) async fn handle_param_write(
                             };
 
                             // Update store
-                            writers.param_store.send_modify(|store| {
+                            ctx.writers.param_store.send_modify(|store| {
                                 store.params.insert(received_name, confirmed.clone());
                             });
 
@@ -307,32 +295,19 @@ pub(super) async fn handle_param_write(
 
 pub(super) async fn handle_param_write_batch(
     params: Vec<(String, f32)>,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
 ) -> Result<Vec<ParamWriteResult>, VehicleError> {
     let total = params.len() as u16;
     let mut results = Vec::with_capacity(params.len());
 
-    let _ = writers.param_progress.send(ParamProgress {
+    let _ = ctx.writers.param_progress.send(ParamProgress {
         phase: ParamTransferPhase::Writing,
         received: 0,
         expected: total,
     });
 
     for (i, (name, value)) in params.into_iter().enumerate() {
-        let result = handle_param_write(
-            &name,
-            value,
-            connection,
-            writers,
-            vehicle_target,
-            config,
-            cancel,
-        )
-        .await;
+        let result = handle_param_write(&name, value, ctx).await;
         match result {
             Ok(confirmed) => {
                 results.push(ParamWriteResult {
@@ -343,7 +318,7 @@ pub(super) async fn handle_param_write_batch(
                 });
             }
             Err(VehicleError::Cancelled) => {
-                let _ = writers.param_progress.send(ParamProgress {
+                let _ = ctx.writers.param_progress.send(ParamProgress {
                     phase: ParamTransferPhase::Failed,
                     received: i as u16,
                     expected: total,
@@ -360,7 +335,7 @@ pub(super) async fn handle_param_write_batch(
             }
         }
 
-        let _ = writers.param_progress.send(ParamProgress {
+        let _ = ctx.writers.param_progress.send(ParamProgress {
             phase: ParamTransferPhase::Writing,
             received: (i + 1) as u16,
             expected: total,
@@ -368,7 +343,7 @@ pub(super) async fn handle_param_write_batch(
     }
 
     let all_ok = results.iter().all(|r| r.success);
-    let _ = writers.param_progress.send(ParamProgress {
+    let _ = ctx.writers.param_progress.send(ParamProgress {
         phase: if all_ok {
             ParamTransferPhase::Completed
         } else {

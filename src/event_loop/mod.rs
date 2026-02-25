@@ -45,6 +45,15 @@ struct VehicleTarget {
     vehicle_type: common::MavType,
 }
 
+/// Bundles the common parameters passed to every command handler.
+struct CommandContext<'a> {
+    pub(crate) connection: &'a (dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
+    pub(crate) writers: &'a StateWriters,
+    pub(crate) vehicle_target: &'a mut Option<VehicleTarget>,
+    pub(crate) config: &'a VehicleConfig,
+    pub(crate) cancel: &'a CancellationToken,
+}
+
 pub(crate) async fn run_event_loop(
     connection: Box<dyn AsyncMavConnection<common::MavMessage> + Sync + Send>,
     mut command_rx: mpsc::Receiver<Command>,
@@ -74,14 +83,14 @@ pub(crate) async fn run_event_loop(
                         break;
                     }
                     cmd => {
-                        handle_command(
-                            cmd,
-                            &*connection,
-                            &state_writers,
-                            &mut vehicle_target,
-                            &config,
-                            &cancel,
-                        ).await;
+                        let mut ctx = CommandContext {
+                            connection: &*connection,
+                            writers: &state_writers,
+                            vehicle_target: &mut vehicle_target,
+                            config: &config,
+                            cancel: &cancel,
+                        };
+                        handle_command(cmd, &mut ctx).await;
                     }
                 }
             }
@@ -191,10 +200,7 @@ async fn send_message(
 /// all other messages received in the meantime.
 #[allow(dead_code)]
 async fn wait_for_response<F, T>(
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    cancel: &CancellationToken,
+    ctx: &mut CommandContext<'_>,
     timeout: Duration,
     mut predicate: F,
 ) -> Result<T, VehicleError>
@@ -206,13 +212,13 @@ where
     loop {
         tokio::select! {
             biased;
-            _ = cancel.cancelled() => return Err(VehicleError::Cancelled),
+            _ = ctx.cancel.cancelled() => return Err(VehicleError::Cancelled),
             _ = &mut deadline => return Err(VehicleError::Timeout),
-            result = connection.recv() => {
+            result = ctx.connection.recv() => {
                 let (header, msg) =
                     result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                update_vehicle_target(vehicle_target, &header, &msg);
-                update_state(&header, &msg, writers, vehicle_target);
+                update_vehicle_target(ctx.vehicle_target, &header, &msg);
+                update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
                 if let Some(val) = predicate(&header, &msg) {
                     return Ok(val);
                 }
@@ -229,51 +235,18 @@ fn get_target(vehicle_target: &Option<VehicleTarget>) -> Result<VehicleTarget, V
 // Command dispatch
 // ---------------------------------------------------------------------------
 
-async fn handle_command(
-    cmd: Command,
-    connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
-    writers: &StateWriters,
-    vehicle_target: &mut Option<VehicleTarget>,
-    config: &VehicleConfig,
-    cancel: &CancellationToken,
-) {
+async fn handle_command(cmd: Command, ctx: &mut CommandContext<'_>) {
     match cmd {
         Command::Arm { force, reply } => {
-            let result = handle_arm_disarm(
-                true,
-                force,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_arm_disarm(true, force, ctx).await;
             let _ = reply.send(result);
         }
         Command::Disarm { force, reply } => {
-            let result = handle_arm_disarm(
-                false,
-                force,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_arm_disarm(false, force, ctx).await;
             let _ = reply.send(result);
         }
         Command::SetMode { custom_mode, reply } => {
-            let result = handle_set_mode(
-                custom_mode,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_set_mode(custom_mode, ctx).await;
             let _ = reply.send(result);
         }
         Command::Long {
@@ -281,16 +254,7 @@ async fn handle_command(
             params,
             reply,
         } => {
-            let result = handle_command_long(
-                command,
-                params,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_command_long(command, params, ctx).await;
             let _ = reply.send(result);
         }
         Command::GuidedGoto {
@@ -299,90 +263,44 @@ async fn handle_command(
             alt_m,
             reply,
         } => {
-            let result =
-                handle_guided_goto(lat_e7, lon_e7, alt_m, connection, vehicle_target, config).await;
+            let result = handle_guided_goto(lat_e7, lon_e7, alt_m, ctx).await;
             let _ = reply.send(result);
         }
         Command::MissionUpload { plan, reply } => {
-            let result =
-                handle_mission_upload(plan, connection, writers, vehicle_target, config, cancel)
-                    .await;
+            let result = handle_mission_upload(plan, ctx).await;
             let _ = reply.send(result);
         }
         Command::MissionDownload {
             mission_type,
             reply,
         } => {
-            let result = handle_mission_download(
-                mission_type,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_mission_download(mission_type, ctx).await;
             let _ = reply.send(result);
         }
         Command::MissionClear {
             mission_type,
             reply,
         } => {
-            let result = handle_mission_clear(
-                mission_type,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_mission_clear(mission_type, ctx).await;
             let _ = reply.send(result);
         }
         Command::MissionSetCurrent { seq, reply } => {
-            let result = handle_mission_set_current(
-                seq,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_mission_set_current(seq, ctx).await;
             let _ = reply.send(result);
         }
         Command::MissionCancelTransfer => {
             // Transfer cancellation currently relies on outer cancellation.
         }
         Command::ParamDownloadAll { reply } => {
-            let result =
-                handle_param_download_all(connection, writers, vehicle_target, config, cancel)
-                    .await;
+            let result = handle_param_download_all(ctx).await;
             let _ = reply.send(result);
         }
         Command::ParamWrite { name, value, reply } => {
-            let result = handle_param_write(
-                &name,
-                value,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_param_write(&name, value, ctx).await;
             let _ = reply.send(result);
         }
         Command::ParamWriteBatch { params, reply } => {
-            let result = handle_param_write_batch(
-                params,
-                connection,
-                writers,
-                vehicle_target,
-                config,
-                cancel,
-            )
-            .await;
+            let result = handle_param_write_batch(params, ctx).await;
             let _ = reply.send(result);
         }
         Command::Shutdown => {
