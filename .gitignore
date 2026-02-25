@@ -20,3 +20,8 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 *.pyo
+
+# Gas Town (added by gt)
+.runtime/
+.claude/commands/
+.logs/

@@ -19,7 +19,7 @@ pip install mavkit
 **Rust**
 ```toml
 [dependencies]
-mavkit = "0.2"
+mavkit = "0.3"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 

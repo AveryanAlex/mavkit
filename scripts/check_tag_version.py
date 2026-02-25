@@ -34,6 +34,19 @@ def main() -> int:
         else:
             print(f"Tag {tag} matches {path} version {version}")
 
+    # Verify README.md shows correct major.minor version
+    major_minor = ".".join(tag_version.split(".")[:2])
+    readme = pathlib.Path("README.md").read_text()
+    expected = f'mavkit = "{major_minor}"'
+    if expected not in readme:
+        print(
+            f"README.md does not contain {expected!r}",
+            file=sys.stderr,
+        )
+        ok = False
+    else:
+        print(f"README.md contains {expected}")
+
     return 0 if ok else 1
 
 
