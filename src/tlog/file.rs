@@ -190,7 +190,8 @@ impl TlogFile {
 
     /// Return the time range `(first_timestamp, last_timestamp)` in the file.
     ///
-    /// Returns `None` for empty files.
+    /// Returns `None` for empty files.  For the last timestamp, seeks near EOF
+    /// and scans only the tail of the file instead of reading every entry.
     pub async fn time_range(&self) -> Result<Option<(u64, u64)>, TlogError> {
         let file = File::open(&self.path).await?;
         let mut buf_reader = BufReader::new(file);
@@ -204,8 +205,28 @@ impl TlogFile {
         }
         let first_ts = u64::from_le_bytes(ts_buf);
 
-        // Scan the entire file for the last valid timestamp
-        buf_reader.seek(SeekFrom::Start(0)).await?;
+        let file_len = buf_reader.seek(SeekFrom::End(0)).await?;
+
+        // Find the last timestamp by seeking near EOF and scanning forward.
+        // Expand the search window backwards if no valid entry is found.
+        const SCAN_SIZE: u64 = 8192;
+        let mut scan_start = file_len.saturating_sub(SCAN_SIZE);
+
+        let entry_pos = loop {
+            match Self::find_entry_at_or_after(&mut buf_reader, scan_start, file_len).await? {
+                Some((pos, _ts)) => break pos,
+                None => {
+                    if scan_start == 0 {
+                        return Ok(Some((first_ts, first_ts)));
+                    }
+                    scan_start = scan_start.saturating_sub(SCAN_SIZE);
+                }
+            }
+        };
+
+        // Scan forward from the found entry to collect the last timestamp.
+        // Since we started near EOF, this reads only a small tail of the file.
+        buf_reader.seek(SeekFrom::Start(entry_pos)).await?;
         let mut reader = TlogReader::new(buf_reader);
         let mut last_ts = first_ts;
         while let Some(entry) = reader.next().await? {
@@ -366,5 +387,25 @@ mod tests {
         let tlog = TlogFile::open(tmp.path()).await.unwrap();
         let mut reader = tlog.seek_to_timestamp(1000).await.unwrap();
         assert!(reader.next().await.unwrap().is_none());
+    }
+
+    #[tokio::test]
+    async fn time_range_many_entries() {
+        // Enough entries to exceed the 8KB near-EOF scan window,
+        // exercising the optimized tail-seek path.
+        let entries: Vec<(u64, MavMessage)> =
+            (0..500).map(|i| (1000 + i * 100, heartbeat())).collect();
+        let tmp = write_temp_tlog(&entries).await;
+        let tlog = TlogFile::open(tmp.path()).await.unwrap();
+        let range = tlog.time_range().await.unwrap();
+        assert_eq!(range, Some((1000, 1000 + 499 * 100)));
+    }
+
+    #[tokio::test]
+    async fn time_range_single_entry() {
+        let tmp = write_temp_tlog(&[(42_000, heartbeat())]).await;
+        let tlog = TlogFile::open(tmp.path()).await.unwrap();
+        let range = tlog.time_range().await.unwrap();
+        assert_eq!(range, Some((42_000, 42_000)));
     }
 }
