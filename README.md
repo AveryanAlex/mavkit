@@ -82,6 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `serial` | Yes | MAVLink direct serial transport |
 | `ardupilot` | Yes | ArduPilot mode-name mapping |
 | `stream` | No | Byte-stream adapters for BLE/SPP/custom links |
+| `tlog` | No | TLOG file parser for timestamped MAVLink logs |
 
 ## Mission Wire Semantics
 
