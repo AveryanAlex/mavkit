@@ -117,8 +117,7 @@ impl Vehicle {
                     .await
                     .map_err(|_| VehicleError::Disconnected)?;
                 let state = vs_rx.borrow().clone();
-                // A heartbeat sets autopilot to something (at minimum Generic from target update)
-                if state.custom_mode != 0 || state.armed || !state.mode_name.is_empty() {
+                if state.heartbeat_received {
                     return Ok::<(), VehicleError>(());
                 }
             }

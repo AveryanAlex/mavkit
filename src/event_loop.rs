@@ -177,6 +177,7 @@ fn update_state(
                     autopilot: autopilot_type,
                     system_id: target.system_id,
                     component_id: target.component_id,
+                    heartbeat_received: true,
                 });
             }
         }

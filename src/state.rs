@@ -11,6 +11,7 @@ pub struct VehicleState {
     pub autopilot: AutopilotType,
     pub system_id: u8,
     pub component_id: u8,
+    pub heartbeat_received: bool,
 }
 
 // ---------------------------------------------------------------------------

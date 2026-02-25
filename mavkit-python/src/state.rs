@@ -52,6 +52,11 @@ impl PyVehicleState {
         self.inner.component_id
     }
 
+    #[getter]
+    fn heartbeat_received(&self) -> bool {
+        self.inner.heartbeat_received
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "VehicleState(mode='{}', armed={}, status={:?})",
