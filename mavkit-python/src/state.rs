@@ -42,6 +42,16 @@ impl PyVehicleState {
         self.inner.autopilot.into()
     }
 
+    #[getter]
+    fn system_id(&self) -> u8 {
+        self.inner.system_id
+    }
+
+    #[getter]
+    fn component_id(&self) -> u8 {
+        self.inner.component_id
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "VehicleState(mode='{}', armed={}, status={:?})",

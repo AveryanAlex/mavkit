@@ -9,6 +9,8 @@ pub struct VehicleState {
     pub system_status: SystemStatus,
     pub vehicle_type: VehicleType,
     pub autopilot: AutopilotType,
+    pub system_id: u8,
+    pub component_id: u8,
 }
 
 /// Telemetry data aggregated from multiple MAVLink messages.

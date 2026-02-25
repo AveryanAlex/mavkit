@@ -276,17 +276,14 @@ impl Vehicle {
     }
 
     /// Returns a best-effort identity from currently tracked state.
-    ///
-    /// `system_id` and `component_id` are currently not exposed via public
-    /// watch channels and are returned as `0`.
     pub fn identity(&self) -> Option<VehicleIdentity> {
         let state = self.inner.channels.vehicle_state.borrow().clone();
         if state.mode_name.is_empty() && !state.armed && state.custom_mode == 0 {
             return None;
         }
         Some(VehicleIdentity {
-            system_id: 0, // Not directly exposed through watch channels
-            component_id: 0,
+            system_id: state.system_id,
+            component_id: state.component_id,
             autopilot: state.autopilot,
             vehicle_type: state.vehicle_type,
         })

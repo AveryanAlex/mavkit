@@ -174,6 +174,8 @@ fn update_state(
                     system_status: SystemStatus::from_mav(hb.system_status),
                     vehicle_type: vtype,
                     autopilot: autopilot_type,
+                    system_id: target.system_id,
+                    component_id: target.component_id,
                 });
             }
         }
