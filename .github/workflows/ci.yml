@@ -75,6 +75,9 @@ jobs:
       - name: Smoke test
         run: uv run python -c "import mavkit; print(dir(mavkit))"
 
+      - name: Python tests
+        run: uv run pytest tests/ -v
+
   sitl:
     needs: rust
     runs-on: ubuntu-latest
