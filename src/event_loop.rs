@@ -536,18 +536,41 @@ async fn handle_command(
 ) {
     match cmd {
         Command::Arm { force, reply } => {
-            let result =
-                handle_arm_disarm(true, force, connection, vehicle_target, config, cancel).await;
+            let result = handle_arm_disarm(
+                true,
+                force,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
         Command::Disarm { force, reply } => {
-            let result =
-                handle_arm_disarm(false, force, connection, vehicle_target, config, cancel).await;
+            let result = handle_arm_disarm(
+                false,
+                force,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
         Command::SetMode { custom_mode, reply } => {
-            let result =
-                handle_set_mode(custom_mode, connection, vehicle_target, config, cancel).await;
+            let result = handle_set_mode(
+                custom_mode,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
         Command::Long {
@@ -555,9 +578,16 @@ async fn handle_command(
             params,
             reply,
         } => {
-            let result =
-                handle_command_long(command, params, connection, vehicle_target, config, cancel)
-                    .await;
+            let result = handle_command_long(
+                command,
+                params,
+                connection,
+                writers,
+                vehicle_target,
+                config,
+                cancel,
+            )
+            .await;
             let _ = reply.send(result);
         }
         Command::GuidedGoto {
@@ -727,6 +757,7 @@ async fn handle_arm_disarm(
     arm: bool,
     force: bool,
     connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
+    writers: &StateWriters,
     vehicle_target: &mut Option<VehicleTarget>,
     config: &VehicleConfig,
     cancel: &CancellationToken,
@@ -748,6 +779,7 @@ async fn handle_arm_disarm(
         [param1, param2, 0.0, 0.0, 0.0, 0.0, 0.0],
         target,
         connection,
+        writers,
         vehicle_target,
         config,
         cancel,
@@ -755,17 +787,17 @@ async fn handle_arm_disarm(
     .await
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn send_command_long_ack(
     command: MavCmd,
     params: [f32; 7],
     target: VehicleTarget,
     connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
+    writers: &StateWriters,
     vehicle_target: &mut Option<VehicleTarget>,
     config: &VehicleConfig,
     cancel: &CancellationToken,
 ) -> Result<(), VehicleError> {
-    // ACK wait path intentionally does not update watch state.
-
     let retry_policy = &config.retry_policy;
     for _attempt in 0..=retry_policy.max_retries {
         send_message(
@@ -800,6 +832,7 @@ async fn send_command_long_ack(
                     let (header, msg) = result
                         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                     update_vehicle_target(vehicle_target, &header, &msg);
+                    update_state(&header, &msg, writers, vehicle_target);
                     if let common::MavMessage::COMMAND_ACK(ack) = &msg
                         && ack.command == command
                     {
@@ -826,6 +859,7 @@ async fn send_command_long_ack(
 async fn handle_set_mode(
     custom_mode: u32,
     connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
+    writers: &StateWriters,
     vehicle_target: &mut Option<VehicleTarget>,
     config: &VehicleConfig,
     cancel: &CancellationToken,
@@ -838,6 +872,7 @@ async fn handle_set_mode(
         [1.0, custom_mode as f32, 0.0, 0.0, 0.0, 0.0, 0.0],
         target,
         connection,
+        writers,
         vehicle_target,
         config,
         cancel,
@@ -867,6 +902,7 @@ async fn handle_set_mode(
                 let (header, msg) =
                     result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
                 update_vehicle_target(vehicle_target, &header, &msg);
+                update_state(&header, &msg, writers, vehicle_target);
                 if let common::MavMessage::HEARTBEAT(hb) = &msg
                     && hb.custom_mode == custom_mode
                 {
@@ -885,6 +921,7 @@ async fn handle_command_long(
     command: MavCmd,
     params: [f32; 7],
     connection: &(dyn AsyncMavConnection<common::MavMessage> + Sync + Send),
+    writers: &StateWriters,
     vehicle_target: &mut Option<VehicleTarget>,
     config: &VehicleConfig,
     cancel: &CancellationToken,
@@ -895,6 +932,7 @@ async fn handle_command_long(
         params,
         target,
         connection,
+        writers,
         vehicle_target,
         config,
         cancel,
