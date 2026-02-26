@@ -27,7 +27,6 @@ use mission::{
 };
 #[cfg(test)]
 use params::{from_mav_param_type, param_id_to_string, string_to_param_id, to_mav_param_type};
-use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
@@ -196,37 +195,6 @@ async fn send_message(
         .map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))
 }
 
-/// Wait for a message matching `predicate`, continuing to update state for
-/// all other messages received in the meantime.
-#[allow(dead_code)]
-async fn wait_for_response<F, T>(
-    ctx: &mut CommandContext<'_>,
-    timeout: Duration,
-    mut predicate: F,
-) -> Result<T, VehicleError>
-where
-    F: FnMut(&MavHeader, &common::MavMessage) -> Option<T>,
-{
-    let deadline = tokio::time::sleep(timeout);
-    tokio::pin!(deadline);
-    loop {
-        tokio::select! {
-            biased;
-            _ = ctx.cancel.cancelled() => return Err(VehicleError::Cancelled),
-            _ = &mut deadline => return Err(VehicleError::Timeout),
-            result = ctx.connection.recv() => {
-                let (header, msg) =
-                    result.map_err(|err| VehicleError::Io(std::io::Error::other(err.to_string())))?;
-                update_vehicle_target(ctx.vehicle_target, &header, &msg);
-                update_state(&header, &msg, ctx.writers, ctx.vehicle_target);
-                if let Some(val) = predicate(&header, &msg) {
-                    return Ok(val);
-                }
-            }
-        }
-    }
-}
-
 fn get_target(vehicle_target: &Option<VehicleTarget>) -> Result<VehicleTarget, VehicleError> {
     vehicle_target.ok_or(VehicleError::IdentityUnknown)
 }
@@ -320,6 +288,7 @@ mod tests {
     use mavlink::common::{self, MavModeFlag, MavState};
     use mavlink::{MavHeader, MavlinkVersion};
     use std::sync::{Arc, Mutex};
+    use std::time::Duration;
     use tokio::sync::{mpsc, oneshot};
 
     // -----------------------------------------------------------------------
