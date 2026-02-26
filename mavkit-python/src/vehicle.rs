@@ -6,6 +6,7 @@ use crate::enums::*;
 use crate::error::to_py_err;
 use crate::mission::*;
 use crate::params::*;
+use crate::raw_message::PyRawMessageStream;
 use crate::state::*;
 
 #[pyclass(name = "Vehicle", frozen, skip_from_py_object)]
@@ -416,6 +417,13 @@ impl PyVehicle {
                 .as_ref()
                 .map(|s| PyStatusMessage { inner: s.clone() }))
         })
+    }
+
+    fn subscribe_raw_messages(&self) -> PyRawMessageStream {
+        let rx = self.inner.raw_messages();
+        PyRawMessageStream {
+            rx: std::sync::Arc::new(tokio::sync::Mutex::new(rx)),
+        }
     }
 
     // --- Vehicle commands ---

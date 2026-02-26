@@ -3,6 +3,7 @@ mod enums;
 mod error;
 mod mission;
 mod params;
+mod raw_message;
 mod state;
 mod tlog;
 mod vehicle;
@@ -66,6 +67,10 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Tlog types
     m.add_class::<tlog::PyTlogEntry>()?;
     m.add_class::<tlog::PyTlogFile>()?;
+
+    // Raw message types
+    m.add_class::<raw_message::PyRawMessage>()?;
+    m.add_class::<raw_message::PyRawMessageStream>()?;
 
     // Vehicle
     m.add_class::<vehicle::PyVehicle>()?;

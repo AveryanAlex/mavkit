@@ -386,6 +386,8 @@ pub(crate) struct StateWriters {
     pub navigation: tokio::sync::watch::Sender<Navigation>,
     pub terrain: tokio::sync::watch::Sender<Terrain>,
     pub rc_channels: tokio::sync::watch::Sender<RcChannels>,
+    pub raw_message_tx:
+        tokio::sync::broadcast::Sender<(mavlink::MavHeader, mavlink::common::MavMessage)>,
 }
 
 /// Reader-side channels, cloneable via Arc.
@@ -407,6 +409,8 @@ pub(crate) struct StateChannels {
     pub navigation: tokio::sync::watch::Receiver<Navigation>,
     pub terrain: tokio::sync::watch::Receiver<Terrain>,
     pub rc_channels: tokio::sync::watch::Receiver<RcChannels>,
+    pub raw_message_tx:
+        tokio::sync::broadcast::Sender<(mavlink::MavHeader, mavlink::common::MavMessage)>,
 }
 
 pub(crate) fn create_channels() -> (StateWriters, StateChannels) {
@@ -427,6 +431,7 @@ pub(crate) fn create_channels() -> (StateWriters, StateChannels) {
     let (nav_tx, nav_rx) = tokio::sync::watch::channel(Navigation::default());
     let (ter_tx, ter_rx) = tokio::sync::watch::channel(Terrain::default());
     let (rc_tx, rc_rx) = tokio::sync::watch::channel(RcChannels::default());
+    let (raw_msg_tx, _) = tokio::sync::broadcast::channel(256);
 
     let writers = StateWriters {
         vehicle_state: vs_tx,
@@ -445,6 +450,7 @@ pub(crate) fn create_channels() -> (StateWriters, StateChannels) {
         navigation: nav_tx,
         terrain: ter_tx,
         rc_channels: rc_tx,
+        raw_message_tx: raw_msg_tx.clone(),
     };
 
     let channels = StateChannels {
@@ -464,6 +470,7 @@ pub(crate) fn create_channels() -> (StateWriters, StateChannels) {
         navigation: nav_rx,
         terrain: ter_rx,
         rc_channels: rc_rx,
+        raw_message_tx: raw_msg_tx,
     };
 
     (writers, channels)

@@ -48,3 +48,7 @@ all-features = true
 [[example]]
 name = "tlog_parse"
 required-features = ["tlog"]
+
+[[example]]
+name = "tlog_record"
+required-features = ["tlog", "udp"]

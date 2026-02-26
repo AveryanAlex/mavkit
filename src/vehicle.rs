@@ -219,6 +219,17 @@ impl Vehicle {
         self.inner.channels.statustext.clone()
     }
 
+    /// Subscribe to every raw MAVLink message received from the vehicle.
+    ///
+    /// Returns a broadcast receiver. Each call creates an independent subscriber.
+    /// If a receiver falls behind by more than 256 messages, it will skip the
+    /// oldest messages and resume from the latest (lagged error).
+    pub fn raw_messages(
+        &self,
+    ) -> tokio::sync::broadcast::Receiver<(mavlink::MavHeader, mavlink::common::MavMessage)> {
+        self.inner.channels.raw_message_tx.subscribe()
+    }
+
     // --- Vehicle commands ---
 
     /// Arm the vehicle. Set `force` to bypass pre-arm checks.

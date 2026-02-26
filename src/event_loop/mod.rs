@@ -96,6 +96,7 @@ pub(crate) async fn run_event_loop(
             result = connection.recv() => {
                 match result {
                     Ok((header, msg)) => {
+                        let _ = state_writers.raw_message_tx.send((header, msg.clone()));
                         update_vehicle_target(&mut vehicle_target, &header, &msg);
                         if !home_requested
                             && config.auto_request_home
