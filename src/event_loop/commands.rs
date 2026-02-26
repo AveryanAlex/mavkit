@@ -6,6 +6,10 @@ use crate::error::VehicleError;
 use mavlink::common::{self, MavCmd};
 use std::time::Duration;
 
+/// Bitmask for SET_POSITION_TARGET_GLOBAL_INT: use only lat/lon/alt, ignore
+/// velocity, acceleration, and yaw fields.
+const GUIDED_GOTO_TYPE_MASK: u16 = 0x07F8;
+
 // ---------------------------------------------------------------------------
 // Arm / Disarm
 // ---------------------------------------------------------------------------
@@ -173,7 +177,7 @@ pub(super) async fn handle_guided_goto(
     ctx: &mut CommandContext<'_>,
 ) -> Result<(), VehicleError> {
     let target = get_target(ctx.vehicle_target)?;
-    let type_mask = common::PositionTargetTypemask::from_bits_truncate(0x07F8);
+    let type_mask = common::PositionTargetTypemask::from_bits_truncate(GUIDED_GOTO_TYPE_MASK);
 
     send_message(
         ctx.connection,

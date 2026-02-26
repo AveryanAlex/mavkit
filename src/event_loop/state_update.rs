@@ -8,6 +8,9 @@ use mavlink::MavHeader;
 use mavlink::common::{self, MavModeFlag};
 use tracing::trace;
 
+/// Maximum number of RC channels in the RC_CHANNELS MAVLink message.
+const RC_CHANNELS_MAX: usize = 18;
+
 pub(super) fn update_state(
     _header: &MavHeader,
     message: &common::MavMessage,
@@ -294,7 +297,7 @@ pub(super) fn update_state(
             });
         }
         common::MavMessage::RC_CHANNELS(data) => {
-            let count = data.chancount.min(18) as usize;
+            let count = (data.chancount as usize).min(RC_CHANNELS_MAX);
             let all = [
                 data.chan1_raw,
                 data.chan2_raw,
