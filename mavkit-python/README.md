@@ -107,6 +107,23 @@ param = await vehicle.write_param("BATT_MONITOR", 4.0)
 results = await vehicle.write_params_batch([("BATT_MONITOR", 4.0), ("BATT_CAPACITY", 5000.0)])
 ```
 
+## Examples
+
+The `examples/` directory contains runnable scripts demonstrating each feature:
+
+| Script | Description |
+|--------|-------------|
+| `connect_udp.py` | Connect over UDP, print vehicle state and telemetry |
+| `connect_tcp.py` | Connect over TCP, print vehicle state |
+| `monitor_telemetry.py` | Stream live telemetry to the terminal |
+| `monitor_statustext.py` | Print STATUSTEXT messages from the vehicle |
+| `list_modes.py` | List available flight modes for the connected vehicle |
+| `set_mode_and_arm.py` | Set flight mode and arm the vehicle |
+| `mission_upload_download.py` | Upload a mission, download it back, and verify the round-trip |
+| `params_roundtrip.py` | Download all parameters and round-trip through the param file format |
+| `params_write.py` | Write individual and batch parameters to the vehicle |
+| `tlog_parse.py` | Parse a TLOG file and print all entries |
+
 ## Links
 
 - [GitHub Repository](https://github.com/averyanalex/mavkit)
