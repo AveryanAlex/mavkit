@@ -9,8 +9,10 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: crates-io
     permissions:
       contents: read
+      id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,7 +28,11 @@ jobs:
           GIT_TAG: ${{ github.ref_name }}
         run: ./scripts/check_tag_version.py
 
+      - name: Authenticate with crates.io
+        uses: rust-lang/crates-io-auth-action@v1
+        id: auth
+
       - name: Publish to crates.io
         run: cargo publish --locked
         env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}

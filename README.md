@@ -3,8 +3,8 @@
 [![Crates.io](https://img.shields.io/crates/v/mavkit)](https://crates.io/crates/mavkit)
 [![PyPI](https://img.shields.io/pypi/v/mavkit)](https://pypi.org/project/mavkit/)
 [![docs.rs](https://img.shields.io/docsrs/mavkit)](https://docs.rs/mavkit)
-[![CI](https://github.com/averyanalex/mavkit/actions/workflows/ci.yml/badge.svg)](https://github.com/averyanalex/mavkit/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/averyanalex/mavkit/blob/main/LICENSE)
+[![CI](https://github.com/AveryanAlex/mavkit/actions/workflows/ci.yml/badge.svg)](https://github.com/AveryanAlex/mavkit/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/AveryanAlex/mavkit/blob/main/LICENSE)
 
 Async MAVLink SDK for vehicle control, telemetry, missions, and parameters.
 Available as a Rust crate and a Python package with full async support.

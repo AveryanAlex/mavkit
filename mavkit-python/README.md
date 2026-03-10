@@ -126,7 +126,7 @@ The `examples/` directory contains runnable scripts demonstrating each feature:
 
 ## Links
 
-- [GitHub Repository](https://github.com/averyanalex/mavkit)
+- [GitHub Repository](https://github.com/AveryanAlex/mavkit)
 - [Rust API Documentation](https://docs.rs/mavkit)
 - [Rust Crate](https://crates.io/crates/mavkit)
 
