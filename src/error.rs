@@ -21,6 +21,8 @@ pub enum VehicleError {
     MissionTransfer { code: String, message: String },
     #[error("mission validation failed: {0}")]
     MissionValidation(String),
+    #[error("invalid parameter: {0}")]
+    InvalidParameter(String),
     #[error("MAVLink I/O: {0}")]
     Io(#[from] std::io::Error),
 }

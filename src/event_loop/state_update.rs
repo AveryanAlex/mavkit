@@ -1,11 +1,11 @@
 use super::VehicleTarget;
 use crate::mission;
 use crate::state::{
-    AutopilotType, GpsFixType, MissionState, StateWriters, SystemStatus, VehicleState, VehicleType,
-    set_if_changed,
+    set_if_changed, AutopilotType, GpsFixType, MagCalReport, MagCalStatus, MissionState,
+    SensorHealth, StateWriters, SystemStatus, VehicleState, VehicleType,
 };
-use mavlink::MavHeader;
 use mavlink::common::{self, MavModeFlag};
+use mavlink::MavHeader;
 use tracing::trace;
 
 /// Maximum number of RC channels in the RC_CHANNELS MAVLink message.
@@ -145,6 +145,14 @@ pub(super) fn update_state(
                 }
                 c
             });
+            let new_health = SensorHealth::from_bitmasks(
+                data.onboard_control_sensors_present.bits(),
+                data.onboard_control_sensors_enabled.bits(),
+                data.onboard_control_sensors_health.bits(),
+            );
+            writers
+                .sensor_health
+                .send_if_modified(|h| set_if_changed(h, new_health.clone()));
         }
         common::MavMessage::GPS_RAW_INT(data) => {
             let fix = Some(GpsFixType::from_raw(data.fix_type as u8));
@@ -375,6 +383,17 @@ pub(super) fn update_state(
                     severity: crate::state::MavSeverity::from_mav(data.severity),
                 }));
             }
+        }
+        common::MavMessage::MAG_CAL_REPORT(data) => {
+            let _ = writers.mag_cal_report.send(Some(MagCalReport {
+                compass_id: data.compass_id,
+                status: MagCalStatus::from_mav(data.cal_status),
+                fitness: data.fitness,
+                ofs_x: data.ofs_x,
+                ofs_y: data.ofs_y,
+                ofs_z: data.ofs_z,
+                autosaved: data.autosaved != 0,
+            }));
         }
         _ => {
             trace!("unhandled message type");

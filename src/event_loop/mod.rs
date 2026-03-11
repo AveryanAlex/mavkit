@@ -1774,4 +1774,79 @@ mod tests {
         let t = channels.telemetry.borrow();
         assert_eq!(t.heading_deg, None);
     }
+
+    #[test]
+    fn sys_status_updates_sensor_health() {
+        let (writers, channels) = create_channels();
+        let target: Option<VehicleTarget> = None;
+        let header = default_header();
+        let present = common::MavSysStatusSensor::MAV_SYS_STATUS_SENSOR_3D_GYRO
+            | common::MavSysStatusSensor::MAV_SYS_STATUS_SENSOR_GPS
+            | common::MavSysStatusSensor::MAV_SYS_STATUS_PREARM_CHECK;
+        let enabled = present;
+        let health = common::MavSysStatusSensor::MAV_SYS_STATUS_SENSOR_3D_GYRO
+            | common::MavSysStatusSensor::MAV_SYS_STATUS_PREARM_CHECK;
+        // GPS present+enabled but NOT healthy
+        let msg = common::MavMessage::SYS_STATUS(common::SYS_STATUS_DATA {
+            onboard_control_sensors_present: present,
+            onboard_control_sensors_enabled: enabled,
+            onboard_control_sensors_health: health,
+            load: 0,
+            voltage_battery: u16::MAX,
+            current_battery: -1,
+            battery_remaining: -1,
+            drop_rate_comm: 0,
+            errors_comm: 0,
+            errors_count1: 0,
+            errors_count2: 0,
+            errors_count3: 0,
+            errors_count4: 0,
+            onboard_control_sensors_present_extended: common::MavSysStatusSensorExtended::empty(),
+            onboard_control_sensors_enabled_extended: common::MavSysStatusSensorExtended::empty(),
+            onboard_control_sensors_health_extended: common::MavSysStatusSensorExtended::empty(),
+        });
+        update_state(&header, &msg, &writers, &target);
+
+        let sh = channels.sensor_health.borrow();
+        assert!(sh.pre_arm_good);
+        let gps = sh
+            .sensors
+            .iter()
+            .find(|(id, _)| *id == state::SensorId::Gps)
+            .unwrap();
+        assert_eq!(gps.1, state::SensorStatus::Unhealthy);
+    }
+
+    #[test]
+    fn mag_cal_report_updates_channel() {
+        let (writers, channels) = create_channels();
+        let target: Option<VehicleTarget> = None;
+        let header = default_header();
+        let msg = common::MavMessage::MAG_CAL_REPORT(common::MAG_CAL_REPORT_DATA {
+            fitness: 0.05,
+            ofs_x: 1.0,
+            ofs_y: 2.0,
+            ofs_z: 3.0,
+            diag_x: 0.0,
+            diag_y: 0.0,
+            diag_z: 0.0,
+            offdiag_x: 0.0,
+            offdiag_y: 0.0,
+            offdiag_z: 0.0,
+            compass_id: 0,
+            cal_mask: 0x01,
+            cal_status: common::MagCalStatus::MAG_CAL_SUCCESS,
+            autosaved: 1,
+            ..common::MAG_CAL_REPORT_DATA::DEFAULT
+        });
+        update_state(&header, &msg, &writers, &target);
+
+        let report = channels.mag_cal_report.borrow();
+        let report = report.as_ref().unwrap();
+        assert_eq!(report.compass_id, 0);
+        assert_eq!(report.status, state::MagCalStatus::Success);
+        assert!(report.autosaved);
+        assert!((report.fitness - 0.05).abs() < 0.001);
+        assert_eq!(report.ofs_x, 1.0);
+    }
 }

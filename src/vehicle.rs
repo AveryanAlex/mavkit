@@ -5,9 +5,9 @@ use crate::event_loop::run_event_loop;
 use crate::mission::{HomePosition, MissionHandle, TransferProgress};
 use crate::params::{ParamProgress, ParamStore, ParamsHandle};
 use crate::state::{
-    Attitude, Battery, FlightMode, Gps, LinkState, MissionState, Navigation, Position, RcChannels,
-    StateChannels, StatusMessage, Telemetry, Terrain, VehicleIdentity, VehicleState,
-    create_channels,
+    Attitude, Battery, FlightMode, Gps, LinkState, MagCalProgress, MagCalReport, MissionState,
+    Navigation, Position, RcChannels, SensorHealth, StateChannels, StatusMessage, Telemetry,
+    Terrain, VehicleIdentity, VehicleState, create_channels,
 };
 use mavlink::common::{self, MavCmd};
 use std::sync::Arc;
@@ -219,6 +219,21 @@ impl Vehicle {
         self.inner.channels.statustext.clone()
     }
 
+    /// Subscribe to sensor health updates (decoded from SYS_STATUS bitmasks).
+    pub fn sensor_health(&self) -> watch::Receiver<SensorHealth> {
+        self.inner.channels.sensor_health.clone()
+    }
+
+    /// Subscribe to magnetometer calibration progress.
+    pub fn mag_cal_progress(&self) -> watch::Receiver<Option<MagCalProgress>> {
+        self.inner.channels.mag_cal_progress.clone()
+    }
+
+    /// Subscribe to magnetometer calibration reports.
+    pub fn mag_cal_report(&self) -> watch::Receiver<Option<MagCalReport>> {
+        self.inner.channels.mag_cal_report.clone()
+    }
+
     /// Subscribe to every raw MAVLink message received from the vehicle.
     ///
     /// Returns a broadcast receiver. Each call creates an independent subscriber.
@@ -312,6 +327,101 @@ impl Vehicle {
         .await
     }
 
+    /// Reboot the autopilot (MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN param1=1).
+    pub async fn reboot(&self) -> Result<(), VehicleError> {
+        self.command_long(
+            MavCmd::MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN,
+            [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        )
+        .await
+    }
+
+    /// Test a single motor. Instance is 1-based (1–12), throttle 0–100%, duration 0.1–30s.
+    pub async fn motor_test(
+        &self,
+        motor_instance: u8,
+        throttle_pct: f32,
+        duration_s: f32,
+    ) -> Result<(), VehicleError> {
+        if !(1..=12).contains(&motor_instance) {
+            return Err(VehicleError::InvalidParameter(format!(
+                "motor_instance must be 1–12, got {motor_instance}"
+            )));
+        }
+        if !(0.0..=100.0).contains(&throttle_pct) {
+            return Err(VehicleError::InvalidParameter(format!(
+                "throttle_pct must be 0.0–100.0, got {throttle_pct}"
+            )));
+        }
+        if !(0.1..=30.0).contains(&duration_s) {
+            return Err(VehicleError::InvalidParameter(format!(
+                "duration_s must be 0.1–30.0, got {duration_s}"
+            )));
+        }
+        self.command_long(
+            MavCmd::MAV_CMD_DO_MOTOR_TEST,
+            [
+                motor_instance as f32, // param1: motor instance
+                0.0,                   // param2: throttle type (0 = percent)
+                throttle_pct,          // param3: throttle value
+                duration_s,            // param4: timeout
+                0.0,                   // param5: motor count (unused for single)
+                0.0,                   // param6: test order (default)
+                0.0,                   // param7: unused
+            ],
+        )
+        .await
+    }
+
+    /// Start magnetometer calibration (ArduPilot MAV_CMD_DO_START_MAG_CAL = 42424).
+    pub async fn start_mag_cal(
+        &self,
+        compass_mask: u8,
+        retry: bool,
+        autosave: bool,
+    ) -> Result<(), VehicleError> {
+        self.command_long(
+            Self::mav_cmd_from_u32(42424),
+            [
+                compass_mask as f32,
+                if retry { 1.0 } else { 0.0 },
+                if autosave { 1.0 } else { 0.0 },
+                0.0, // delay
+                0.0,
+                0.0,
+                0.0,
+            ],
+        )
+        .await
+    }
+
+    /// Accept magnetometer calibration results (ArduPilot MAV_CMD_DO_ACCEPT_MAG_CAL = 42425).
+    pub async fn accept_mag_cal(&self, compass_mask: u8) -> Result<(), VehicleError> {
+        self.command_long(
+            Self::mav_cmd_from_u32(42425),
+            [compass_mask as f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        )
+        .await
+    }
+
+    /// Cancel magnetometer calibration (ArduPilot MAV_CMD_DO_CANCEL_MAG_CAL = 42426).
+    pub async fn cancel_mag_cal(&self, compass_mask: u8) -> Result<(), VehicleError> {
+        self.command_long(
+            Self::mav_cmd_from_u32(42426),
+            [compass_mask as f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        )
+        .await
+    }
+
+    /// Request the autopilot to run pre-arm checks and report via STATUSTEXT.
+    pub async fn request_prearm_checks(&self) -> Result<(), VehicleError> {
+        self.command_long(
+            MavCmd::MAV_CMD_RUN_PREARM_CHECKS,
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        )
+        .await
+    }
+
     /// List all flight modes available for the detected autopilot and vehicle type.
     pub fn available_modes(&self) -> Vec<FlightMode> {
         let state = self.inner.channels.vehicle_state.borrow().clone();
@@ -348,7 +458,16 @@ impl Vehicle {
         Ok(())
     }
 
-    // --- Internal helper ---
+    // --- Internal helpers ---
+
+    /// Create a MavCmd from a raw u32 value. Used for ArduPilot-specific
+    /// command IDs not present in the common dialect enum.
+    fn mav_cmd_from_u32(id: u32) -> MavCmd {
+        // SAFETY: MavCmd is #[repr(u32)]. The MAVLink wire format serializes
+        // it as a u32, so any u32 value round-trips correctly even if it
+        // doesn't correspond to a named variant.
+        unsafe { std::mem::transmute(id) }
+    }
 
     pub(crate) async fn send_command<T>(
         &self,
@@ -361,5 +480,66 @@ impl Vehicle {
             .await
             .map_err(|_| VehicleError::Disconnected)?;
         rx.await.map_err(|_| VehicleError::Disconnected)?
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn dummy_vehicle() -> Vehicle {
+        let (_, channels) = create_channels();
+        let cancel = CancellationToken::new();
+        let (command_tx, _command_rx) = mpsc::channel(1);
+        Vehicle {
+            inner: Arc::new(VehicleInner {
+                command_tx,
+                cancel,
+                channels,
+                _config: VehicleConfig::default(),
+            }),
+        }
+    }
+
+    #[tokio::test]
+    async fn motor_test_rejects_instance_zero() {
+        let v = dummy_vehicle();
+        let err = v.motor_test(0, 50.0, 5.0).await.unwrap_err();
+        assert!(matches!(err, VehicleError::InvalidParameter(_)));
+    }
+
+    #[tokio::test]
+    async fn motor_test_rejects_instance_13() {
+        let v = dummy_vehicle();
+        let err = v.motor_test(13, 50.0, 5.0).await.unwrap_err();
+        assert!(matches!(err, VehicleError::InvalidParameter(_)));
+    }
+
+    #[tokio::test]
+    async fn motor_test_rejects_throttle_over_100() {
+        let v = dummy_vehicle();
+        let err = v.motor_test(1, 101.0, 5.0).await.unwrap_err();
+        assert!(matches!(err, VehicleError::InvalidParameter(_)));
+    }
+
+    #[tokio::test]
+    async fn motor_test_rejects_negative_throttle() {
+        let v = dummy_vehicle();
+        let err = v.motor_test(1, -1.0, 5.0).await.unwrap_err();
+        assert!(matches!(err, VehicleError::InvalidParameter(_)));
+    }
+
+    #[tokio::test]
+    async fn motor_test_rejects_zero_duration() {
+        let v = dummy_vehicle();
+        let err = v.motor_test(1, 50.0, 0.0).await.unwrap_err();
+        assert!(matches!(err, VehicleError::InvalidParameter(_)));
+    }
+
+    #[tokio::test]
+    async fn motor_test_rejects_duration_over_30() {
+        let v = dummy_vehicle();
+        let err = v.motor_test(1, 50.0, 31.0).await.unwrap_err();
+        assert!(matches!(err, VehicleError::InvalidParameter(_)));
     }
 }

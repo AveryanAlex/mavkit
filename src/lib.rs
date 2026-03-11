@@ -21,9 +21,10 @@ pub use error::VehicleError;
 pub use vehicle::Vehicle;
 
 pub use state::{
-    Attitude, AutopilotType, Battery, FlightMode, Gps, GpsFixType, LinkState, MavSeverity,
-    MissionState, Navigation, Position, RcChannels, StatusMessage, SystemStatus, Telemetry,
-    Terrain, VehicleIdentity, VehicleState, VehicleType,
+    Attitude, AutopilotType, Battery, FlightMode, Gps, GpsFixType, LinkState, MagCalProgress,
+    MagCalReport, MagCalStatus, MavSeverity, MissionState, Navigation, Position, RcChannels,
+    SensorHealth, SensorId, SensorStatus, StatusMessage, SystemStatus, Telemetry, Terrain,
+    VehicleIdentity, VehicleState, VehicleType,
 };
 
 pub use mission::{
