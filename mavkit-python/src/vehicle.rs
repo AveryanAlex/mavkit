@@ -526,6 +526,14 @@ impl PyVehicle {
         })
     }
 
+    fn reboot<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+        let v = self.inner.clone();
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            v.reboot().await.map_err(to_py_err)?;
+            Ok(())
+        })
+    }
+
     fn reboot_to_bootloader<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
         let v = self.inner.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
