@@ -468,7 +468,7 @@ pub struct PyMissionState {
 #[pymethods]
 impl PyMissionState {
     #[getter]
-    fn current_seq(&self) -> u16 {
+    fn current_seq(&self) -> Option<u16> {
         self.inner.current_seq
     }
 
@@ -479,7 +479,7 @@ impl PyMissionState {
 
     fn __repr__(&self) -> String {
         format!(
-            "MissionState(seq={}, total={})",
+            "MissionState(seq={:?}, total={})",
             self.inner.current_seq, self.inner.total_items
         )
     }

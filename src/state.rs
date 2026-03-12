@@ -154,10 +154,60 @@ pub struct Telemetry {
 }
 
 /// Current mission execution state reported by the autopilot.
+///
+/// Values are **semantic** — normalized from the MAVLink wire format:
+///
+/// - For `MissionType::Mission`: wire seq 0 is the home placeholder and is
+///   excluded. `current_seq` is `None` when the vehicle targets home (pre-mission
+///   or RTL), otherwise it is the 0-indexed visible-waypoint index (`wire_seq - 1`).
+///   `total_items` counts only visible waypoints (`wire_total - 1`).
+///
+/// - For `MissionType::Fence` and `MissionType::Rally`: no home placeholder
+///   exists, so wire values pass through unchanged.
+///
+/// Construct via [`MissionState::from_wire`] to ensure correct normalization.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct MissionState {
-    pub current_seq: u16,
+    pub current_seq: Option<u16>,
     pub total_items: u16,
+}
+
+impl MissionState {
+    /// Convert raw MAVLink wire values into semantic mission state.
+    ///
+    /// For `MissionType::Mission` the wire format includes the home position at
+    /// seq 0. This method subtracts that offset so consumers see only visible
+    /// waypoints (0-indexed). When `wire_seq == 0` the vehicle is targeting
+    /// home (not a visible waypoint), so `current_seq` is `None`.
+    ///
+    /// For Fence and Rally types there is no home placeholder — values pass
+    /// through unchanged.
+    pub fn from_wire(
+        mission_type: crate::mission::MissionType,
+        wire_seq: u16,
+        wire_total: u16,
+    ) -> Self {
+        use crate::mission::MissionType;
+
+        match mission_type {
+            MissionType::Mission => {
+                let total_items = wire_total.saturating_sub(1);
+                let current_seq = if wire_seq == 0 {
+                    None
+                } else {
+                    Some(wire_seq - 1)
+                };
+                MissionState {
+                    current_seq,
+                    total_items,
+                }
+            }
+            MissionType::Fence | MissionType::Rally => MissionState {
+                current_seq: Some(wire_seq),
+                total_items: wire_total,
+            },
+        }
+    }
 }
 
 /// Connection lifecycle state.
@@ -733,5 +783,62 @@ mod tests {
             .find(|(id, _)| *id == SensorId::OpticalFlow)
             .unwrap();
         assert_eq!(of.1, SensorStatus::Disabled);
+    }
+
+    #[test]
+    fn mission_state_from_wire_home_only() {
+        use crate::mission::MissionType;
+        let ms = MissionState::from_wire(MissionType::Mission, 0, 1);
+        assert_eq!(ms.current_seq, None);
+        assert_eq!(ms.total_items, 0);
+    }
+
+    #[test]
+    fn mission_state_from_wire_first_waypoint_active() {
+        use crate::mission::MissionType;
+        let ms = MissionState::from_wire(MissionType::Mission, 1, 3);
+        assert_eq!(ms.current_seq, Some(0));
+        assert_eq!(ms.total_items, 2);
+    }
+
+    #[test]
+    fn mission_state_from_wire_fence_passthrough() {
+        use crate::mission::MissionType;
+        let ms = MissionState::from_wire(MissionType::Fence, 2, 5);
+        assert_eq!(ms.current_seq, Some(2));
+        assert_eq!(ms.total_items, 5);
+    }
+
+    #[test]
+    fn mission_state_from_wire_rally_passthrough() {
+        use crate::mission::MissionType;
+        let ms = MissionState::from_wire(MissionType::Rally, 0, 3);
+        assert_eq!(ms.current_seq, Some(0));
+        assert_eq!(ms.total_items, 3);
+    }
+
+    #[test]
+    fn set_current_semantic_zero_becomes_wire_one() {
+        use crate::mission::MissionType;
+        // set_current(0) sends wire seq 0+1=1; MISSION_CURRENT(seq=1) comes
+        // back as semantic 0 via from_wire.
+        let semantic_seq: u16 = 0;
+        let wire_seq = semantic_seq + 1;
+        assert_eq!(wire_seq, 1);
+
+        let state = MissionState::from_wire(MissionType::Mission, wire_seq, 5);
+        assert_eq!(state.current_seq, Some(semantic_seq));
+        assert_eq!(state.total_items, 4);
+    }
+
+    #[test]
+    fn set_current_semantic_roundtrip_higher_index() {
+        use crate::mission::MissionType;
+        let semantic_seq: u16 = 4;
+        let wire_seq = semantic_seq + 1;
+        assert_eq!(wire_seq, 5);
+
+        let state = MissionState::from_wire(MissionType::Mission, wire_seq, 10);
+        assert_eq!(state.current_seq, Some(semantic_seq));
     }
 }

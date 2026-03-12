@@ -1,11 +1,11 @@
 use super::VehicleTarget;
 use crate::mission;
 use crate::state::{
-    AutopilotType, GpsFixType, MagCalReport, MagCalStatus, MissionState, SensorHealth,
-    StateWriters, SystemStatus, VehicleState, VehicleType, set_if_changed,
+    set_if_changed, AutopilotType, GpsFixType, MagCalReport, MagCalStatus, MissionState,
+    SensorHealth, StateWriters, SystemStatus, VehicleState, VehicleType,
 };
-use mavlink::MavHeader;
 use mavlink::common::{self, MavModeFlag};
+use mavlink::MavHeader;
 use tracing::trace;
 
 /// Maximum number of RC channels in the RC_CHANNELS MAVLink message.
@@ -190,10 +190,12 @@ pub(super) fn update_state(
             });
         }
         common::MavMessage::MISSION_CURRENT(data) => {
-            let _ = writers.mission_state.send(MissionState {
-                current_seq: data.seq,
-                total_items: data.total,
-            });
+            // MISSION_CURRENT always reports Mission type execution state
+            let _ = writers.mission_state.send(MissionState::from_wire(
+                mission::MissionType::Mission,
+                data.seq,
+                data.total,
+            ));
         }
         common::MavMessage::HOME_POSITION(data) => {
             let _ = writers.home_position.send(Some(mission::HomePosition {
