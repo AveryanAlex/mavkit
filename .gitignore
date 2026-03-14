@@ -25,3 +25,5 @@ __pycache__/
 .runtime/
 .claude/commands/
 .logs/
+
+docs/plans/
