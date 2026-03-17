@@ -1,28 +1,17 @@
 #[allow(dead_code)]
 mod common;
 
-use mavkit::{ParamTransferPhase, Vehicle};
+use mavkit::{ParamOperationProgress, Vehicle};
 use std::time::Duration;
 
-async fn wait_for_param_progress<F>(vehicle: &Vehicle, mut predicate: F, timeout: Duration)
-where
-    F: FnMut(&mavkit::ParamProgress) -> bool,
-{
-    let mut rx = vehicle.param_progress();
-    let deadline = tokio::time::sleep(timeout);
-    tokio::pin!(deadline);
-    loop {
-        tokio::select! {
-            _ = &mut deadline => panic!("timed out waiting for param progress"),
-            result = rx.changed() => {
-                result.expect("watch channel closed");
-                let progress = rx.borrow().clone();
-                if predicate(&progress) {
-                    return;
-                }
-            }
-        }
-    }
+async fn download_all(vehicle: &Vehicle) -> Result<mavkit::ParamStore, String> {
+    vehicle
+        .params()
+        .download_all()
+        .map_err(|e| e.to_string())?
+        .wait()
+        .await
+        .map_err(|e| e.to_string())
 }
 
 #[tokio::test]
@@ -31,11 +20,7 @@ async fn sitl_param_download_all() {
     let vehicle = common::setup_sitl_vehicle().await;
 
     let result: Result<(), String> = async {
-        let store = vehicle
-            .params()
-            .download_all()
-            .await
-            .map_err(|e| e.to_string())?;
+        let store = download_all(&vehicle).await?;
 
         if store.params.is_empty() {
             return Err("expected non-empty param store".into());
@@ -51,7 +36,6 @@ async fn sitl_param_download_all() {
             ));
         }
 
-        // Verify a param that every ArduPilot vehicle has
         if !store.params.contains_key("SYSID_THISMAV") {
             return Err("missing SYSID_THISMAV in downloaded params".into());
         }
@@ -72,11 +56,7 @@ async fn sitl_param_write_and_readback() {
     let vehicle = common::setup_sitl_vehicle().await;
 
     let result: Result<(), String> = async {
-        let store = vehicle
-            .params()
-            .download_all()
-            .await
-            .map_err(|e| e.to_string())?;
+        let store = download_all(&vehicle).await?;
 
         let original = store
             .params
@@ -84,7 +64,6 @@ async fn sitl_param_write_and_readback() {
             .ok_or("SR0_EXTRA1 not found in params")?
             .value;
 
-        // Toggle to a different value
         let new_value = if (original - 4.0).abs() < 0.01 {
             10.0
         } else {
@@ -93,24 +72,21 @@ async fn sitl_param_write_and_readback() {
 
         let confirmed = vehicle
             .params()
-            .write("SR0_EXTRA1".into(), new_value)
+            .write("SR0_EXTRA1", new_value)
             .await
             .map_err(|e| e.to_string())?;
 
-        if (confirmed.value - new_value).abs() > 0.01 {
+        if !confirmed.success {
+            return Err("single-parameter write did not report success".into());
+        }
+        if (confirmed.confirmed_value - new_value).abs() > 0.01 {
             return Err(format!(
                 "write confirmation mismatch: requested {new_value}, got {}",
-                confirmed.value
+                confirmed.confirmed_value
             ));
         }
 
-        // Download again and verify persistence
-        let store = vehicle
-            .params()
-            .download_all()
-            .await
-            .map_err(|e| e.to_string())?;
-
+        let store = download_all(&vehicle).await?;
         let readback = store
             .params
             .get("SR0_EXTRA1")
@@ -123,10 +99,9 @@ async fn sitl_param_write_and_readback() {
             ));
         }
 
-        // Restore original
         vehicle
             .params()
-            .write("SR0_EXTRA1".into(), original)
+            .write("SR0_EXTRA1", original)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -146,11 +121,7 @@ async fn sitl_param_write_batch_and_readback() {
     let vehicle = common::setup_sitl_vehicle().await;
 
     let result: Result<(), String> = async {
-        let store = vehicle
-            .params()
-            .download_all()
-            .await
-            .map_err(|e| e.to_string())?;
+        let store = download_all(&vehicle).await?;
 
         let params_to_write: Vec<(&str, f32)> = vec![
             ("SR0_EXTRA1", 2.0),
@@ -158,7 +129,6 @@ async fn sitl_param_write_batch_and_readback() {
             ("SR0_EXTRA3", 2.0),
         ];
 
-        // Save originals for restore
         let originals: Vec<(String, f32)> = params_to_write
             .iter()
             .map(|(name, _)| {
@@ -179,6 +149,8 @@ async fn sitl_param_write_batch_and_readback() {
         let results = vehicle
             .params()
             .write_batch(batch)
+            .map_err(|e| e.to_string())?
+            .wait()
             .await
             .map_err(|e| e.to_string())?;
 
@@ -202,13 +174,7 @@ async fn sitl_param_write_batch_and_readback() {
             }
         }
 
-        // Verify via full download
-        let store = vehicle
-            .params()
-            .download_all()
-            .await
-            .map_err(|e| e.to_string())?;
-
+        let store = download_all(&vehicle).await?;
         for (name, expected) in &params_to_write {
             let actual = store
                 .params
@@ -222,10 +188,11 @@ async fn sitl_param_write_batch_and_readback() {
             }
         }
 
-        // Restore originals
         vehicle
             .params()
             .write_batch(originals)
+            .map_err(|e| e.to_string())?
+            .wait()
             .await
             .map_err(|e| e.to_string())?;
 
@@ -245,36 +212,42 @@ async fn sitl_param_progress_during_download() {
     let vehicle = common::setup_sitl_vehicle().await;
 
     let result: Result<(), String> = async {
-        let download = tokio::spawn({
-            let vehicle = vehicle.clone();
-            async move {
-                vehicle
-                    .params()
-                    .download_all()
-                    .await
-                    .map_err(|e| e.to_string())
+        let op = vehicle
+            .params()
+            .download_all()
+            .map_err(|e| e.to_string())?;
+
+        if !op
+            .latest()
+            .is_some_and(|progress| matches!(progress, ParamOperationProgress::Downloading { .. }))
+        {
+            let mut progress_stream = op.subscribe();
+            let deadline = tokio::time::sleep(Duration::from_secs(10));
+            tokio::pin!(deadline);
+            loop {
+                tokio::select! {
+                    _ = &mut deadline => {
+                        return Err(String::from("timed out waiting for param download progress"));
+                    }
+                    observed = progress_stream.recv() => {
+                        let progress = observed.ok_or("param progress stream closed before download progress")?;
+                        if matches!(progress, ParamOperationProgress::Downloading { .. }) {
+                            break;
+                        }
+                    }
+                }
             }
-        });
-
-        // Wait for downloading phase to appear
-        wait_for_param_progress(
-            &vehicle,
-            |p| p.phase == ParamTransferPhase::Downloading,
-            Duration::from_secs(10),
-        )
-        .await;
-
-        let store = download.await.unwrap()?;
-
-        // After download completes, progress should reflect completion
-        let progress = vehicle.param_progress().borrow().clone();
-        if progress.expected == 0 {
-            return Err("expected non-zero expected count in progress".into());
         }
-        if progress.expected != store.expected_count {
+
+        let store = op.wait().await.map_err(|e| e.to_string())?;
+        if store.expected_count == 0 {
+            return Err("expected non-zero expected count in downloaded store".into());
+        }
+
+        let progress = op.latest();
+        if !matches!(progress, Some(ParamOperationProgress::Completed)) {
             return Err(format!(
-                "progress expected count ({}) doesn't match store ({})",
-                progress.expected, store.expected_count
+                "expected completed param progress after download, got {progress:?}"
             ));
         }
 
@@ -294,16 +267,15 @@ async fn sitl_param_store_watch_updates_on_write() {
     let vehicle = common::setup_sitl_vehicle().await;
 
     let result: Result<(), String> = async {
-        // Populate the store first
-        vehicle
-            .params()
-            .download_all()
-            .await
-            .map_err(|e| e.to_string())?;
+        download_all(&vehicle).await?;
 
-        let original = vehicle
-            .param_store()
-            .borrow()
+        let original_store = vehicle
+            .params()
+            .latest()
+            .and_then(|state| state.store)
+            .ok_or("parameter store unavailable after download")?;
+
+        let original = original_store
             .params
             .get("SR0_EXTRA1")
             .ok_or("SR0_EXTRA1 not found")?
@@ -317,13 +289,16 @@ async fn sitl_param_store_watch_updates_on_write() {
 
         vehicle
             .params()
-            .write("SR0_EXTRA1".into(), new_value)
+            .write("SR0_EXTRA1", new_value)
             .await
             .map_err(|e| e.to_string())?;
 
-        // The watch channel should reflect the updated value
         tokio::time::sleep(Duration::from_millis(200)).await;
-        let store = vehicle.param_store().borrow().clone();
+        let store = vehicle
+            .params()
+            .latest()
+            .and_then(|state| state.store)
+            .ok_or("parameter store unavailable after write")?;
         let readback = store
             .params
             .get("SR0_EXTRA1")
@@ -336,10 +311,9 @@ async fn sitl_param_store_watch_updates_on_write() {
             ));
         }
 
-        // Restore
         vehicle
             .params()
-            .write("SR0_EXTRA1".into(), original)
+            .write("SR0_EXTRA1", original)
             .await
             .map_err(|e| e.to_string())?;
 
@@ -359,17 +333,8 @@ async fn sitl_param_download_twice_is_consistent() {
     let vehicle = common::setup_sitl_vehicle().await;
 
     let result: Result<(), String> = async {
-        let first = vehicle
-            .params()
-            .download_all()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let second = vehicle
-            .params()
-            .download_all()
-            .await
-            .map_err(|e| e.to_string())?;
+        let first = download_all(&vehicle).await?;
+        let second = download_all(&vehicle).await?;
 
         if first.expected_count != second.expected_count {
             return Err(format!(
@@ -386,7 +351,6 @@ async fn sitl_param_download_twice_is_consistent() {
             ));
         }
 
-        // Values should be identical (no writes in between)
         for (name, param) in &first.params {
             let other = second
                 .params

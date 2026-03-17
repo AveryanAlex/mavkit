@@ -1,11 +1,10 @@
-use std::collections::HashMap;
-
 use super::types::ParamStore;
+use crate::VehicleError;
 
 /// Parse a `.param` file. Each non-comment line should be `NAME,VALUE`.
 /// Lines starting with `#` are comments.
-pub fn parse_param_file(contents: &str) -> Result<HashMap<String, f32>, String> {
-    let mut result = HashMap::new();
+pub fn parse_param_file(contents: &str) -> Result<Vec<(String, f32)>, VehicleError> {
+    let mut result = Vec::new();
     for (line_num, line) in contents.lines().enumerate() {
         let trimmed = line.trim();
         if trimmed.is_empty() || trimmed.starts_with('#') {
@@ -13,14 +12,20 @@ pub fn parse_param_file(contents: &str) -> Result<HashMap<String, f32>, String> 
         }
         let parts: Vec<&str> = trimmed.splitn(2, ',').collect();
         if parts.len() != 2 {
-            return Err(format!("line {}: expected NAME,VALUE", line_num + 1));
+            return Err(VehicleError::InvalidParameter(format!(
+                "line {}: expected NAME,VALUE",
+                line_num + 1
+            )));
         }
         let name = parts[0].trim();
-        let value: f32 = parts[1]
-            .trim()
-            .parse()
-            .map_err(|_| format!("line {}: invalid value '{}'", line_num + 1, parts[1].trim()))?;
-        result.insert(name.to_string(), value);
+        let value: f32 = parts[1].trim().parse().map_err(|_| {
+            VehicleError::InvalidParameter(format!(
+                "line {}: invalid value '{}'",
+                line_num + 1,
+                parts[1].trim()
+            ))
+        })?;
+        result.push((name.to_string(), value));
     }
     Ok(result)
 }
@@ -43,13 +48,19 @@ mod tests {
     use super::*;
     use crate::params::types::{Param, ParamType};
 
+    fn value_for(parsed: &[(String, f32)], name: &str) -> Option<f32> {
+        parsed
+            .iter()
+            .find_map(|(param_name, value)| (param_name == name).then_some(*value))
+    }
+
     #[test]
     fn parse_simple() {
         let contents = "BATT_CAPACITY,5000\nBATT_MONITOR,4\n";
         let result = parse_param_file(contents).unwrap();
         assert_eq!(result.len(), 2);
-        assert_eq!(result["BATT_CAPACITY"], 5000.0);
-        assert_eq!(result["BATT_MONITOR"], 4.0);
+        assert_eq!(value_for(&result, "BATT_CAPACITY"), Some(5000.0));
+        assert_eq!(value_for(&result, "BATT_MONITOR"), Some(4.0));
     }
 
     #[test]
@@ -64,8 +75,8 @@ mod tests {
     fn parse_float_values() {
         let contents = "ATC_ACCEL_P_MAX,110000.5\nATC_RAT_PIT_P,0.135\n";
         let result = parse_param_file(contents).unwrap();
-        assert!((result["ATC_ACCEL_P_MAX"] - 110000.5).abs() < 0.01);
-        assert!((result["ATC_RAT_PIT_P"] - 0.135).abs() < 0.001);
+        assert!((value_for(&result, "ATC_ACCEL_P_MAX").unwrap() - 110000.5).abs() < 0.01);
+        assert!((value_for(&result, "ATC_RAT_PIT_P").unwrap() - 0.135).abs() < 0.001);
     }
 
     #[test]
@@ -73,7 +84,7 @@ mod tests {
         let contents = "BATT_CAPACITY,notanumber\n";
         let result = parse_param_file(contents);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("invalid value"));
+        assert!(result.unwrap_err().to_string().contains("invalid value"));
     }
 
     #[test]
@@ -81,7 +92,12 @@ mod tests {
         let contents = "BATT_CAPACITY\n";
         let result = parse_param_file(contents);
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("expected NAME,VALUE"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("expected NAME,VALUE")
+        );
     }
 
     #[test]
@@ -109,8 +125,8 @@ mod tests {
         let formatted = format_param_file(&store);
         let parsed = parse_param_file(&formatted).unwrap();
         assert_eq!(parsed.len(), 2);
-        assert!((parsed["BATT_MONITOR"] - 4.0).abs() < 0.001);
-        assert!((parsed["ATC_RAT_PIT_P"] - 0.135).abs() < 0.001);
+        assert!((value_for(&parsed, "BATT_MONITOR").unwrap() - 4.0).abs() < 0.001);
+        assert!((value_for(&parsed, "ATC_RAT_PIT_P").unwrap() - 0.135).abs() < 0.001);
     }
 
     #[test]

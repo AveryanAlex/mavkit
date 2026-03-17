@@ -1,3 +1,4 @@
+use crate::types::{ParamOperationKind, SyncState};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -30,26 +31,6 @@ pub struct ParamStore {
     pub expected_count: u16,
 }
 
-/// Current phase of a parameter download or write operation.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ParamTransferPhase {
-    #[default]
-    Idle,
-    Downloading,
-    Writing,
-    Completed,
-    Failed,
-}
-
-/// Snapshot of parameter transfer progress.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct ParamProgress {
-    pub phase: ParamTransferPhase,
-    pub received: u16,
-    pub expected: u16,
-}
-
 /// Result of a single parameter write, with requested and confirmed values.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParamWriteResult {
@@ -59,12 +40,10 @@ pub struct ParamWriteResult {
     pub success: bool,
 }
 
-impl Default for ParamProgress {
-    fn default() -> Self {
-        ParamProgress {
-            phase: ParamTransferPhase::Idle,
-            received: 0,
-            expected: 0,
-        }
-    }
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+/// Cached parameter-domain state plus sync and active-operation markers.
+pub struct ParamState {
+    pub store: Option<ParamStore>,
+    pub sync: SyncState,
+    pub active_op: Option<ParamOperationKind>,
 }

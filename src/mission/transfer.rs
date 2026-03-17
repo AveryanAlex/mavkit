@@ -62,6 +62,7 @@ pub struct TransferError {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// Transfer event emitted by the transfer machine.
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TransferEvent {
     Progress { progress: TransferProgress },
@@ -69,6 +70,7 @@ pub enum TransferEvent {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+/// Lightweight mission transfer state machine used by event-loop flows.
 pub struct MissionTransferMachine {
     direction: TransferDirection,
     mission_type: MissionType,
@@ -199,29 +201,33 @@ impl MissionTransferMachine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mission::{MissionFrame, MissionItem, MissionPlan, MissionType};
+    use crate::mission::commands::MissionFrame as CommandFrame;
+    use crate::mission::{
+        MissionCommand, MissionItem, MissionPlan, MissionType, RawMissionCommand,
+    };
 
     fn sample_plan(count: usize) -> MissionPlan {
         let mut items = Vec::with_capacity(count);
         for seq in 0..count {
             items.push(MissionItem {
                 seq: seq as u16,
-                command: 16,
-                frame: MissionFrame::GlobalRelativeAltInt,
+                command: MissionCommand::Other(RawMissionCommand {
+                    command: 16,
+                    frame: CommandFrame::GlobalRelativeAlt,
+                    param1: 0.0,
+                    param2: 0.0,
+                    param3: 0.0,
+                    param4: 0.0,
+                    x: 0,
+                    y: 0,
+                    z: 10.0,
+                }),
                 current: seq == 0,
                 autocontinue: true,
-                param1: 0.0,
-                param2: 0.0,
-                param3: 0.0,
-                param4: 0.0,
-                x: 0,
-                y: 0,
-                z: 10.0,
             });
         }
         MissionPlan {
             mission_type: MissionType::Mission,
-            home: None,
             items,
         }
     }

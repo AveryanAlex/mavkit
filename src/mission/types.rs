@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use super::commands::{MissionCommand, MissionFrame as CommandFrame, RawMissionCommand};
+use crate::types::{MissionOperationKind, SyncState};
+
 /// MAVLink mission storage type.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -36,17 +39,9 @@ impl MissionFrame {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MissionItem {
     pub seq: u16,
-    pub command: u16,
-    pub frame: MissionFrame,
+    pub command: MissionCommand,
     pub current: bool,
     pub autocontinue: bool,
-    pub param1: f32,
-    pub param2: f32,
-    pub param3: f32,
-    pub param4: f32,
-    pub x: i32,
-    pub y: i32,
-    pub z: f32,
 }
 
 /// Home position in WGS84 coordinates.
@@ -62,27 +57,30 @@ impl HomePosition {
     pub fn to_mission_item(&self, seq: u16) -> MissionItem {
         MissionItem {
             seq,
-            command: 16,
-            frame: MissionFrame::GlobalInt,
+            command: MissionCommand::Other(RawMissionCommand {
+                command: 16,
+                frame: CommandFrame::Global,
+                param1: 0.0,
+                param2: 0.0,
+                param3: 0.0,
+                param4: 0.0,
+                x: (self.latitude_deg * 1e7) as i32,
+                y: (self.longitude_deg * 1e7) as i32,
+                z: self.altitude_m,
+            }),
             current: false,
             autocontinue: true,
-            param1: 0.0,
-            param2: 0.0,
-            param3: 0.0,
-            param4: 0.0,
-            x: (self.latitude_deg * 1e7) as i32,
-            y: (self.longitude_deg * 1e7) as i32,
-            z: self.altitude_m,
         }
     }
 
     /// Extract a home position from a mission item, if it is a global waypoint.
     pub fn from_mission_item(item: &MissionItem) -> Option<Self> {
-        if item.command == 16 && item.frame == MissionFrame::GlobalInt {
+        let (command, frame, _params, x, y, z) = item.command.clone().into_wire();
+        if command == 16 && frame == CommandFrame::Global {
             Some(HomePosition {
-                latitude_deg: item.x as f64 / 1e7,
-                longitude_deg: item.y as f64 / 1e7,
-                altitude_m: item.z,
+                latitude_deg: x as f64 / 1e7,
+                longitude_deg: y as f64 / 1e7,
+                altitude_m: z,
             })
         } else {
             None
@@ -90,12 +88,20 @@ impl HomePosition {
     }
 }
 
-/// A complete mission plan with optional home position and ordered items.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+/// Ordered mission plan payload for upload/download/verify operations.
 pub struct MissionPlan {
     pub mission_type: MissionType,
-    pub home: Option<HomePosition>,
     pub items: Vec<MissionItem>,
+}
+
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
+/// Cached mission-domain state plus sync and active-operation markers.
+pub struct MissionState {
+    pub plan: Option<MissionPlan>,
+    pub current_index: Option<u16>,
+    pub sync: SyncState,
+    pub active_op: Option<MissionOperationKind>,
 }
 
 /// Severity level of a mission validation issue.
