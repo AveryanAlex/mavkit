@@ -596,7 +596,6 @@ pub(crate) struct StateWriters {
     pub param_progress: tokio::sync::watch::Sender<Option<crate::types::ParamOperationProgress>>,
     pub statustext: tokio::sync::watch::Sender<Option<StatusMessage>>,
     pub sensor_health: tokio::sync::watch::Sender<SensorHealth>,
-    #[allow(dead_code)]
     pub mag_cal_progress: tokio::sync::watch::Sender<Option<MagCalProgress>>,
     pub mag_cal_report: tokio::sync::watch::Sender<Option<MagCalReport>>,
     // Per-domain telemetry channels

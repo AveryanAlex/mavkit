@@ -17,7 +17,6 @@ pub(crate) struct RawCommandIntPayload {
     pub(crate) z: f32,
 }
 
-#[allow(dead_code)]
 pub(crate) enum Command {
     Arm {
         force: bool,

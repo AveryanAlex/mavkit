@@ -433,7 +433,6 @@ pub(crate) fn mode_name(
         .unwrap_or_else(|| format!("MODE({custom_mode})"))
 }
 
-#[allow(dead_code)]
 pub(crate) fn mode_number(
     autopilot: AutopilotType,
     vehicle_type: VehicleType,
