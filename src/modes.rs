@@ -306,7 +306,28 @@ impl ModeTracker {
                     ModeAction::None
                 }
             }
-            dialect::MavMessage::CURRENT_MODE(_data) => ModeAction::None,
+            dialect::MavMessage::CURRENT_MODE(data) => {
+                self.current_custom_mode = Some(data.custom_mode);
+                let intended = if data.intended_custom_mode == 0 {
+                    None
+                } else {
+                    Some(data.intended_custom_mode)
+                };
+
+                let next = CurrentMode {
+                    custom_mode: data.custom_mode,
+                    name: catalog_name_or_fallback(&self.catalog, data.custom_mode),
+                    intended_custom_mode: intended,
+                    source: CurrentModeSource::CurrentModeMessage,
+                };
+
+                if self.last_current.as_ref() != Some(&next) {
+                    self.last_current = Some(next.clone());
+                    let _ = domain.current_writer.publish(next);
+                }
+
+                ModeAction::None
+            }
             _ => ModeAction::None,
         }
     }
@@ -324,6 +345,25 @@ impl ModeTracker {
         let Some(custom_mode) = self.current_custom_mode else {
             return;
         };
+
+        // If we already have a CURRENT_MODE-sourced snapshot for the same mode,
+        // preserve it — it carries intended_custom_mode that heartbeat lacks.
+        if let Some(ref last) = self.last_current {
+            if last.custom_mode == custom_mode
+                && last.source == CurrentModeSource::CurrentModeMessage
+            {
+                // Re-publish with updated name in case catalog changed.
+                let refreshed = CurrentMode {
+                    name: catalog_name_or_fallback(&self.catalog, custom_mode),
+                    ..last.clone()
+                };
+                if self.last_current.as_ref() != Some(&refreshed) {
+                    self.last_current = Some(refreshed.clone());
+                    let _ = domain.current_writer.publish(refreshed);
+                }
+                return;
+            }
+        }
 
         let next = CurrentMode {
             custom_mode,
@@ -686,5 +726,120 @@ mod tests {
             standard_mode: dialect::MavStandardMode::MAV_STANDARD_MODE_NON_STANDARD,
             mode_name: mode_name.into(),
         }
+    }
+
+    fn current_mode_message(
+        custom_mode: u32,
+        intended_custom_mode: u32,
+    ) -> dialect::CURRENT_MODE_DATA {
+        dialect::CURRENT_MODE_DATA {
+            custom_mode,
+            intended_custom_mode,
+            standard_mode: dialect::MavStandardMode::MAV_STANDARD_MODE_NON_STANDARD,
+        }
+    }
+
+    #[test]
+    fn current_mode_message_updates_current() {
+        let (runtime, handle) = test_observer_fixture();
+
+        runtime.handle_vehicle_state(&heartbeat_state(
+            AutopilotType::ArduPilotMega,
+            VehicleType::Quadrotor,
+            4,
+        ));
+
+        runtime.handle_message(&dialect::MavMessage::CURRENT_MODE(current_mode_message(
+            4, 0,
+        )));
+
+        assert_eq!(
+            handle.current().latest(),
+            Some(CurrentMode {
+                custom_mode: 4,
+                name: "GUIDED".to_string(),
+                intended_custom_mode: None,
+                source: CurrentModeSource::CurrentModeMessage,
+            })
+        );
+    }
+
+    #[test]
+    fn current_mode_message_with_intended_mode() {
+        let (runtime, handle) = test_observer_fixture();
+
+        runtime.handle_vehicle_state(&heartbeat_state(
+            AutopilotType::ArduPilotMega,
+            VehicleType::Quadrotor,
+            6,
+        ));
+
+        // Vehicle is in RTL (6) but user intended GUIDED (4)
+        runtime.handle_message(&dialect::MavMessage::CURRENT_MODE(current_mode_message(
+            6, 4,
+        )));
+
+        assert_eq!(
+            handle.current().latest(),
+            Some(CurrentMode {
+                custom_mode: 6,
+                name: "RTL".to_string(),
+                intended_custom_mode: Some(4),
+                source: CurrentModeSource::CurrentModeMessage,
+            })
+        );
+    }
+
+    #[test]
+    fn heartbeat_does_not_overwrite_current_mode_source() {
+        let (runtime, handle) = test_observer_fixture();
+
+        runtime.handle_vehicle_state(&heartbeat_state(
+            AutopilotType::ArduPilotMega,
+            VehicleType::Quadrotor,
+            6,
+        ));
+
+        runtime.handle_message(&dialect::MavMessage::CURRENT_MODE(current_mode_message(
+            6, 4,
+        )));
+
+        // Another heartbeat with the same mode should not overwrite
+        runtime.handle_vehicle_state(&heartbeat_state(
+            AutopilotType::ArduPilotMega,
+            VehicleType::Quadrotor,
+            6,
+        ));
+
+        let current = handle.current().latest().unwrap();
+        assert_eq!(current.source, CurrentModeSource::CurrentModeMessage);
+        assert_eq!(current.intended_custom_mode, Some(4));
+    }
+
+    #[test]
+    fn heartbeat_with_new_mode_overrides_current_mode_source() {
+        let (runtime, handle) = test_observer_fixture();
+
+        runtime.handle_vehicle_state(&heartbeat_state(
+            AutopilotType::ArduPilotMega,
+            VehicleType::Quadrotor,
+            6,
+        ));
+
+        runtime.handle_message(&dialect::MavMessage::CURRENT_MODE(current_mode_message(
+            6, 4,
+        )));
+
+        // Heartbeat with a different mode should override
+        runtime.handle_vehicle_state(&heartbeat_state(
+            AutopilotType::ArduPilotMega,
+            VehicleType::Quadrotor,
+            5,
+        ));
+
+        let current = handle.current().latest().unwrap();
+        assert_eq!(current.custom_mode, 5);
+        assert_eq!(current.source, CurrentModeSource::Heartbeat);
+        assert_eq!(current.intended_custom_mode, None);
     }
 }
