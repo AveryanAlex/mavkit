@@ -11,6 +11,9 @@ permissions:
   id-token: write
 
 jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
   validate:
     runs-on: ubuntu-latest
     steps:
@@ -23,7 +26,7 @@ jobs:
         run: python3 scripts/check_tag_version.py
 
   build-wheels:
-    needs: validate
+    needs: [ci, validate]
     strategy:
       matrix:
         include:
