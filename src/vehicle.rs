@@ -451,22 +451,23 @@ impl Vehicle {
             .await
     }
 
-    #[allow(deprecated)]
     pub async fn set_home(&self, position: GeoPoint3dMsl) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Long {
-            command: dialect::MavCmd::MAV_CMD_DO_SET_HOME,
-            params: [
-                0.0,
-                0.0,
-                0.0,
-                0.0,
-                position.latitude_deg as f32,
-                position.longitude_deg as f32,
-                position.altitude_msl_m as f32,
-            ],
+        self.send_command(|reply| Command::RawCommandInt {
+            payload: crate::command::RawCommandIntPayload {
+                command: dialect::MavCmd::MAV_CMD_DO_SET_HOME,
+                frame: dialect::MavFrame::MAV_FRAME_GLOBAL,
+                current: 0,
+                autocontinue: 0,
+                params: [0.0, 0.0, 0.0, 0.0],
+                x: quantize_degrees_e7(position.latitude_deg),
+                y: quantize_degrees_e7(position.longitude_deg),
+                // Altitude narrowed to f32 at wire boundary (MAVLink z field).
+                z: position.altitude_msl_m as f32,
+            },
             reply,
         })
         .await
+        .map(|_| ())
     }
 
     #[allow(deprecated)]
@@ -1169,7 +1170,6 @@ mod tests {
             .expect("disconnect should succeed");
     }
 
-    #[allow(deprecated)]
     #[tokio::test]
     async fn set_home_ack_flow() {
         let (vehicle, msg_tx, sent) = connect_mock_vehicle_with_sent().await;
@@ -1204,19 +1204,19 @@ mod tests {
             .expect("sent messages lock should not poison")
             .iter()
             .find_map(|(_, msg)| match msg {
-                dialect::MavMessage::COMMAND_LONG(data)
+                dialect::MavMessage::COMMAND_INT(data)
                     if data.command == dialect::MavCmd::MAV_CMD_DO_SET_HOME =>
                 {
                     Some(data.clone())
                 }
                 _ => None,
             })
-            .expect("set home command should be sent");
+            .expect("set home command should be sent as COMMAND_INT");
 
         assert_eq!(sent_home.param1, 0.0);
-        assert_eq!(sent_home.param5, point.latitude_deg as f32);
-        assert_eq!(sent_home.param6, point.longitude_deg as f32);
-        assert_eq!(sent_home.param7, point.altitude_msl_m as f32);
+        assert_eq!(sent_home.x, quantize_degrees_e7(point.latitude_deg));
+        assert_eq!(sent_home.y, quantize_degrees_e7(point.longitude_deg));
+        assert_eq!(sent_home.z, point.altitude_msl_m as f32);
 
         vehicle
             .disconnect()
