@@ -41,27 +41,27 @@ impl PyRawMessage {
     }
 
     #[getter]
-    fn system_id(&self) -> u8 {
+    pub(crate) fn system_id(&self) -> u8 {
         self.system_id
     }
 
     #[getter]
-    fn component_id(&self) -> u8 {
+    pub(crate) fn component_id(&self) -> u8 {
         self.component_id
     }
 
     #[getter]
-    fn sequence(&self) -> u8 {
+    pub(crate) fn sequence(&self) -> u8 {
         self.sequence
     }
 
     #[getter]
-    fn message_id(&self) -> u32 {
+    pub(crate) fn message_id(&self) -> u32 {
         self.message_id
     }
 
     #[getter]
-    fn payload(&self) -> Vec<u8> {
+    pub(crate) fn payload(&self) -> Vec<u8> {
         self.payload.clone()
     }
 

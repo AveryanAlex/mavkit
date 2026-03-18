@@ -195,6 +195,7 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Tlog types
     m.add_class::<tlog::PyTlogEntry>()?;
     m.add_class::<tlog::PyTlogFile>()?;
+    m.add_class::<tlog::PyTlogWriter>()?;
 
     // Raw message types
     m.add_class::<raw_message::PyRawMessage>()?;

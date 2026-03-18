@@ -1,12 +1,29 @@
 use std::path::PathBuf;
 
+use mavkit::dialect::MavMessage;
 use mavlink::Message;
+use mavlink::{MavHeader, MavlinkVersion};
 use pyo3::prelude::*;
 
 use crate::error::MavkitError;
+use crate::raw_message::PyRawMessage;
+
+type FileTlogWriter = mavkit::tlog::TlogWriter<std::io::BufWriter<std::fs::File>>;
 
 fn tlog_to_py_err(e: mavkit::tlog::TlogError) -> PyErr {
     MavkitError::new_err(e.to_string())
+}
+
+fn parse_raw_message(message: &PyRawMessage) -> PyResult<(MavHeader, MavMessage)> {
+    let payload = message.payload();
+    let msg = MavMessage::parse(MavlinkVersion::V2, message.message_id(), &payload)
+        .map_err(|e| MavkitError::new_err(format!("failed to parse payload: {e}")))?;
+    let header = MavHeader {
+        sequence: message.sequence(),
+        system_id: message.system_id(),
+        component_id: message.component_id(),
+    };
+    Ok((header, msg))
 }
 
 #[pyclass(name = "TlogEntry", frozen)]
@@ -129,5 +146,94 @@ impl PyTlogFile {
             let range = f.time_range().await.map_err(tlog_to_py_err)?;
             Ok(range)
         })
+    }
+}
+
+#[pyclass(name = "TlogWriter")]
+pub struct PyTlogWriter {
+    inner: std::sync::Mutex<Option<FileTlogWriter>>,
+}
+
+impl PyTlogWriter {
+    fn with_writer<R>(&self, f: impl FnOnce(&mut FileTlogWriter) -> PyResult<R>) -> PyResult<R> {
+        let mut guard = self
+            .inner
+            .lock()
+            .map_err(|_| MavkitError::new_err("tlog writer lock poisoned"))?;
+        let writer = guard
+            .as_mut()
+            .ok_or_else(|| MavkitError::new_err("tlog writer is closed"))?;
+        f(writer)
+    }
+}
+
+#[pymethods]
+impl PyTlogWriter {
+    #[new]
+    fn new(path: &str) -> PyResult<Self> {
+        let file = std::fs::File::create(path)
+            .map_err(|e| MavkitError::new_err(format!("failed to create file {path}: {e}")))?;
+        let writer = mavkit::tlog::TlogWriter::new(std::io::BufWriter::new(file), MavlinkVersion::V2);
+        Ok(Self {
+            inner: std::sync::Mutex::new(Some(writer)),
+        })
+    }
+
+    fn write(&self, message: &PyRawMessage) -> PyResult<usize> {
+        let (header, msg) = parse_raw_message(message)?;
+        self.with_writer(|writer| writer.write_now(&header, &msg).map_err(tlog_to_py_err))
+    }
+
+    fn write_entry(&self, timestamp_usec: u64, message: &PyRawMessage) -> PyResult<usize> {
+        let (header, msg) = parse_raw_message(message)?;
+        self.with_writer(|writer| {
+            writer
+                .write_entry(timestamp_usec, &header, &msg)
+                .map_err(tlog_to_py_err)
+        })
+    }
+
+    fn flush(&self) -> PyResult<()> {
+        self.with_writer(|writer| writer.flush().map_err(tlog_to_py_err))
+    }
+
+    fn close(&self) -> PyResult<()> {
+        let mut guard = self
+            .inner
+            .lock()
+            .map_err(|_| MavkitError::new_err("tlog writer lock poisoned"))?;
+        if let Some(writer) = guard.as_mut() {
+            writer.flush().map_err(tlog_to_py_err)?;
+        }
+        guard.take();
+        Ok(())
+    }
+
+    fn __repr__(&self) -> String {
+        let status = match self.inner.lock() {
+            Ok(guard) => {
+                if guard.is_some() {
+                    "open"
+                } else {
+                    "closed"
+                }
+            }
+            Err(_) => "poisoned",
+        };
+        format!("TlogWriter(status={status})")
+    }
+
+    fn __enter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
+        slf
+    }
+
+    #[pyo3(signature = (_exc_type=None, _exc_val=None, _exc_tb=None))]
+    fn __exit__<'py>(
+        &self,
+        _exc_type: Option<&Bound<'py, PyAny>>,
+        _exc_val: Option<&Bound<'py, PyAny>>,
+        _exc_tb: Option<&Bound<'py, PyAny>>,
+    ) -> PyResult<()> {
+        self.close()
     }
 }
