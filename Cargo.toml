@@ -48,5 +48,9 @@ name = "tlog_parse"
 required-features = ["tlog"]
 
 [[example]]
+name = "connect_tcp"
+required-features = ["tcp"]
+
+[[example]]
 name = "tlog_record"
 required-features = ["tlog", "udp"]
