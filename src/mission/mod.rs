@@ -118,17 +118,25 @@ impl MissionDomain {
         let domain = self.clone();
 
         tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    _ = cancel.cancelled() => break,
-                    changed = mission_state_rx.changed() => {
-                        if changed.is_err() {
-                            break;
+            let mission_state_task = tokio::spawn(async move {
+                loop {
+                    tokio::select! {
+                        _ = cancel.cancelled() => break,
+                        changed = mission_state_rx.changed() => {
+                            if changed.is_err() {
+                                break;
+                            }
+                            let current = mission_state_rx.borrow_and_update().current_seq;
+                            domain.update_current_index(current);
                         }
-                        let current = mission_state_rx.borrow_and_update().current_seq;
-                        domain.update_current_index(current);
                     }
                 }
+            });
+
+            if let Err(err) = mission_state_task.await
+                && err.is_panic()
+            {
+                tracing::error!("mission current-seq watcher task panicked: {err}");
             }
         });
     }

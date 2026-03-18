@@ -184,9 +184,17 @@ impl InitManager {
         let manager = self.clone();
         let config = self.config.clone();
         tokio::spawn(async move {
-            manager
-                .run_domain(domain, policy, connection, target, config, cancel)
-                .await;
+            let domain_task = tokio::spawn(async move {
+                manager
+                    .run_domain(domain, policy, connection, target, config, cancel)
+                    .await;
+            });
+
+            if let Err(err) = domain_task.await
+                && err.is_panic()
+            {
+                tracing::error!(domain = ?domain, "init domain task panicked: {err}");
+            }
         });
     }
 
