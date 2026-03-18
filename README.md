@@ -34,11 +34,12 @@ import mavkit
 async def main():
     vehicle = await mavkit.Vehicle.connect_udp("0.0.0.0:14550")
 
-    state = await vehicle.wait_state()
-    print(f"mode={state.mode_name} armed={state.armed}")
+    mode = vehicle.available_modes().current().latest()
+    armed = vehicle.telemetry().armed().latest()
+    print(f"mode={mode.name if mode else 'unknown'} armed={armed.value if armed else None}")
 
-    telem = await vehicle.wait_telemetry()
-    print(f"alt={telem.altitude_m} bat={telem.battery_pct}")
+    position = (await vehicle.telemetry().position().global_pos().wait()).value
+    print(f"lat={position.latitude_deg:.7f} lon={position.longitude_deg:.7f}")
 
     await vehicle.disconnect()
 
