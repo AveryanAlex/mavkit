@@ -173,7 +173,8 @@ impl PyTlogWriter {
     fn new(path: &str) -> PyResult<Self> {
         let file = std::fs::File::create(path)
             .map_err(|e| MavkitError::new_err(format!("failed to create file {path}: {e}")))?;
-        let writer = mavkit::tlog::TlogWriter::new(std::io::BufWriter::new(file), MavlinkVersion::V2);
+        let writer =
+            mavkit::tlog::TlogWriter::new(std::io::BufWriter::new(file), MavlinkVersion::V2);
         Ok(Self {
             inner: std::sync::Mutex::new(Some(writer)),
         })

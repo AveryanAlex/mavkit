@@ -12,7 +12,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let vehicle = Vehicle::connect_udp(&bind_addr).await?;
     let identity = vehicle.identity();
-    println!("connected: sys={} comp={}", identity.system_id, identity.component_id);
+    println!(
+        "connected: sys={} comp={}",
+        identity.system_id, identity.component_id
+    );
     println!("listening for {message_count} raw MAVLink messages...");
 
     let mut stream = vehicle.raw().subscribe();
@@ -20,7 +23,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Some(message) = stream.next().await {
             println!(
                 "message_id={} sys={} comp={} payload_len={}",
-                message.message_id, message.system_id, message.component_id, message.payload.len(),
+                message.message_id,
+                message.system_id,
+                message.component_id,
+                message.payload.len(),
             );
         }
     }
