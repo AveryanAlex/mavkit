@@ -238,7 +238,13 @@ impl<'a> ParamsHandle<'a> {
             ));
         }
 
-        let total = batch.len() as u16;
+        let total = u16::try_from(batch.len()).map_err(|_| {
+            VehicleError::InvalidParameter(format!(
+                "write_batch has {} params, exceeding the {} protocol limit",
+                batch.len(),
+                u16::MAX
+            ))
+        })?;
         let first_name = batch[0].0.clone();
         let domain = self.inner.params.clone();
         let reservation = domain.begin_operation(

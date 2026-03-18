@@ -357,6 +357,14 @@ fn mission_plan_from_fence_plan(plan: &FencePlan) -> Result<MissionPlan, Vehicle
         }
     }
 
+    if items.len() > u16::MAX as usize {
+        return Err(VehicleError::InvalidParameter(format!(
+            "fence plan produces {} items, exceeding the {} item protocol limit",
+            items.len(),
+            u16::MAX
+        )));
+    }
+
     Ok(MissionPlan {
         mission_type: MissionType::Fence,
         items,

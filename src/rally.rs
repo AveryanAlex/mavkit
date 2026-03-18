@@ -133,7 +133,7 @@ impl<'a> RallyHandle<'a> {
     }
 
     pub fn upload(&self, plan: RallyPlan) -> Result<RallyUploadOp, VehicleError> {
-        let wire_plan = mission_plan_from_rally_plan(&plan);
+        let wire_plan = mission_plan_from_rally_plan(&plan)?;
         let domain = self.inner.rally.clone();
         let reservation = domain.begin_operation(
             &self.inner.mission_protocol,
@@ -233,7 +233,15 @@ impl<'a> RallyHandle<'a> {
     }
 }
 
-fn mission_plan_from_rally_plan(plan: &RallyPlan) -> MissionPlan {
+fn mission_plan_from_rally_plan(plan: &RallyPlan) -> Result<MissionPlan, VehicleError> {
+    if plan.points.len() > u16::MAX as usize {
+        return Err(VehicleError::InvalidParameter(format!(
+            "rally plan has {} points, exceeding the {} item protocol limit",
+            plan.points.len(),
+            u16::MAX
+        )));
+    }
+
     let items = plan
         .points
         .iter()
@@ -241,10 +249,10 @@ fn mission_plan_from_rally_plan(plan: &RallyPlan) -> MissionPlan {
         .map(|(index, point)| rally_item(index as u16, point))
         .collect();
 
-    MissionPlan {
+    Ok(MissionPlan {
         mission_type: MissionType::Rally,
         items,
-    }
+    })
 }
 
 fn rally_plan_from_mission_plan(plan: MissionPlan) -> Result<RallyPlan, VehicleError> {
@@ -387,7 +395,7 @@ mod tests {
     #[test]
     fn wire_roundtrip() {
         let plan = sample_plan();
-        let wire_plan = mission_plan_from_rally_plan(&plan);
+        let wire_plan = mission_plan_from_rally_plan(&plan).unwrap();
 
         assert_eq!(wire_plan.mission_type, MissionType::Rally);
         assert_eq!(wire_plan.items.len(), 3);
