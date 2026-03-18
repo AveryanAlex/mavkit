@@ -3,6 +3,7 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio::io::{AsyncRead, AsyncWrite, ReadBuf};
 use tokio::sync::mpsc;
+use tokio_util::sync::PollSender;
 
 /// An [`AsyncRead`] adapter backed by an mpsc channel of byte buffers.
 ///
@@ -68,36 +69,50 @@ impl AsyncRead for ChannelReader {
 ///
 /// Each `write` call sends the data as a `Vec<u8>` to the receiver side,
 /// which is responsible for chunking to MTU and transmitting over BLE/SPP.
+///
+/// Uses [`PollSender`] internally so that a full channel properly parks
+/// the task instead of busy-spinning.
 pub struct ChannelWriter {
-    tx: mpsc::Sender<Vec<u8>>,
+    tx: PollSender<Vec<u8>>,
 }
 
 impl ChannelWriter {
     pub fn new(tx: mpsc::Sender<Vec<u8>>) -> Self {
-        Self { tx }
+        Self {
+            tx: PollSender::new(tx),
+        }
     }
 }
 
 impl AsyncWrite for ChannelWriter {
     fn poll_write(
         self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
+        cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<io::Result<usize>> {
         if buf.is_empty() {
             return Poll::Ready(Ok(0));
         }
+
+        let this = self.get_mut();
+
+        // Reserve capacity, registering the waker for proper backpressure.
+        match this.tx.poll_reserve(cx) {
+            Poll::Ready(Ok(())) => {}
+            Poll::Ready(Err(_)) => {
+                return Poll::Ready(Err(io::Error::new(
+                    io::ErrorKind::BrokenPipe,
+                    "channel closed",
+                )));
+            }
+            Poll::Pending => return Poll::Pending,
+        }
+
         let data = buf.to_vec();
         let len = data.len();
-        match self.tx.try_send(data) {
+        match this.tx.send_item(data) {
             Ok(()) => Poll::Ready(Ok(len)),
-            Err(mpsc::error::TrySendError::Full(_)) => {
-                // Channel is full — signal the caller to retry.
-                // Wake immediately since capacity may free up soon.
-                _cx.waker().wake_by_ref();
-                Poll::Pending
-            }
-            Err(mpsc::error::TrySendError::Closed(_)) => Poll::Ready(Err(io::Error::new(
+            Err(_) => Poll::Ready(Err(io::Error::new(
                 io::ErrorKind::BrokenPipe,
                 "channel closed",
             ))),
