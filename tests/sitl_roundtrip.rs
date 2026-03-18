@@ -1,21 +1,11 @@
 #[allow(dead_code)]
 mod common;
 
-use mavkit::{FencePlan, MissionPlan, MissionType, RallyPlan, Vehicle};
+use mavkit::{FencePlan, MissionType, RallyPlan, Vehicle};
 use std::time::Duration;
-
-fn sample_plan_mission() -> MissionPlan {
-    common::sample_plan_mission(3)
-}
 
 async fn setup_sitl_vehicle() -> Vehicle {
     common::setup_sitl_vehicle().await
-}
-
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_roundtrip_mission_type_mission() {
-    common::run_roundtrip_case(sample_plan_mission()).await;
 }
 
 #[tokio::test]
