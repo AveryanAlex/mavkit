@@ -49,14 +49,14 @@ fn telemetry_message_kind_name(kind: mavkit::TelemetryMessageKind) -> &'static s
     }
 }
 
-fn gps_fix_type_from_debug(value: impl std::fmt::Debug) -> PyGpsFixType {
-    match format!("{value:?}").as_str() {
-        "Fix2d" => PyGpsFixType::Fix2d,
-        "Fix3d" => PyGpsFixType::Fix3d,
-        "Dgps" => PyGpsFixType::Dgps,
-        "RtkFloat" => PyGpsFixType::RtkFloat,
-        "RtkFixed" => PyGpsFixType::RtkFixed,
-        _ => PyGpsFixType::NoFix,
+fn convert_gps_fix_type(value: mavkit::GpsFixType) -> PyGpsFixType {
+    match value {
+        mavkit::GpsFixType::NoFix => PyGpsFixType::NoFix,
+        mavkit::GpsFixType::Fix2d => PyGpsFixType::Fix2d,
+        mavkit::GpsFixType::Fix3d => PyGpsFixType::Fix3d,
+        mavkit::GpsFixType::Dgps => PyGpsFixType::Dgps,
+        mavkit::GpsFixType::RtkFloat => PyGpsFixType::RtkFloat,
+        mavkit::GpsFixType::RtkFixed => PyGpsFixType::RtkFixed,
     }
 }
 
@@ -284,7 +284,7 @@ impl From<mavkit::GpsQuality> for PyGpsQuality {
             hdop,
         } = value;
         Self {
-            fix_type: gps_fix_type_from_debug(fix_type),
+            fix_type: convert_gps_fix_type(fix_type),
             satellites,
             hdop,
         }
