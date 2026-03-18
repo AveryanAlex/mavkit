@@ -2,71 +2,84 @@ use super::types::{MissionFrame as MissionItemFrame, MissionItem};
 use crate::geo::{GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain};
 use serde::{Deserialize, Serialize};
 
-const MAV_CMD_NAV_WAYPOINT: u16 = 16;
-const MAV_CMD_NAV_LOITER_UNLIMITED: u16 = 17;
-const MAV_CMD_NAV_LOITER_TURNS: u16 = 18;
-const MAV_CMD_NAV_LOITER_TIME: u16 = 19;
-const MAV_CMD_NAV_RETURN_TO_LAUNCH: u16 = 20;
-const MAV_CMD_NAV_LAND: u16 = 21;
-const MAV_CMD_NAV_TAKEOFF: u16 = 22;
-const MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT: u16 = 30;
-const MAV_CMD_NAV_LOITER_TO_ALT: u16 = 31;
-const MAV_CMD_NAV_ARC_WAYPOINT: u16 = 36;
-const MAV_CMD_NAV_SPLINE_WAYPOINT: u16 = 82;
-const MAV_CMD_NAV_ALTITUDE_WAIT: u16 = 83;
-const MAV_CMD_NAV_VTOL_TAKEOFF: u16 = 84;
-const MAV_CMD_NAV_VTOL_LAND: u16 = 85;
-const MAV_CMD_NAV_GUIDED_ENABLE: u16 = 92;
-const MAV_CMD_NAV_DELAY: u16 = 93;
-const MAV_CMD_NAV_PAYLOAD_PLACE: u16 = 94;
-const MAV_CMD_DO_JUMP: u16 = 177;
-const MAV_CMD_DO_CHANGE_SPEED: u16 = 178;
-const MAV_CMD_DO_SET_HOME: u16 = 179;
-const MAV_CMD_DO_SET_RELAY: u16 = 181;
-const MAV_CMD_DO_REPEAT_RELAY: u16 = 182;
-const MAV_CMD_DO_SET_SERVO: u16 = 183;
-const MAV_CMD_DO_REPEAT_SERVO: u16 = 184;
-const MAV_CMD_DO_RETURN_PATH_START: u16 = 188;
-const MAV_CMD_DO_LAND_START: u16 = 189;
-const MAV_CMD_DO_GO_AROUND: u16 = 191;
-const MAV_CMD_DO_PAUSE_CONTINUE: u16 = 193;
-const MAV_CMD_DO_SET_REVERSE: u16 = 194;
-const MAV_CMD_DO_SET_ROI_LOCATION: u16 = 195;
-const MAV_CMD_DO_SET_ROI_NONE: u16 = 197;
-const MAV_CMD_DO_SET_ROI: u16 = 201;
-const MAV_CMD_DO_DIGICAM_CONFIGURE: u16 = 202;
-const MAV_CMD_DO_DIGICAM_CONTROL: u16 = 203;
-const MAV_CMD_DO_MOUNT_CONTROL: u16 = 205;
-const MAV_CMD_DO_SET_CAM_TRIGG_DIST: u16 = 206;
-const MAV_CMD_DO_FENCE_ENABLE: u16 = 207;
-const MAV_CMD_DO_PARACHUTE: u16 = 208;
-const MAV_CMD_DO_INVERTED_FLIGHT: u16 = 210;
-const MAV_CMD_DO_GRIPPER: u16 = 211;
-const MAV_CMD_DO_AUTOTUNE_ENABLE: u16 = 212;
-const MAV_CMD_NAV_SET_YAW_SPEED: u16 = 213;
-const MAV_CMD_DO_SET_RESUME_REPEAT_DIST: u16 = 215;
-const MAV_CMD_DO_SPRAYER: u16 = 216;
-const MAV_CMD_DO_SEND_SCRIPT_MESSAGE: u16 = 217;
-const MAV_CMD_DO_AUX_FUNCTION: u16 = 218;
-const MAV_CMD_DO_GUIDED_LIMITS: u16 = 222;
-const MAV_CMD_DO_ENGINE_CONTROL: u16 = 223;
-const MAV_CMD_CONDITION_DELAY: u16 = 112;
-const MAV_CMD_CONDITION_DISTANCE: u16 = 114;
-const MAV_CMD_CONDITION_YAW: u16 = 115;
-const MAV_CMD_SET_CAMERA_ZOOM: u16 = 531;
-const MAV_CMD_SET_CAMERA_FOCUS: u16 = 532;
-const MAV_CMD_SET_CAMERA_SOURCE: u16 = 534;
-const MAV_CMD_JUMP_TAG: u16 = 600;
-const MAV_CMD_DO_JUMP_TAG: u16 = 601;
-const MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW: u16 = 1000;
-const MAV_CMD_IMAGE_START_CAPTURE: u16 = 2000;
-const MAV_CMD_IMAGE_STOP_CAPTURE: u16 = 2001;
-const MAV_CMD_VIDEO_START_CAPTURE: u16 = 2500;
-const MAV_CMD_VIDEO_STOP_CAPTURE: u16 = 2501;
-const MAV_CMD_DO_VTOL_TRANSITION: u16 = 3000;
-const MAV_CMD_DO_WINCH: u16 = 42_600;
-const MAV_CMD_NAV_SCRIPT_TIME: u16 = 42_702;
-const MAV_CMD_NAV_ATTITUDE_TIME: u16 = 42_703;
+#[allow(non_camel_case_types)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u16)]
+enum MavCmd {
+    MAV_CMD_NAV_WAYPOINT = 16,
+    MAV_CMD_NAV_LOITER_UNLIMITED = 17,
+    MAV_CMD_NAV_LOITER_TURNS = 18,
+    MAV_CMD_NAV_LOITER_TIME = 19,
+    MAV_CMD_NAV_RETURN_TO_LAUNCH = 20,
+    MAV_CMD_NAV_LAND = 21,
+    MAV_CMD_NAV_TAKEOFF = 22,
+    MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT = 30,
+    MAV_CMD_NAV_LOITER_TO_ALT = 31,
+    MAV_CMD_NAV_ARC_WAYPOINT = 36,
+    MAV_CMD_NAV_SPLINE_WAYPOINT = 82,
+    MAV_CMD_NAV_ALTITUDE_WAIT = 83,
+    MAV_CMD_NAV_VTOL_TAKEOFF = 84,
+    MAV_CMD_NAV_VTOL_LAND = 85,
+    MAV_CMD_NAV_GUIDED_ENABLE = 92,
+    MAV_CMD_NAV_DELAY = 93,
+    MAV_CMD_NAV_PAYLOAD_PLACE = 94,
+    MAV_CMD_DO_JUMP = 177,
+    MAV_CMD_DO_CHANGE_SPEED = 178,
+    MAV_CMD_DO_SET_HOME = 179,
+    MAV_CMD_DO_SET_RELAY = 181,
+    MAV_CMD_DO_REPEAT_RELAY = 182,
+    MAV_CMD_DO_SET_SERVO = 183,
+    MAV_CMD_DO_REPEAT_SERVO = 184,
+    MAV_CMD_DO_RETURN_PATH_START = 188,
+    MAV_CMD_DO_LAND_START = 189,
+    MAV_CMD_DO_GO_AROUND = 191,
+    MAV_CMD_DO_PAUSE_CONTINUE = 193,
+    MAV_CMD_DO_SET_REVERSE = 194,
+    MAV_CMD_DO_SET_ROI_LOCATION = 195,
+    MAV_CMD_DO_SET_ROI_NONE = 197,
+    MAV_CMD_DO_SET_ROI = 201,
+    MAV_CMD_DO_DIGICAM_CONFIGURE = 202,
+    MAV_CMD_DO_DIGICAM_CONTROL = 203,
+    MAV_CMD_DO_MOUNT_CONTROL = 205,
+    MAV_CMD_DO_SET_CAM_TRIGG_DIST = 206,
+    MAV_CMD_DO_FENCE_ENABLE = 207,
+    MAV_CMD_DO_PARACHUTE = 208,
+    MAV_CMD_DO_INVERTED_FLIGHT = 210,
+    MAV_CMD_DO_GRIPPER = 211,
+    MAV_CMD_DO_AUTOTUNE_ENABLE = 212,
+    MAV_CMD_NAV_SET_YAW_SPEED = 213,
+    MAV_CMD_DO_SET_RESUME_REPEAT_DIST = 215,
+    MAV_CMD_DO_SPRAYER = 216,
+    MAV_CMD_DO_SEND_SCRIPT_MESSAGE = 217,
+    MAV_CMD_DO_AUX_FUNCTION = 218,
+    MAV_CMD_DO_GUIDED_LIMITS = 222,
+    MAV_CMD_DO_ENGINE_CONTROL = 223,
+    MAV_CMD_CONDITION_DELAY = 112,
+    MAV_CMD_CONDITION_DISTANCE = 114,
+    MAV_CMD_CONDITION_YAW = 115,
+    MAV_CMD_SET_CAMERA_ZOOM = 531,
+    MAV_CMD_SET_CAMERA_FOCUS = 532,
+    MAV_CMD_SET_CAMERA_SOURCE = 534,
+    MAV_CMD_JUMP_TAG = 600,
+    MAV_CMD_DO_JUMP_TAG = 601,
+    MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW = 1000,
+    MAV_CMD_IMAGE_START_CAPTURE = 2000,
+    MAV_CMD_IMAGE_STOP_CAPTURE = 2001,
+    MAV_CMD_VIDEO_START_CAPTURE = 2500,
+    MAV_CMD_VIDEO_STOP_CAPTURE = 2501,
+    MAV_CMD_DO_VTOL_TRANSITION = 3000,
+    MAV_CMD_DO_WINCH = 42_600,
+    MAV_CMD_NAV_SCRIPT_TIME = 42_702,
+    MAV_CMD_NAV_ATTITUDE_TIME = 42_703,
+}
+
+impl From<MavCmd> for u16 {
+    fn from(value: MavCmd) -> Self {
+        value as Self
+    }
+}
+
+use MavCmd::*;
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
@@ -288,29 +301,29 @@ macro_rules! mission_commands {
             ) -> Self {
                 match command {
                     $(
-                        code if code == $nav_command => {
+                        code if code == u16::from($nav_command) => {
                             Self::Nav(NavCommand::$nav_variant($nav_from_wire(frame, params, x, y, z)))
                         },
                     )+
                     $(
-                        code if code == $nav_unit_command => {
+                        code if code == u16::from($nav_unit_command) => {
                             $nav_unit_from_wire(frame, params, x, y, z);
                             Self::Nav(NavCommand::$nav_unit_variant)
                         },
                     )*
                     $(
-                        code if code == $do_command => {
+                        code if code == u16::from($do_command) => {
                             Self::Do(DoCommand::$do_variant($do_from_wire(frame, params, x, y, z)))
                         },
                     )*
                     $(
-                        code if code == $do_unit_command => {
+                        code if code == u16::from($do_unit_command) => {
                             $do_unit_from_wire(frame, params, x, y, z);
                             Self::Do(DoCommand::$do_unit_variant)
                         },
                     )*
                     $(
-                        code if code == $condition_command => {
+                        code if code == u16::from($condition_command) => {
                             Self::Condition(ConditionCommand::$condition_variant(
                                 $condition_from_wire(frame, params, x, y, z),
                             ))
@@ -335,31 +348,31 @@ macro_rules! mission_commands {
                     $(
                         Self::Nav(NavCommand::$nav_variant(command_value)) => {
                             let (frame, params, x, y, z) = $nav_to_wire(command_value);
-                            ($nav_command, frame, params, x, y, z)
+                            (u16::from($nav_command), frame, params, x, y, z)
                         }
                     )+
                     $(
                         Self::Nav(NavCommand::$nav_unit_variant) => {
                             let (frame, params, x, y, z) = $nav_unit_to_wire();
-                            ($nav_unit_command, frame, params, x, y, z)
+                            (u16::from($nav_unit_command), frame, params, x, y, z)
                         }
                     )*
                     $(
                         Self::Do(DoCommand::$do_variant(command_value)) => {
                             let (frame, params, x, y, z) = $do_to_wire(command_value);
-                            ($do_command, frame, params, x, y, z)
+                            (u16::from($do_command), frame, params, x, y, z)
                         }
                     )*
                     $(
                         Self::Do(DoCommand::$do_unit_variant) => {
                             let (frame, params, x, y, z) = $do_unit_to_wire();
-                            ($do_unit_command, frame, params, x, y, z)
+                            (u16::from($do_unit_command), frame, params, x, y, z)
                         }
                     )*
                     $(
                         Self::Condition(ConditionCommand::$condition_variant(command_value)) => {
                             let (frame, params, x, y, z) = $condition_to_wire(command_value);
-                            ($condition_command, frame, params, x, y, z)
+                            (u16::from($condition_command), frame, params, x, y, z)
                         }
                     )+
                     Self::Other(raw) => raw.to_wire(),
@@ -476,29 +489,29 @@ fn position_to_wire(position: GeoPoint3d) -> (MissionFrame, i32, i32, f32) {
 }
 
 fn position_from_wire(frame: MissionFrame, x: i32, y: i32, z: f32) -> GeoPoint3d {
-    let latitude_deg = x as f64 / 1e7;
-    let longitude_deg = y as f64 / 1e7;
+    let latitude_deg = f64::from(x) / 1e7;
+    let longitude_deg = f64::from(y) / 1e7;
 
     match frame {
         MissionFrame::Global => GeoPoint3d::Msl(GeoPoint3dMsl {
             latitude_deg,
             longitude_deg,
-            altitude_msl_m: z as f64,
+            altitude_msl_m: f64::from(z),
         }),
         MissionFrame::GlobalRelativeAlt => GeoPoint3d::RelHome(GeoPoint3dRelHome {
             latitude_deg,
             longitude_deg,
-            relative_alt_m: z as f64,
+            relative_alt_m: f64::from(z),
         }),
         MissionFrame::GlobalTerrainAlt => GeoPoint3d::Terrain(GeoPoint3dTerrain {
             latitude_deg,
             longitude_deg,
-            altitude_terrain_m: z as f64,
+            altitude_terrain_m: f64::from(z),
         }),
         MissionFrame::Mission | MissionFrame::Other(_) => GeoPoint3d::Msl(GeoPoint3dMsl {
             latitude_deg,
             longitude_deg,
-            altitude_msl_m: z as f64,
+            altitude_msl_m: f64::from(z),
         }),
     }
 }
@@ -555,7 +568,11 @@ fn yaw_direction_from_param(value: f32) -> YawDirection {
 }
 
 fn bool_to_param(value: bool) -> f32 {
-    if value { 1.0 } else { 0.0 }
+    if value {
+        1.0
+    } else {
+        0.0
+    }
 }
 
 fn bool_from_param(value: f32) -> bool {
@@ -655,7 +672,11 @@ fn winch_action_from_param(value: f32) -> WinchAction {
 }
 
 fn engine_allow_disarmed_to_param(value: bool) -> f32 {
-    if value { 1.0 } else { 0.0 }
+    if value {
+        1.0
+    } else {
+        0.0
+    }
 }
 
 fn engine_allow_disarmed_from_param(value: f32) -> bool {
@@ -1129,7 +1150,10 @@ pub struct NavVtolLand {
 }
 
 fn nav_vtol_land_to_wire(command: NavVtolLand) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [command.options as f32, 0.0, 0.0, 0.0])
+    position_command_to_wire(
+        command.position,
+        [f32::from(command.options), 0.0, 0.0, 0.0],
+    )
 }
 
 fn nav_vtol_land_from_wire(
@@ -1219,7 +1243,7 @@ pub struct NavScriptTime {
 fn nav_script_time_to_wire(command: NavScriptTime) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.command as f32,
+            f32::from(command.command),
             command.timeout_s,
             command.arg1,
             command.arg2,
@@ -1297,8 +1321,8 @@ pub struct DoJump {
 fn do_jump_to_wire(command: DoJump) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.target_index as f32,
-            command.repeat_count as f32,
+            f32::from(command.target_index),
+            f32::from(command.repeat_count),
             0.0,
             0.0,
         ],
@@ -1324,7 +1348,12 @@ pub struct DoJumpTag {
 
 fn do_jump_tag_to_wire(command: DoJumpTag) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
-        [command.tag as f32, command.repeat_count as f32, 0.0, 0.0],
+        [
+            f32::from(command.tag),
+            f32::from(command.repeat_count),
+            0.0,
+            0.0,
+        ],
         0,
         0,
         0.0,
@@ -1351,7 +1380,7 @@ pub struct DoTag {
 }
 
 fn do_tag_to_wire(command: DoTag) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([command.tag as f32, 0.0, 0.0, 0.0], 0, 0, 0.0)
+    mission_command_to_wire([f32::from(command.tag), 0.0, 0.0, 0.0], 0, 0, 0.0)
 }
 
 fn do_tag_from_wire(_frame: MissionFrame, params: [f32; 4], _x: i32, _y: i32, _z: f32) -> DoTag {
@@ -1575,7 +1604,7 @@ pub struct DoSetRoi {
 }
 
 fn do_set_roi_to_wire(command: DoSetRoi) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [command.mode as f32, 0.0, 0.0, 0.0])
+    position_command_to_wire(command.position, [f32::from(command.mode), 0.0, 0.0, 0.0])
 }
 
 fn do_set_roi_from_wire(frame: MissionFrame, params: [f32; 4], x: i32, y: i32, z: f32) -> DoSetRoi {
@@ -1639,7 +1668,7 @@ fn do_gimbal_manager_pitch_yaw_to_wire(
         ],
         command.flags as i32,
         0,
-        command.gimbal_id as f32,
+        f32::from(command.gimbal_id),
     )
 }
 
@@ -1705,7 +1734,7 @@ fn do_image_start_capture_to_wire(
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.instance as f32,
+            f32::from(command.instance),
             command.interval_s,
             command.total_images as f32,
             command.start_number as f32,
@@ -1740,7 +1769,7 @@ pub struct DoImageStopCapture {
 fn do_image_stop_capture_to_wire(
     command: DoImageStopCapture,
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([command.instance as f32, 0.0, 0.0, 0.0], 0, 0, 0.0)
+    mission_command_to_wire([f32::from(command.instance), 0.0, 0.0, 0.0], 0, 0, 0.0)
 }
 
 fn do_image_stop_capture_from_wire(
@@ -1764,7 +1793,7 @@ pub struct DoVideoStartCapture {
 fn do_video_start_capture_to_wire(
     command: DoVideoStartCapture,
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([command.stream_id as f32, 0.0, 0.0, 0.0], 0, 0, 0.0)
+    mission_command_to_wire([f32::from(command.stream_id), 0.0, 0.0, 0.0], 0, 0, 0.0)
 }
 
 fn do_video_start_capture_from_wire(
@@ -1788,7 +1817,7 @@ pub struct DoVideoStopCapture {
 fn do_video_stop_capture_to_wire(
     command: DoVideoStopCapture,
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([command.stream_id as f32, 0.0, 0.0, 0.0], 0, 0, 0.0)
+    mission_command_to_wire([f32::from(command.stream_id), 0.0, 0.0, 0.0], 0, 0, 0.0)
 }
 
 fn do_video_stop_capture_from_wire(
@@ -1812,7 +1841,7 @@ pub struct DoSetCameraZoom {
 
 fn do_set_camera_zoom_to_wire(command: DoSetCameraZoom) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
-        [command.zoom_type as f32, command.zoom_value, 0.0, 0.0],
+        [f32::from(command.zoom_type), command.zoom_value, 0.0, 0.0],
         0,
         0,
         0.0,
@@ -1843,7 +1872,7 @@ fn do_set_camera_focus_to_wire(
     command: DoSetCameraFocus,
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
-        [command.focus_type as f32, command.focus_value, 0.0, 0.0],
+        [f32::from(command.focus_type), command.focus_value, 0.0, 0.0],
         0,
         0,
         0.0,
@@ -1876,9 +1905,9 @@ fn do_set_camera_source_to_wire(
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.instance as f32,
-            command.primary as f32,
-            command.secondary as f32,
+            f32::from(command.instance),
+            f32::from(command.primary),
+            f32::from(command.secondary),
             0.0,
         ],
         0,
@@ -1918,10 +1947,10 @@ fn do_digicam_configure_to_wire(
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.shooting_mode as f32,
-            command.shutter_speed as f32,
+            f32::from(command.shooting_mode),
+            f32::from(command.shutter_speed),
             command.aperture,
-            command.iso as f32,
+            f32::from(command.iso),
         ],
         i32::from(command.exposure_type),
         i32::from(command.cmd_id),
@@ -1963,10 +1992,10 @@ fn do_digicam_control_to_wire(
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.session as f32,
-            command.zoom_pos as f32,
-            command.zoom_step as f32,
-            command.focus_lock as f32,
+            f32::from(command.session),
+            f32::from(command.zoom_pos),
+            f32::from(command.zoom_step),
+            f32::from(command.focus_lock),
         ],
         i32::from(command.shooting_cmd),
         i32::from(command.cmd_id),
@@ -2000,7 +2029,7 @@ pub struct DoSetServo {
 
 fn do_set_servo_to_wire(command: DoSetServo) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
-        [command.channel as f32, command.pwm as f32, 0.0, 0.0],
+        [f32::from(command.channel), f32::from(command.pwm), 0.0, 0.0],
         0,
         0,
         0.0,
@@ -2030,7 +2059,7 @@ pub struct DoSetRelay {
 fn do_set_relay_to_wire(command: DoSetRelay) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.number as f32,
+            f32::from(command.number),
             bool_to_param(command.state),
             0.0,
             0.0,
@@ -2066,9 +2095,9 @@ pub struct DoRepeatServo {
 fn do_repeat_servo_to_wire(command: DoRepeatServo) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.channel as f32,
-            command.pwm as f32,
-            command.count as f32,
+            f32::from(command.channel),
+            f32::from(command.pwm),
+            f32::from(command.count),
             command.cycle_time_s,
         ],
         0,
@@ -2103,8 +2132,8 @@ pub struct DoRepeatRelay {
 fn do_repeat_relay_to_wire(command: DoRepeatRelay) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.number as f32,
-            command.count as f32,
+            f32::from(command.number),
+            f32::from(command.count),
             command.cycle_time_s,
             0.0,
         ],
@@ -2192,7 +2221,7 @@ pub struct DoGripper {
 fn do_gripper_to_wire(command: DoGripper) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.number as f32,
+            f32::from(command.number),
             gripper_action_to_param(command.action),
             0.0,
             0.0,
@@ -2250,7 +2279,7 @@ pub struct DoWinch {
 fn do_winch_to_wire(command: DoWinch) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
         [
-            command.number as f32,
+            f32::from(command.number),
             winch_action_to_param(command.action),
             command.release_length_m,
             command.release_rate_mps,
@@ -2371,7 +2400,7 @@ pub struct DoVtolTransition {
 fn do_vtol_transition_to_wire(
     command: DoVtolTransition,
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([command.target_state as f32, 0.0, 0.0, 0.0], 0, 0, 0.0)
+    mission_command_to_wire([f32::from(command.target_state), 0.0, 0.0, 0.0], 0, 0, 0.0)
 }
 
 fn do_vtol_transition_from_wire(
@@ -2457,7 +2486,12 @@ pub struct DoAuxFunction {
 
 fn do_aux_function_to_wire(command: DoAuxFunction) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
-        [command.function as f32, command.switch_pos as f32, 0.0, 0.0],
+        [
+            f32::from(command.function),
+            f32::from(command.switch_pos),
+            0.0,
+            0.0,
+        ],
         0,
         0,
         0.0,
@@ -2490,7 +2524,7 @@ fn do_send_script_message_to_wire(
     command: DoSendScriptMessage,
 ) -> (MissionFrame, [f32; 4], i32, i32, f32) {
     mission_command_to_wire(
-        [command.id as f32, command.p1, command.p2, command.p3],
+        [f32::from(command.id), command.p1, command.p2, command.p3],
         0,
         0,
         0.0,
@@ -3115,24 +3149,24 @@ mod tests {
 
     fn geo_msl(latitude_e7: i32, longitude_e7: i32, altitude_msl_m: f64) -> GeoPoint3d {
         GeoPoint3d::Msl(GeoPoint3dMsl {
-            latitude_deg: latitude_e7 as f64 / 1e7,
-            longitude_deg: longitude_e7 as f64 / 1e7,
+            latitude_deg: f64::from(latitude_e7) / 1e7,
+            longitude_deg: f64::from(longitude_e7) / 1e7,
             altitude_msl_m,
         })
     }
 
     fn geo_rel_home(latitude_e7: i32, longitude_e7: i32, relative_alt_m: f64) -> GeoPoint3d {
         GeoPoint3d::RelHome(GeoPoint3dRelHome {
-            latitude_deg: latitude_e7 as f64 / 1e7,
-            longitude_deg: longitude_e7 as f64 / 1e7,
+            latitude_deg: f64::from(latitude_e7) / 1e7,
+            longitude_deg: f64::from(longitude_e7) / 1e7,
             relative_alt_m,
         })
     }
 
     fn geo_terrain(latitude_e7: i32, longitude_e7: i32, altitude_terrain_m: f64) -> GeoPoint3d {
         GeoPoint3d::Terrain(GeoPoint3dTerrain {
-            latitude_deg: latitude_e7 as f64 / 1e7,
-            longitude_deg: longitude_e7 as f64 / 1e7,
+            latitude_deg: f64::from(latitude_e7) / 1e7,
+            longitude_deg: f64::from(longitude_e7) / 1e7,
             altitude_terrain_m,
         })
     }
@@ -3179,7 +3213,7 @@ mod tests {
 
         let mission_item: MissionItem = waypoint.into();
         let (command, frame, params, x, y, z) = mission_item.command.clone().into_wire();
-        assert_eq!(command, MAV_CMD_NAV_WAYPOINT);
+        assert_eq!(command, u16::from(MAV_CMD_NAV_WAYPOINT));
         assert_eq!(
             MissionItemFrame::from(frame),
             MissionItemFrame::GlobalRelativeAltInt
@@ -3209,7 +3243,7 @@ mod tests {
         assert_roundtrip(
             original,
             (
-                MAV_CMD_NAV_WAYPOINT,
+                u16::from(MAV_CMD_NAV_WAYPOINT),
                 MissionFrame::GlobalRelativeAlt,
                 [5.0, 2.0, 0.5, 180.0],
                 473_977_420,
@@ -3231,7 +3265,7 @@ mod tests {
                     yaw_deg: 180.0,
                 }),
                 (
-                    MAV_CMD_NAV_WAYPOINT,
+                    u16::from(MAV_CMD_NAV_WAYPOINT),
                     MissionFrame::GlobalRelativeAlt,
                     [5.0, 2.0, 0.5, 180.0],
                     473_977_420,
@@ -3245,7 +3279,7 @@ mod tests {
                     hold_time_s: 7.0,
                 }),
                 (
-                    MAV_CMD_NAV_SPLINE_WAYPOINT,
+                    u16::from(MAV_CMD_NAV_SPLINE_WAYPOINT),
                     MissionFrame::Global,
                     [7.0, 0.0, 0.0, 0.0],
                     473_977_421,
@@ -3260,7 +3294,7 @@ mod tests {
                     direction: LoiterDirection::CounterClockwise,
                 }),
                 (
-                    MAV_CMD_NAV_ARC_WAYPOINT,
+                    u16::from(MAV_CMD_NAV_ARC_WAYPOINT),
                     MissionFrame::GlobalTerrainAlt,
                     [-90.0, 0.0, 0.0, 0.0],
                     473_977_422,
@@ -3274,7 +3308,7 @@ mod tests {
                     pitch_deg: 12.0,
                 }),
                 (
-                    MAV_CMD_NAV_TAKEOFF,
+                    u16::from(MAV_CMD_NAV_TAKEOFF),
                     MissionFrame::GlobalTerrainAlt,
                     [12.0, 0.0, 0.0, 0.0],
                     473_977_423,
@@ -3288,7 +3322,7 @@ mod tests {
                     abort_alt_m: 25.0,
                 }),
                 (
-                    MAV_CMD_NAV_LAND,
+                    u16::from(MAV_CMD_NAV_LAND),
                     MissionFrame::Global,
                     [25.0, 0.0, 0.0, 0.0],
                     473_977_424,
@@ -3299,7 +3333,7 @@ mod tests {
             (
                 MissionCommand::from(NavCommand::ReturnToLaunch),
                 (
-                    MAV_CMD_NAV_RETURN_TO_LAUNCH,
+                    u16::from(MAV_CMD_NAV_RETURN_TO_LAUNCH),
                     MissionFrame::Mission,
                     [0.0, 0.0, 0.0, 0.0],
                     0,
@@ -3314,7 +3348,7 @@ mod tests {
                     direction: LoiterDirection::CounterClockwise,
                 }),
                 (
-                    MAV_CMD_NAV_LOITER_UNLIMITED,
+                    u16::from(MAV_CMD_NAV_LOITER_UNLIMITED),
                     MissionFrame::GlobalRelativeAlt,
                     [0.0, 0.0, -35.0, 0.0],
                     473_977_425,
@@ -3331,7 +3365,7 @@ mod tests {
                     exit_xtrack: true,
                 }),
                 (
-                    MAV_CMD_NAV_LOITER_TURNS,
+                    u16::from(MAV_CMD_NAV_LOITER_TURNS),
                     MissionFrame::GlobalRelativeAlt,
                     [2.5, 0.0, 20.0, 1.0],
                     473_977_426,
@@ -3347,7 +3381,7 @@ mod tests {
                     exit_xtrack: false,
                 }),
                 (
-                    MAV_CMD_NAV_LOITER_TIME,
+                    u16::from(MAV_CMD_NAV_LOITER_TIME),
                     MissionFrame::Global,
                     [15.0, 0.0, 0.0, 0.0],
                     473_977_427,
@@ -3363,7 +3397,7 @@ mod tests {
                     exit_xtrack: true,
                 }),
                 (
-                    MAV_CMD_NAV_LOITER_TO_ALT,
+                    u16::from(MAV_CMD_NAV_LOITER_TO_ALT),
                     MissionFrame::GlobalTerrainAlt,
                     [0.0, -40.0, 0.0, 1.0],
                     473_977_428,
@@ -3377,7 +3411,7 @@ mod tests {
                     action: AltChangeAction::Descend,
                 }),
                 (
-                    MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT,
+                    u16::from(MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT),
                     MissionFrame::GlobalTerrainAlt,
                     [2.0, 0.0, 0.0, 0.0],
                     473_977_429,
@@ -3393,7 +3427,7 @@ mod tests {
                     sec_utc: 8.0,
                 }),
                 (
-                    MAV_CMD_NAV_DELAY,
+                    u16::from(MAV_CMD_NAV_DELAY),
                     MissionFrame::Mission,
                     [-1.0, 6.0, 7.0, 8.0],
                     0,
@@ -3404,7 +3438,7 @@ mod tests {
             (
                 MissionCommand::from(NavGuidedEnable { enabled: true }),
                 (
-                    MAV_CMD_NAV_GUIDED_ENABLE,
+                    u16::from(MAV_CMD_NAV_GUIDED_ENABLE),
                     MissionFrame::Mission,
                     [1.0, 0.0, 0.0, 0.0],
                     0,
@@ -3419,7 +3453,7 @@ mod tests {
                     wiggle_time_s: 3.0,
                 }),
                 (
-                    MAV_CMD_NAV_ALTITUDE_WAIT,
+                    u16::from(MAV_CMD_NAV_ALTITUDE_WAIT),
                     MissionFrame::Mission,
                     [1500.0, -4.0, 3.0, 0.0],
                     0,
@@ -3432,7 +3466,7 @@ mod tests {
                     position: geo_rel_home(473_977_430, 85_455_980, 90.0),
                 }),
                 (
-                    MAV_CMD_NAV_VTOL_TAKEOFF,
+                    u16::from(MAV_CMD_NAV_VTOL_TAKEOFF),
                     MissionFrame::GlobalRelativeAlt,
                     [0.0, 0.0, 0.0, 0.0],
                     473_977_430,
@@ -3446,7 +3480,7 @@ mod tests {
                     options: 2,
                 }),
                 (
-                    MAV_CMD_NAV_VTOL_LAND,
+                    u16::from(MAV_CMD_NAV_VTOL_LAND),
                     MissionFrame::Global,
                     [2.0, 0.0, 0.0, 0.0],
                     473_977_431,
@@ -3460,7 +3494,7 @@ mod tests {
                     max_descent_m: 6.0,
                 }),
                 (
-                    MAV_CMD_NAV_PAYLOAD_PLACE,
+                    u16::from(MAV_CMD_NAV_PAYLOAD_PLACE),
                     MissionFrame::GlobalTerrainAlt,
                     [6.0, 0.0, 0.0, 0.0],
                     473_977_432,
@@ -3475,7 +3509,7 @@ mod tests {
                     relative: true,
                 }),
                 (
-                    MAV_CMD_NAV_SET_YAW_SPEED,
+                    u16::from(MAV_CMD_NAV_SET_YAW_SPEED),
                     MissionFrame::Mission,
                     [45.0, 3.5, 1.0, 0.0],
                     0,
@@ -3493,7 +3527,7 @@ mod tests {
                     arg4: -29,
                 }),
                 (
-                    MAV_CMD_NAV_SCRIPT_TIME,
+                    u16::from(MAV_CMD_NAV_SCRIPT_TIME),
                     MissionFrame::Mission,
                     [9.0, 11.0, 1.5, -2.5],
                     17,
@@ -3510,7 +3544,7 @@ mod tests {
                     climb_rate_mps: 3.0,
                 }),
                 (
-                    MAV_CMD_NAV_ATTITUDE_TIME,
+                    u16::from(MAV_CMD_NAV_ATTITUDE_TIME),
                     MissionFrame::Mission,
                     [12.0, 15.0, -5.0, 270.0],
                     3,
@@ -3536,7 +3570,7 @@ mod tests {
         assert_roundtrip(
             original,
             (
-                MAV_CMD_DO_CHANGE_SPEED,
+                u16::from(MAV_CMD_DO_CHANGE_SPEED),
                 MissionFrame::Mission,
                 [1.0, 5.5, 66.0, 0.0],
                 0,
@@ -3551,7 +3585,7 @@ mod tests {
         assert_roundtrip(
             MissionCommand::from(DoCommand::SetRoiNone),
             (
-                MAV_CMD_DO_SET_ROI_NONE,
+                u16::from(MAV_CMD_DO_SET_ROI_NONE),
                 MissionFrame::Mission,
                 [0.0, 0.0, 0.0, 0.0],
                 0,
@@ -3571,7 +3605,7 @@ mod tests {
         assert_roundtrip(
             original,
             (
-                MAV_CMD_DO_SET_HOME,
+                u16::from(MAV_CMD_DO_SET_HOME),
                 MissionFrame::GlobalTerrainAlt,
                 [0.0, 0.0, 0.0, 0.0],
                 473_977_520,
@@ -3590,7 +3624,7 @@ mod tests {
                     repeat_count: 3,
                 }),
                 (
-                    MAV_CMD_DO_JUMP,
+                    u16::from(MAV_CMD_DO_JUMP),
                     MissionFrame::Mission,
                     [12.0, 3.0, 0.0, 0.0],
                     0,
@@ -3604,7 +3638,7 @@ mod tests {
                     repeat_count: 5,
                 }),
                 (
-                    MAV_CMD_DO_JUMP_TAG,
+                    u16::from(MAV_CMD_DO_JUMP_TAG),
                     MissionFrame::Mission,
                     [44.0, 5.0, 0.0, 0.0],
                     0,
@@ -3615,7 +3649,7 @@ mod tests {
             (
                 MissionCommand::from(DoTag { tag: 44 }),
                 (
-                    MAV_CMD_JUMP_TAG,
+                    u16::from(MAV_CMD_JUMP_TAG),
                     MissionFrame::Mission,
                     [44.0, 0.0, 0.0, 0.0],
                     0,
@@ -3626,7 +3660,7 @@ mod tests {
             (
                 MissionCommand::from(DoPauseContinue { pause: true }),
                 (
-                    MAV_CMD_DO_PAUSE_CONTINUE,
+                    u16::from(MAV_CMD_DO_PAUSE_CONTINUE),
                     MissionFrame::Mission,
                     [0.0, 0.0, 0.0, 0.0],
                     0,
@@ -3641,7 +3675,7 @@ mod tests {
                     throttle_pct: 66.0,
                 }),
                 (
-                    MAV_CMD_DO_CHANGE_SPEED,
+                    u16::from(MAV_CMD_DO_CHANGE_SPEED),
                     MissionFrame::Mission,
                     [1.0, 5.5, 66.0, 0.0],
                     0,
@@ -3652,7 +3686,7 @@ mod tests {
             (
                 MissionCommand::from(DoSetReverse { reverse: true }),
                 (
-                    MAV_CMD_DO_SET_REVERSE,
+                    u16::from(MAV_CMD_DO_SET_REVERSE),
                     MissionFrame::Mission,
                     [1.0, 0.0, 0.0, 0.0],
                     0,
@@ -3666,7 +3700,7 @@ mod tests {
                     use_current: false,
                 }),
                 (
-                    MAV_CMD_DO_SET_HOME,
+                    u16::from(MAV_CMD_DO_SET_HOME),
                     MissionFrame::Global,
                     [0.0, 0.0, 0.0, 0.0],
                     473_977_501,
@@ -3679,7 +3713,7 @@ mod tests {
                     position: geo_rel_home(473_977_502, 85_456_002, 25.0),
                 }),
                 (
-                    MAV_CMD_DO_LAND_START,
+                    u16::from(MAV_CMD_DO_LAND_START),
                     MissionFrame::GlobalRelativeAlt,
                     [0.0, 0.0, 0.0, 0.0],
                     473_977_502,
@@ -3692,7 +3726,7 @@ mod tests {
                     position: geo_terrain(473_977_503, 85_456_003, 15.0),
                 }),
                 (
-                    MAV_CMD_DO_RETURN_PATH_START,
+                    u16::from(MAV_CMD_DO_RETURN_PATH_START),
                     MissionFrame::GlobalTerrainAlt,
                     [0.0, 0.0, 0.0, 0.0],
                     473_977_503,
@@ -3705,7 +3739,7 @@ mod tests {
                     position: geo_rel_home(473_977_504, 85_456_004, 35.0),
                 }),
                 (
-                    MAV_CMD_DO_GO_AROUND,
+                    u16::from(MAV_CMD_DO_GO_AROUND),
                     MissionFrame::GlobalRelativeAlt,
                     [0.0, 0.0, 0.0, 0.0],
                     473_977_504,
@@ -3718,7 +3752,7 @@ mod tests {
                     position: geo_msl(473_977_505, 85_456_005, 45.0),
                 }),
                 (
-                    MAV_CMD_DO_SET_ROI_LOCATION,
+                    u16::from(MAV_CMD_DO_SET_ROI_LOCATION),
                     MissionFrame::Global,
                     [0.0, 0.0, 0.0, 0.0],
                     473_977_505,
@@ -3729,7 +3763,7 @@ mod tests {
             (
                 MissionCommand::from(DoCommand::SetRoiNone),
                 (
-                    MAV_CMD_DO_SET_ROI_NONE,
+                    u16::from(MAV_CMD_DO_SET_ROI_NONE),
                     MissionFrame::Mission,
                     [0.0, 0.0, 0.0, 0.0],
                     0,
@@ -3743,7 +3777,7 @@ mod tests {
                     position: geo_terrain(473_977_506, 85_456_006, 55.0),
                 }),
                 (
-                    MAV_CMD_DO_SET_ROI,
+                    u16::from(MAV_CMD_DO_SET_ROI),
                     MissionFrame::GlobalTerrainAlt,
                     [3.0, 0.0, 0.0, 0.0],
                     473_977_506,
@@ -3758,7 +3792,7 @@ mod tests {
                     yaw_deg: 180.0,
                 }),
                 (
-                    MAV_CMD_DO_MOUNT_CONTROL,
+                    u16::from(MAV_CMD_DO_MOUNT_CONTROL),
                     MissionFrame::Mission,
                     [-10.0, 2.5, 180.0, 0.0],
                     0,
@@ -3776,7 +3810,7 @@ mod tests {
                     gimbal_id: 5,
                 }),
                 (
-                    MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW,
+                    u16::from(MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW),
                     MissionFrame::Mission,
                     [-5.0, 90.0, 3.0, 4.0],
                     7,
@@ -3790,7 +3824,7 @@ mod tests {
                     trigger_now: true,
                 }),
                 (
-                    MAV_CMD_DO_SET_CAM_TRIGG_DIST,
+                    u16::from(MAV_CMD_DO_SET_CAM_TRIGG_DIST),
                     MissionFrame::Mission,
                     [12.5, 0.0, 1.0, 0.0],
                     0,
@@ -3806,7 +3840,7 @@ mod tests {
                     start_number: 8,
                 }),
                 (
-                    MAV_CMD_IMAGE_START_CAPTURE,
+                    u16::from(MAV_CMD_IMAGE_START_CAPTURE),
                     MissionFrame::Mission,
                     [2.0, 4.0, 6.0, 8.0],
                     0,
@@ -3817,7 +3851,7 @@ mod tests {
             (
                 MissionCommand::from(DoImageStopCapture { instance: 2 }),
                 (
-                    MAV_CMD_IMAGE_STOP_CAPTURE,
+                    u16::from(MAV_CMD_IMAGE_STOP_CAPTURE),
                     MissionFrame::Mission,
                     [2.0, 0.0, 0.0, 0.0],
                     0,
@@ -3828,7 +3862,7 @@ mod tests {
             (
                 MissionCommand::from(DoVideoStartCapture { stream_id: 3 }),
                 (
-                    MAV_CMD_VIDEO_START_CAPTURE,
+                    u16::from(MAV_CMD_VIDEO_START_CAPTURE),
                     MissionFrame::Mission,
                     [3.0, 0.0, 0.0, 0.0],
                     0,
@@ -3839,7 +3873,7 @@ mod tests {
             (
                 MissionCommand::from(DoVideoStopCapture { stream_id: 4 }),
                 (
-                    MAV_CMD_VIDEO_STOP_CAPTURE,
+                    u16::from(MAV_CMD_VIDEO_STOP_CAPTURE),
                     MissionFrame::Mission,
                     [4.0, 0.0, 0.0, 0.0],
                     0,
@@ -3853,7 +3887,7 @@ mod tests {
                     zoom_value: 55.0,
                 }),
                 (
-                    MAV_CMD_SET_CAMERA_ZOOM,
+                    u16::from(MAV_CMD_SET_CAMERA_ZOOM),
                     MissionFrame::Mission,
                     [2.0, 55.0, 0.0, 0.0],
                     0,
@@ -3867,7 +3901,7 @@ mod tests {
                     focus_value: 9.0,
                 }),
                 (
-                    MAV_CMD_SET_CAMERA_FOCUS,
+                    u16::from(MAV_CMD_SET_CAMERA_FOCUS),
                     MissionFrame::Mission,
                     [3.0, 9.0, 0.0, 0.0],
                     0,
@@ -3882,7 +3916,7 @@ mod tests {
                     secondary: 3,
                 }),
                 (
-                    MAV_CMD_SET_CAMERA_SOURCE,
+                    u16::from(MAV_CMD_SET_CAMERA_SOURCE),
                     MissionFrame::Mission,
                     [1.0, 2.0, 3.0, 0.0],
                     0,
@@ -3901,7 +3935,7 @@ mod tests {
                     cutoff_time: 0.7,
                 }),
                 (
-                    MAV_CMD_DO_DIGICAM_CONFIGURE,
+                    u16::from(MAV_CMD_DO_DIGICAM_CONFIGURE),
                     MissionFrame::Mission,
                     [1.0, 125.0, 2.8, 200.0],
                     4,
@@ -3919,7 +3953,7 @@ mod tests {
                     cmd_id: 6,
                 }),
                 (
-                    MAV_CMD_DO_DIGICAM_CONTROL,
+                    u16::from(MAV_CMD_DO_DIGICAM_CONTROL),
                     MissionFrame::Mission,
                     [1.0, 2.0, -3.0, 4.0],
                     5,
@@ -3933,7 +3967,7 @@ mod tests {
                     pwm: 1500,
                 }),
                 (
-                    MAV_CMD_DO_SET_SERVO,
+                    u16::from(MAV_CMD_DO_SET_SERVO),
                     MissionFrame::Mission,
                     [9.0, 1500.0, 0.0, 0.0],
                     0,
@@ -3947,7 +3981,7 @@ mod tests {
                     state: true,
                 }),
                 (
-                    MAV_CMD_DO_SET_RELAY,
+                    u16::from(MAV_CMD_DO_SET_RELAY),
                     MissionFrame::Mission,
                     [2.0, 1.0, 0.0, 0.0],
                     0,
@@ -3963,7 +3997,7 @@ mod tests {
                     cycle_time_s: 2.0,
                 }),
                 (
-                    MAV_CMD_DO_REPEAT_SERVO,
+                    u16::from(MAV_CMD_DO_REPEAT_SERVO),
                     MissionFrame::Mission,
                     [10.0, 1200.0, 4.0, 2.0],
                     0,
@@ -3978,7 +4012,7 @@ mod tests {
                     cycle_time_s: 1.5,
                 }),
                 (
-                    MAV_CMD_DO_REPEAT_RELAY,
+                    u16::from(MAV_CMD_DO_REPEAT_RELAY),
                     MissionFrame::Mission,
                     [3.0, 5.0, 1.5, 0.0],
                     0,
@@ -3991,7 +4025,7 @@ mod tests {
                     action: FenceAction::Enable,
                 }),
                 (
-                    MAV_CMD_DO_FENCE_ENABLE,
+                    u16::from(MAV_CMD_DO_FENCE_ENABLE),
                     MissionFrame::Mission,
                     [1.0, 0.0, 0.0, 0.0],
                     0,
@@ -4004,7 +4038,7 @@ mod tests {
                     action: ParachuteAction::Release,
                 }),
                 (
-                    MAV_CMD_DO_PARACHUTE,
+                    u16::from(MAV_CMD_DO_PARACHUTE),
                     MissionFrame::Mission,
                     [2.0, 0.0, 0.0, 0.0],
                     0,
@@ -4018,7 +4052,7 @@ mod tests {
                     action: GripperAction::Grab,
                 }),
                 (
-                    MAV_CMD_DO_GRIPPER,
+                    u16::from(MAV_CMD_DO_GRIPPER),
                     MissionFrame::Mission,
                     [1.0, 1.0, 0.0, 0.0],
                     0,
@@ -4029,7 +4063,7 @@ mod tests {
             (
                 MissionCommand::from(DoSprayer { enabled: true }),
                 (
-                    MAV_CMD_DO_SPRAYER,
+                    u16::from(MAV_CMD_DO_SPRAYER),
                     MissionFrame::Mission,
                     [1.0, 0.0, 0.0, 0.0],
                     0,
@@ -4045,7 +4079,7 @@ mod tests {
                     release_rate_mps: -1.25,
                 }),
                 (
-                    MAV_CMD_DO_WINCH,
+                    u16::from(MAV_CMD_DO_WINCH),
                     MissionFrame::Mission,
                     [1.0, 2.0, 12.5, -1.25],
                     0,
@@ -4061,7 +4095,7 @@ mod tests {
                     allow_disarmed: true,
                 }),
                 (
-                    MAV_CMD_DO_ENGINE_CONTROL,
+                    u16::from(MAV_CMD_DO_ENGINE_CONTROL),
                     MissionFrame::Mission,
                     [1.0, 0.0, 6.5, 1.0],
                     0,
@@ -4072,7 +4106,7 @@ mod tests {
             (
                 MissionCommand::from(DoInvertedFlight { inverted: true }),
                 (
-                    MAV_CMD_DO_INVERTED_FLIGHT,
+                    u16::from(MAV_CMD_DO_INVERTED_FLIGHT),
                     MissionFrame::Mission,
                     [1.0, 0.0, 0.0, 0.0],
                     0,
@@ -4083,7 +4117,7 @@ mod tests {
             (
                 MissionCommand::from(DoAutotuneEnable { enabled: true }),
                 (
-                    MAV_CMD_DO_AUTOTUNE_ENABLE,
+                    u16::from(MAV_CMD_DO_AUTOTUNE_ENABLE),
                     MissionFrame::Mission,
                     [1.0, 0.0, 0.0, 0.0],
                     0,
@@ -4094,7 +4128,7 @@ mod tests {
             (
                 MissionCommand::from(DoVtolTransition { target_state: 4 }),
                 (
-                    MAV_CMD_DO_VTOL_TRANSITION,
+                    u16::from(MAV_CMD_DO_VTOL_TRANSITION),
                     MissionFrame::Mission,
                     [4.0, 0.0, 0.0, 0.0],
                     0,
@@ -4110,7 +4144,7 @@ mod tests {
                     max_horiz_m: 40.0,
                 }),
                 (
-                    MAV_CMD_DO_GUIDED_LIMITS,
+                    u16::from(MAV_CMD_DO_GUIDED_LIMITS),
                     MissionFrame::Mission,
                     [10.0, 20.0, 30.0, 40.0],
                     0,
@@ -4121,7 +4155,7 @@ mod tests {
             (
                 MissionCommand::from(DoSetResumeRepeatDist { distance_m: 18.0 }),
                 (
-                    MAV_CMD_DO_SET_RESUME_REPEAT_DIST,
+                    u16::from(MAV_CMD_DO_SET_RESUME_REPEAT_DIST),
                     MissionFrame::Mission,
                     [18.0, 0.0, 0.0, 0.0],
                     0,
@@ -4135,7 +4169,7 @@ mod tests {
                     switch_pos: 2,
                 }),
                 (
-                    MAV_CMD_DO_AUX_FUNCTION,
+                    u16::from(MAV_CMD_DO_AUX_FUNCTION),
                     MissionFrame::Mission,
                     [42.0, 2.0, 0.0, 0.0],
                     0,
@@ -4151,7 +4185,7 @@ mod tests {
                     p3: 3.75,
                 }),
                 (
-                    MAV_CMD_DO_SEND_SCRIPT_MESSAGE,
+                    u16::from(MAV_CMD_DO_SEND_SCRIPT_MESSAGE),
                     MissionFrame::Mission,
                     [7.0, 1.25, -2.5, 3.75],
                     0,
@@ -4172,7 +4206,7 @@ mod tests {
             (
                 MissionCommand::from(CondDelay { delay_s: 8.5 }),
                 (
-                    MAV_CMD_CONDITION_DELAY,
+                    u16::from(MAV_CMD_CONDITION_DELAY),
                     MissionFrame::Mission,
                     [8.5, 0.0, 0.0, 0.0],
                     0,
@@ -4183,7 +4217,7 @@ mod tests {
             (
                 MissionCommand::from(CondDistance { distance_m: 125.0 }),
                 (
-                    MAV_CMD_CONDITION_DISTANCE,
+                    u16::from(MAV_CMD_CONDITION_DISTANCE),
                     MissionFrame::Mission,
                     [125.0, 0.0, 0.0, 0.0],
                     0,
@@ -4199,7 +4233,7 @@ mod tests {
                     relative: true,
                 }),
                 (
-                    MAV_CMD_CONDITION_YAW,
+                    u16::from(MAV_CMD_CONDITION_YAW),
                     MissionFrame::Mission,
                     [135.0, 20.0, -1.0, 1.0],
                     0,
