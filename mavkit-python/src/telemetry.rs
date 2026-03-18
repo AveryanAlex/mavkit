@@ -2267,8 +2267,13 @@ impl PyTelemetryTerrainNamespace {
 
 #[pymethods]
 impl PyTelemetryRcNamespace {
-    fn channel_pwm_us(&self, index: usize) -> PyMetricHandle {
-        PyMetricHandle::u16(self.inner.telemetry().rc().channel_pwm_us(index))
+    fn channel_pwm_us(&self, index: usize) -> PyResult<PyMetricHandle> {
+        self.inner
+            .telemetry()
+            .rc()
+            .channel_pwm_us(index)
+            .map(PyMetricHandle::u16)
+            .ok_or_else(|| pyo3::exceptions::PyIndexError::new_err("rc channel index out of range"))
     }
 
     fn rssi_pct(&self) -> PyMetricHandle {
@@ -2278,8 +2283,13 @@ impl PyTelemetryRcNamespace {
 
 #[pymethods]
 impl PyTelemetryActuatorsNamespace {
-    fn servo_pwm_us(&self, index: usize) -> PyMetricHandle {
-        PyMetricHandle::u16(self.inner.telemetry().actuators().servo_pwm_us(index))
+    fn servo_pwm_us(&self, index: usize) -> PyResult<PyMetricHandle> {
+        self.inner
+            .telemetry()
+            .actuators()
+            .servo_pwm_us(index)
+            .map(PyMetricHandle::u16)
+            .ok_or_else(|| pyo3::exceptions::PyIndexError::new_err("servo index out of range"))
     }
 }
 

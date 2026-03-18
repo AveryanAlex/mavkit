@@ -498,12 +498,8 @@ pub struct RcNamespace<'a> {
 }
 
 impl RcNamespace<'_> {
-    pub fn channel_pwm_us(&self, index: usize) -> MetricHandle<u16> {
-        self.handles
-            .rc_channels_pwm_us
-            .get(index)
-            .cloned()
-            .expect("rc channel index out of range")
+    pub fn channel_pwm_us(&self, index: usize) -> Option<MetricHandle<u16>> {
+        self.handles.rc_channels_pwm_us.get(index).cloned()
     }
 
     pub fn rssi_pct(&self) -> MetricHandle<u8> {
@@ -517,11 +513,7 @@ pub struct ActuatorsNamespace<'a> {
 }
 
 impl ActuatorsNamespace<'_> {
-    pub fn servo_pwm_us(&self, index: usize) -> MetricHandle<u16> {
-        self.handles
-            .actuator_servo_pwm_us
-            .get(index)
-            .cloned()
-            .expect("servo index out of range")
+    pub fn servo_pwm_us(&self, index: usize) -> Option<MetricHandle<u16>> {
+        self.handles.actuator_servo_pwm_us.get(index).cloned()
     }
 }
