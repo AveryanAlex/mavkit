@@ -4,9 +4,9 @@ use mavkit::dialect;
 use mavlink::{
     AsyncMavConnection, MAVLinkMessageRaw, MAVLinkV2MessageRaw, MavHeader, MavlinkVersion,
 };
-use pyo3::exceptions::{PyStopAsyncIteration, PyTypeError};
 #[cfg(feature = "test-support")]
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::exceptions::{PyStopAsyncIteration, PyTypeError};
 use pyo3::prelude::*;
 use std::sync::Arc;
 #[cfg(feature = "test-support")]

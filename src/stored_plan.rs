@@ -254,7 +254,10 @@ mod tests {
         domain.update_state(|_state| {});
 
         let no_change = tokio::time::timeout(Duration::from_millis(100), sub.recv()).await;
-        assert!(no_change.is_err(), "expected no publish for unchanged state");
+        assert!(
+            no_change.is_err(),
+            "expected no publish for unchanged state"
+        );
     }
 
     #[tokio::test]

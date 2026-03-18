@@ -1,6 +1,8 @@
 use crate::command::Command;
 use crate::error::VehicleError;
-use crate::geo::{GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain, quantize_degrees_e7};
+use crate::geo::{
+    GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain, quantize_degrees_e7,
+};
 use crate::mission::commands::MissionFrame as WireMissionFrame;
 use crate::mission::operations::MissionOperationHandle;
 use crate::mission::{

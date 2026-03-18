@@ -3,8 +3,8 @@ use crate::dialect::{self, MavModeFlag};
 use crate::geo::GeoPoint3dMsl;
 use crate::mission;
 use crate::state::{
-    AutopilotType, GpsFixType, MagCalProgress, MagCalReport, MagCalStatus, WireMissionState,
-    SensorHealth, StateWriters, SystemStatus, VehicleState, VehicleType, set_if_changed,
+    AutopilotType, GpsFixType, MagCalProgress, MagCalReport, MagCalStatus, SensorHealth,
+    StateWriters, SystemStatus, VehicleState, VehicleType, WireMissionState, set_if_changed,
 };
 use crate::telemetry::{
     EulerAttitude, GlobalPosition, GpsQuality, GuidanceState, TelemetryMessageKind,

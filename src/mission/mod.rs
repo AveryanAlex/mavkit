@@ -24,8 +24,8 @@ pub use wire::{items_for_wire_upload, plan_from_wire_download};
 use crate::command::Command;
 use crate::error::VehicleError;
 use crate::observation::{ObservationHandle, ObservationSubscription, ObservationWriter};
-use crate::stored_plan::StoredPlanDomain;
 use crate::state::StateChannels;
+use crate::stored_plan::StoredPlanDomain;
 use crate::types::{MissionOperationKind, MissionOperationProgress};
 use crate::vehicle::VehicleInner;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -260,9 +260,12 @@ pub(crate) fn run_domain_operation<C, T>(
     mission_progress_rx: tokio::sync::watch::Receiver<Option<TransferProgress>>,
     reservation: OperationReservation,
     make_command: impl FnOnce(oneshot::Sender<Result<C, VehicleError>>) -> Command + Send + 'static,
-    on_result: impl FnOnce(Result<C, VehicleError>, &ObservationWriter<MissionOperationProgress>) -> Result<T, VehicleError>
-        + Send
-        + 'static,
+    on_result: impl FnOnce(
+        Result<C, VehicleError>,
+        &ObservationWriter<MissionOperationProgress>,
+    ) -> Result<T, VehicleError>
+    + Send
+    + 'static,
 ) -> operations::MissionOperationHandle<T>
 where
     C: Send + 'static,
