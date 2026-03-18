@@ -79,8 +79,8 @@ pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
             frame,
             MissionFrame::Global | MissionFrame::GlobalRelativeAlt | MissionFrame::GlobalTerrainAlt
         ) {
-            let latitude = x as f64 / 1e7;
-            let longitude = y as f64 / 1e7;
+            let latitude = f64::from(x) / 1e7;
+            let longitude = f64::from(y) / 1e7;
             if !(-90.0..=90.0).contains(&latitude) {
                 issues.push(MissionIssue {
                     code: "item.latitude_out_of_range".to_string(),

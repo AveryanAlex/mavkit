@@ -150,7 +150,7 @@ mod tests {
             command: MissionCommand::Other(RawMissionCommand {
                 command: 177,
                 frame: MissionFrame::Mission,
-                param1: target_index as f32,
+                param1: f32::from(target_index),
                 param2: 2.0,
                 param3: 0.0,
                 param4: 0.0,
