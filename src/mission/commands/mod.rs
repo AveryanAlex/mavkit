@@ -1,6 +1,6 @@
 use super::types::{MissionFrame as MissionItemFrame, MissionItem};
 use crate::geo::{
-    GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain, quantize_degrees_e7,
+    quantize_degrees_e7, GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain,
 };
 use serde::{Deserialize, Serialize};
 
@@ -568,7 +568,11 @@ fn yaw_direction_from_param(value: f32) -> YawDirection {
 }
 
 fn bool_to_param(value: bool) -> f32 {
-    if value { 1.0 } else { 0.0 }
+    if value {
+        1.0
+    } else {
+        0.0
+    }
 }
 
 fn bool_from_param(value: f32) -> bool {
@@ -668,7 +672,11 @@ fn winch_action_from_param(value: f32) -> WinchAction {
 }
 
 fn engine_allow_disarmed_to_param(value: bool) -> f32 {
-    if value { 1.0 } else { 0.0 }
+    if value {
+        1.0
+    } else {
+        0.0
+    }
 }
 
 fn engine_allow_disarmed_from_param(value: f32) -> bool {
@@ -1254,12 +1262,13 @@ fn nav_script_time_from_wire(
     _z: f32,
 ) -> NavScriptTime {
     NavScriptTime {
+        // f32→u16 saturates in Rust (NaN→0, overflow→clamp).
         command: params[0] as u16,
         timeout_s: params[1],
         arg1: params[2],
         arg2: params[3],
-        arg3: x as i16,
-        arg4: y as i16,
+        arg3: i16::try_from(x).unwrap_or(if x > 0 { i16::MAX } else { i16::MIN }),
+        arg4: i16::try_from(y).unwrap_or(if y > 0 { i16::MAX } else { i16::MIN }),
     }
 }
 
@@ -1274,6 +1283,7 @@ pub struct NavAttitudeTime {
 }
 
 fn nav_attitude_time_to_wire(command: NavAttitudeTime) -> (MissionFrame, [f32; 4], i32, i32, f32) {
+    // x field is i32 on wire; round to nearest integer for the climb rate.
     mission_command_to_wire(
         [
             command.time_s,
@@ -1281,7 +1291,7 @@ fn nav_attitude_time_to_wire(command: NavAttitudeTime) -> (MissionFrame, [f32; 4
             command.pitch_deg,
             command.yaw_deg,
         ],
-        command.climb_rate_mps as i32,
+        command.climb_rate_mps.round() as i32,
         0,
         0.0,
     )
@@ -1299,6 +1309,7 @@ fn nav_attitude_time_from_wire(
         roll_deg: params[1],
         pitch_deg: params[2],
         yaw_deg: params[3],
+        // Wire x is i32; widen to f32 (lossless for practical climb rates).
         climb_rate_mps: x as f32,
     }
 }
