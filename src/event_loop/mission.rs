@@ -81,12 +81,12 @@ fn from_mission_item_float(data: &dialect::MISSION_ITEM_DATA) -> MissionItem {
             commands::MissionFrame::from(from_mav_frame(data.frame)),
             [data.param1, data.param2, data.param3, data.param4],
             if is_global {
-                (data.x as f64 * 1e7) as i32
+                (f64::from(data.x) * 1e7) as i32
             } else {
                 data.x as i32
             },
             if is_global {
-                (data.y as f64 * 1e7) as i32
+                (f64::from(data.y) * 1e7) as i32
             } else {
                 data.y as i32
             },
@@ -562,7 +562,7 @@ pub(super) async fn handle_mission_set_current(
                 target_component: target.component_id,
                 command: MavCmd::MAV_CMD_DO_SET_MISSION_CURRENT,
                 confirmation: 0,
-                param1: wire_seq as f32,
+                param1: f32::from(wire_seq),
                 param2: 0.0,
                 param3: 0.0,
                 param4: 0.0,

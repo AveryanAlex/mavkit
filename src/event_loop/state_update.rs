@@ -58,12 +58,12 @@ pub(super) fn update_state(
                 .message_writers
                 .vfr_hud
                 .publish(data.clone(), None);
-            let alt = Some(data.alt as f64);
-            let spd = Some(data.groundspeed as f64);
-            let hdg = Some(data.heading as f64);
-            let climb = Some(data.climb as f64);
-            let thr = Some(data.throttle as f64);
-            let air = Some(data.airspeed as f64);
+            let alt = Some(f64::from(data.alt));
+            let spd = Some(f64::from(data.groundspeed));
+            let hdg = Some(f64::from(data.heading));
+            let climb = Some(f64::from(data.climb));
+            let thr = Some(f64::from(data.throttle));
+            let air = Some(f64::from(data.airspeed));
             writers.telemetry.send_if_modified(|t| {
                 let mut c = false;
                 c |= set_if_changed(&mut t.altitude_m, alt);
@@ -86,40 +86,40 @@ pub(super) fn update_state(
             });
 
             writers.telemetry_metrics.position_groundspeed_mps.publish(
-                data.groundspeed as f64,
+                f64::from(data.groundspeed),
                 TelemetryMessageKind::VfrHud,
                 None,
             );
             writers.telemetry_metrics.position_airspeed_mps.publish(
-                data.airspeed as f64,
+                f64::from(data.airspeed),
                 TelemetryMessageKind::VfrHud,
                 None,
             );
             writers.telemetry_metrics.position_climb_rate_mps.publish(
-                data.climb as f64,
+                f64::from(data.climb),
                 TelemetryMessageKind::VfrHud,
                 None,
             );
             writers.telemetry_metrics.position_heading_deg.publish(
-                data.heading as f64,
+                f64::from(data.heading),
                 TelemetryMessageKind::VfrHud,
                 None,
             );
             writers.telemetry_metrics.position_throttle_pct.publish(
-                data.throttle as f64,
+                f64::from(data.throttle),
                 TelemetryMessageKind::VfrHud,
                 None,
             );
         }
         dialect::MavMessage::GLOBAL_POSITION_INT(data) => {
-            let alt = Some(data.relative_alt as f64 / 1000.0);
-            let lat = Some(data.lat as f64 / 1e7);
-            let lon = Some(data.lon as f64 / 1e7);
-            let vx = data.vx as f64 / 100.0;
-            let vy = data.vy as f64 / 100.0;
+            let alt = Some(f64::from(data.relative_alt) / 1000.0);
+            let lat = Some(f64::from(data.lat) / 1e7);
+            let lon = Some(f64::from(data.lon) / 1e7);
+            let vx = f64::from(data.vx) / 100.0;
+            let vy = f64::from(data.vy) / 100.0;
             let spd = Some((vx * vx + vy * vy).sqrt());
             let hdg = if data.hdg != u16::MAX {
-                Some(data.hdg as f64 / 100.0)
+                Some(f64::from(data.hdg) / 100.0)
             } else {
                 None
             };
@@ -157,10 +157,10 @@ pub(super) fn update_state(
                 .publish(data.clone(), vehicle_time.clone());
             writers.telemetry_metrics.position_global.publish(
                 GlobalPosition {
-                    latitude_deg: data.lat as f64 / 1e7,
-                    longitude_deg: data.lon as f64 / 1e7,
-                    altitude_msl_m: data.alt as f64 / 1000.0,
-                    relative_alt_m: data.relative_alt as f64 / 1000.0,
+                    latitude_deg: f64::from(data.lat) / 1e7,
+                    longitude_deg: f64::from(data.lon) / 1e7,
+                    altitude_msl_m: f64::from(data.alt) / 1000.0,
+                    relative_alt_m: f64::from(data.relative_alt) / 1000.0,
                 },
                 TelemetryMessageKind::GlobalPositionInt,
                 vehicle_time.clone(),
@@ -175,14 +175,14 @@ pub(super) fn update_state(
 
             if data.hdg != u16::MAX {
                 writers.telemetry_metrics.position_heading_deg.publish(
-                    data.hdg as f64 / 100.0,
+                    f64::from(data.hdg) / 100.0,
                     TelemetryMessageKind::GlobalPositionInt,
                     vehicle_time.clone(),
                 );
             }
 
             writers.telemetry_metrics.position_climb_rate_mps.publish(
-                -(data.vz as f64 / 100.0),
+                -(f64::from(data.vz) / 100.0),
                 TelemetryMessageKind::GlobalPositionInt,
                 vehicle_time,
             );
@@ -207,17 +207,17 @@ pub(super) fn update_state(
                 .sys_status
                 .publish(data.clone(), None);
             let pct = if data.battery_remaining >= 0 {
-                Some(data.battery_remaining as f64)
+                Some(f64::from(data.battery_remaining))
             } else {
                 None
             };
             let volt = if data.voltage_battery != u16::MAX {
-                Some(data.voltage_battery as f64 / 1000.0)
+                Some(f64::from(data.voltage_battery) / 1000.0)
             } else {
                 None
             };
             let cur = if data.current_battery >= 0 {
-                Some(data.current_battery as f64 / 100.0)
+                Some(f64::from(data.current_battery) / 100.0)
             } else {
                 None
             };
@@ -278,7 +278,7 @@ pub(super) fn update_state(
                 None
             };
             let hdop = if data.eph != u16::MAX {
-                Some(data.eph as f64 / 100.0)
+                Some(f64::from(data.eph) / 100.0)
             } else {
                 None
             };
@@ -323,9 +323,9 @@ pub(super) fn update_state(
             );
             writers.telemetry_metrics.gps_position_msl.publish(
                 GeoPoint3dMsl {
-                    latitude_deg: data.lat as f64 / 1e7,
-                    longitude_deg: data.lon as f64 / 1e7,
-                    altitude_msl_m: data.alt as f64 / 1000.0,
+                    latitude_deg: f64::from(data.lat) / 1e7,
+                    longitude_deg: f64::from(data.lon) / 1e7,
+                    altitude_msl_m: f64::from(data.alt) / 1000.0,
                 },
                 TelemetryMessageKind::GpsRawInt,
                 vehicle_time,
@@ -341,9 +341,9 @@ pub(super) fn update_state(
         }
         dialect::MavMessage::HOME_POSITION(data) => {
             let _ = writers.home_position.send(Some(mission::HomePosition {
-                latitude_deg: data.latitude as f64 / 1e7,
-                longitude_deg: data.longitude as f64 / 1e7,
-                altitude_m: (data.altitude as f64 / 1000.0) as f32,
+                latitude_deg: f64::from(data.latitude) / 1e7,
+                longitude_deg: f64::from(data.longitude) / 1e7,
+                altitude_m: (f64::from(data.altitude) / 1000.0) as f32,
             }));
 
             let vehicle_time =
@@ -355,9 +355,9 @@ pub(super) fn update_state(
                 .publish(data.clone(), vehicle_time.clone());
             writers.telemetry_metrics.home.publish(
                 GeoPoint3dMsl {
-                    latitude_deg: data.latitude as f64 / 1e7,
-                    longitude_deg: data.longitude as f64 / 1e7,
-                    altitude_msl_m: data.altitude as f64 / 1000.0,
+                    latitude_deg: f64::from(data.latitude) / 1e7,
+                    longitude_deg: f64::from(data.longitude) / 1e7,
+                    altitude_msl_m: f64::from(data.altitude) / 1000.0,
                 },
                 TelemetryMessageKind::HomePosition,
                 vehicle_time,
@@ -375,18 +375,18 @@ pub(super) fn update_state(
                 .publish(data.clone(), vehicle_time.clone());
             writers.telemetry_metrics.origin.publish(
                 GeoPoint3dMsl {
-                    latitude_deg: data.latitude as f64 / 1e7,
-                    longitude_deg: data.longitude as f64 / 1e7,
-                    altitude_msl_m: data.altitude as f64 / 1000.0,
+                    latitude_deg: f64::from(data.latitude) / 1e7,
+                    longitude_deg: f64::from(data.longitude) / 1e7,
+                    altitude_msl_m: f64::from(data.altitude) / 1000.0,
                 },
                 TelemetryMessageKind::GpsGlobalOrigin,
                 vehicle_time,
             );
         }
         dialect::MavMessage::ATTITUDE(data) => {
-            let roll = Some(data.roll.to_degrees() as f64);
-            let pitch = Some(data.pitch.to_degrees() as f64);
-            let yaw = Some(data.yaw.to_degrees() as f64);
+            let roll = Some(f64::from(data.roll.to_degrees()));
+            let pitch = Some(f64::from(data.pitch.to_degrees()));
+            let yaw = Some(f64::from(data.yaw.to_degrees()));
             writers.telemetry.send_if_modified(|t| {
                 let mut c = false;
                 c |= set_if_changed(&mut t.roll_deg, roll);
@@ -413,9 +413,9 @@ pub(super) fn update_state(
                 .publish(data.clone(), vehicle_time.clone());
             writers.telemetry_metrics.attitude_euler.publish(
                 EulerAttitude {
-                    roll_deg: data.roll.to_degrees() as f64,
-                    pitch_deg: data.pitch.to_degrees() as f64,
-                    yaw_deg: data.yaw.to_degrees() as f64,
+                    roll_deg: f64::from(data.roll.to_degrees()),
+                    pitch_deg: f64::from(data.pitch.to_degrees()),
+                    yaw_deg: f64::from(data.yaw.to_degrees()),
                 },
                 TelemetryMessageKind::Attitude,
                 vehicle_time,
@@ -427,10 +427,10 @@ pub(super) fn update_state(
                 .message_writers
                 .nav_controller_output
                 .publish(data.clone(), None);
-            let wp = Some(data.wp_dist as f64);
-            let nav = Some(data.nav_bearing as f64);
-            let tgt = Some(data.target_bearing as f64);
-            let xt = Some(data.xtrack_error as f64);
+            let wp = Some(f64::from(data.wp_dist));
+            let nav = Some(f64::from(data.nav_bearing));
+            let tgt = Some(f64::from(data.target_bearing));
+            let xt = Some(f64::from(data.xtrack_error));
             writers.telemetry.send_if_modified(|t| {
                 let mut c = false;
                 c |= set_if_changed(&mut t.wp_dist_m, wp);
@@ -450,16 +450,16 @@ pub(super) fn update_state(
 
             writers.telemetry_metrics.navigation_waypoint.publish(
                 WaypointProgress {
-                    distance_m: data.wp_dist as f64,
-                    bearing_deg: data.nav_bearing as f64,
+                    distance_m: f64::from(data.wp_dist),
+                    bearing_deg: f64::from(data.nav_bearing),
                 },
                 TelemetryMessageKind::NavControllerOutput,
                 None,
             );
             writers.telemetry_metrics.navigation_guidance.publish(
                 GuidanceState {
-                    bearing_deg: data.target_bearing as f64,
-                    cross_track_error_m: data.xtrack_error as f64,
+                    bearing_deg: f64::from(data.target_bearing),
+                    cross_track_error_m: f64::from(data.xtrack_error),
                 },
                 TelemetryMessageKind::NavControllerOutput,
                 None,
@@ -471,8 +471,8 @@ pub(super) fn update_state(
                 .message_writers
                 .terrain_report
                 .publish(data.clone(), None);
-            let th = Some(data.terrain_height as f64);
-            let hat = Some(data.current_height as f64);
+            let th = Some(f64::from(data.terrain_height));
+            let hat = Some(f64::from(data.current_height));
             writers.telemetry.send_if_modified(|t| {
                 let mut c = false;
                 c |= set_if_changed(&mut t.terrain_height_m, th);
@@ -488,8 +488,8 @@ pub(super) fn update_state(
 
             writers.telemetry_metrics.terrain_clearance.publish(
                 TerrainClearance {
-                    terrain_height_m: data.terrain_height as f64,
-                    height_above_terrain_m: data.current_height as f64,
+                    terrain_height_m: f64::from(data.terrain_height),
+                    height_above_terrain_m: f64::from(data.current_height),
                 },
                 TelemetryMessageKind::TerrainReport,
                 None,
@@ -505,11 +505,11 @@ pub(super) fn update_state(
                 .voltages
                 .iter()
                 .filter(|&&v| v != u16::MAX)
-                .map(|&v| v as f64 / 1000.0)
+                .map(|&v| f64::from(v) / 1000.0)
                 .collect();
             let cells_opt = if !cells.is_empty() { Some(cells) } else { None };
             let energy = if data.energy_consumed >= 0 {
-                Some(data.energy_consumed as f64 / 36.0)
+                Some(f64::from(data.energy_consumed) / 36.0)
             } else {
                 None
             };
@@ -547,12 +547,12 @@ pub(super) fn update_state(
 
             if data.id == 0 {
                 let remaining_pct = if data.battery_remaining >= 0 {
-                    Some(data.battery_remaining as f64)
+                    Some(f64::from(data.battery_remaining))
                 } else {
                     None
                 };
                 let current_a = if data.current_battery >= 0 {
-                    Some(data.current_battery as f64 / 100.0)
+                    Some(f64::from(data.current_battery) / 100.0)
                 } else {
                     None
                 };
@@ -1059,9 +1059,9 @@ mod tests {
 
         let euler = telemetry.attitude().euler().latest().unwrap();
         assert_eq!(euler.source, crate::TelemetryMessageKind::Attitude);
-        assert!((euler.value.roll_deg - 0.1f32.to_degrees() as f64).abs() < 0.001);
-        assert!((euler.value.pitch_deg - (-0.2f32).to_degrees() as f64).abs() < 0.001);
-        assert!((euler.value.yaw_deg - 1.3f32.to_degrees() as f64).abs() < 0.001);
+        assert!((euler.value.roll_deg - f64::from(0.1f32.to_degrees())).abs() < 0.001);
+        assert!((euler.value.pitch_deg - f64::from((-0.2f32).to_degrees())).abs() < 0.001);
+        assert!((euler.value.yaw_deg - f64::from(1.3f32.to_degrees())).abs() < 0.001);
 
         let nav_output =
             dialect::MavMessage::NAV_CONTROLLER_OUTPUT(dialect::NAV_CONTROLLER_OUTPUT_DATA {

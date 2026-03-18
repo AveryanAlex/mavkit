@@ -190,7 +190,7 @@ impl AckCommandDispatcher {
                     target_system: request.target_system,
                     target_component: request.target_component,
                     command: Self::wire_command_from_id(request.command_id)?,
-                    confirmation: attempt.min(u8::MAX as u16) as u8,
+                    confirmation: attempt.min(u16::from(u8::MAX)) as u8,
                     param1: request.params[0],
                     param2: request.params[1],
                     param3: request.params[2],
