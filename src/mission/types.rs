@@ -51,7 +51,7 @@ pub struct MissionItem {
 pub struct HomePosition {
     pub latitude_deg: f64,
     pub longitude_deg: f64,
-    pub altitude_m: f32,
+    pub altitude_m: f64,
 }
 
 impl HomePosition {
@@ -68,7 +68,8 @@ impl HomePosition {
                 param4: 0.0,
                 x: quantize_degrees_e7(self.latitude_deg),
                 y: quantize_degrees_e7(self.longitude_deg),
-                z: self.altitude_m,
+                // Narrow to f32 at the wire boundary (MAVLink z field is f32).
+                z: self.altitude_m as f32,
             }),
             current: false,
             autocontinue: true,
@@ -82,7 +83,7 @@ impl HomePosition {
             Some(HomePosition {
                 latitude_deg: f64::from(x) / 1e7,
                 longitude_deg: f64::from(y) / 1e7,
-                altitude_m: z,
+                altitude_m: f64::from(z),
             })
         } else {
             None

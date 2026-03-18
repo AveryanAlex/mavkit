@@ -343,7 +343,7 @@ pub(super) fn update_state(
             let _ = writers.home_position.send(Some(mission::HomePosition {
                 latitude_deg: f64::from(data.latitude) / 1e7,
                 longitude_deg: f64::from(data.longitude) / 1e7,
-                altitude_m: (f64::from(data.altitude) / 1000.0) as f32,
+                altitude_m: f64::from(data.altitude) / 1000.0,
             }));
 
             let vehicle_time =

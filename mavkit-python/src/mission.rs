@@ -2892,7 +2892,7 @@ pub struct PyHomePosition {
 impl PyHomePosition {
     #[new]
     #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m=0.0))]
-    fn new(latitude_deg: f64, longitude_deg: f64, altitude_m: f32) -> Self {
+    fn new(latitude_deg: f64, longitude_deg: f64, altitude_m: f64) -> Self {
         Self {
             inner: mavkit::HomePosition {
                 latitude_deg,
@@ -2911,7 +2911,7 @@ impl PyHomePosition {
         self.inner.longitude_deg
     }
     #[getter]
-    fn altitude_m(&self) -> f32 {
+    fn altitude_m(&self) -> f64 {
         self.inner.altitude_m
     }
 
