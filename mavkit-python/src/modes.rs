@@ -1,21 +1,11 @@
 use std::sync::Arc;
-use std::time::Duration;
 
-use pyo3::exceptions::{PyStopAsyncIteration, PyValueError};
+use pyo3::exceptions::PyStopAsyncIteration;
 use pyo3::prelude::*;
 
-use crate::error::to_py_err;
+use crate::error::{duration_from_secs, to_py_err};
 use crate::support::PySupportStateHandle;
 use crate::vehicle::vehicle_label;
-
-fn duration_from_secs(timeout_secs: f64) -> PyResult<Duration> {
-    if !timeout_secs.is_finite() || timeout_secs < 0.0 {
-        return Err(PyValueError::new_err(
-            "timeout_secs must be a finite non-negative number",
-        ));
-    }
-    Ok(Duration::from_secs_f64(timeout_secs))
-}
 
 #[pyclass(name = "ModeCatalogSource", eq, frozen, from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]

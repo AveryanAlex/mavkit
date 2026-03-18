@@ -12,7 +12,7 @@ use tokio::time::timeout;
 use crate::ardupilot::PyArduPilotHandle;
 use crate::config::PyVehicleConfig;
 use crate::enums::{PyAutopilotType, PyVehicleType};
-use crate::error::to_py_err;
+use crate::error::{duration_from_secs, to_py_err};
 use crate::info::PyInfoHandle;
 use crate::mission::PyMissionPlan;
 use crate::modes::PyModesHandle;
@@ -20,15 +20,6 @@ use crate::params::{PyParamsHandle, PySyncState};
 use crate::raw_message::{PyRawMessage, PyRawMessageStream};
 use crate::support::{PySupportHandle, PySupportStateHandle};
 use crate::telemetry::{PyGeoPoint3dMsl, PyTelemetryHandle};
-
-fn duration_from_secs(timeout_secs: f64) -> PyResult<Duration> {
-    if !timeout_secs.is_finite() || timeout_secs < 0.0 {
-        return Err(PyValueError::new_err(
-            "timeout_secs must be a finite non-negative number",
-        ));
-    }
-    Ok(Duration::from_secs_f64(timeout_secs))
-}
 
 fn geo_point_msl(
     latitude_deg: f64,

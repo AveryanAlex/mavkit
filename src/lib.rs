@@ -18,6 +18,8 @@ pub mod rally;
 pub mod raw;
 mod state;
 mod stored_plan;
+#[cfg(test)]
+pub(crate) mod test_support;
 #[cfg(feature = "stream")]
 pub mod stream_connection;
 pub mod support;

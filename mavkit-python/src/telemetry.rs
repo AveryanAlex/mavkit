@@ -8,7 +8,7 @@ use pyo3::types::{PyDict, PyList};
 use serde_json::Value;
 
 use crate::enums::{PyGpsFixType, PyMavSeverity};
-use crate::error::to_py_err;
+use crate::error::{duration_from_secs, to_py_err};
 
 static PY_INSTANT_EPOCH: OnceLock<Instant> = OnceLock::new();
 
@@ -18,15 +18,6 @@ fn monotonic_seconds(instant: Instant) -> f64 {
         .checked_duration_since(epoch)
         .unwrap_or_default()
         .as_secs_f64()
-}
-
-fn duration_from_secs(timeout_secs: f64) -> PyResult<Duration> {
-    if !timeout_secs.is_finite() || timeout_secs < 0.0 {
-        return Err(PyValueError::new_err(
-            "timeout_secs must be a finite non-negative number",
-        ));
-    }
-    Ok(Duration::from_secs_f64(timeout_secs))
 }
 
 fn telemetry_message_kind_name(kind: mavkit::TelemetryMessageKind) -> &'static str {
