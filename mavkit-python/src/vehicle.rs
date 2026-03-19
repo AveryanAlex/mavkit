@@ -24,11 +24,11 @@ use crate::enums::{PyAutopilotType, PyVehicleType};
 use crate::error::{duration_from_secs, to_py_err};
 use crate::info::PyInfoHandle;
 use crate::mission::PyMissionPlan;
-use crate::modes::PyModesHandle;
+use crate::modes::{PyCurrentModeHandle, PyModesHandle};
 use crate::params::{PyParamsHandle, PySyncState};
 use crate::raw_message::{PyRawMessage, PyRawMessageStream};
 use crate::support::{PySupportHandle, PySupportStateHandle};
-use crate::telemetry::{PyGeoPoint3dMsl, PyTelemetryHandle};
+use crate::telemetry::{PyGeoPoint3dMsl, PyMetricHandle, PyTelemetryHandle};
 
 fn geo_point_msl(
     latitude_deg: f64,
@@ -1826,6 +1826,21 @@ impl PyVehicle {
 
     fn ardupilot(&self) -> PyArduPilotHandle {
         PyArduPilotHandle::new(self.inner.clone())
+    }
+
+    /// Shortcut for ``vehicle.available_modes().current()``.
+    fn current_mode(&self) -> PyCurrentModeHandle {
+        PyCurrentModeHandle::from_observation(self.inner.current_mode())
+    }
+
+    /// Shortcut for ``vehicle.telemetry().home()``.
+    fn home(&self) -> PyMetricHandle {
+        PyMetricHandle::geo_point_3d_msl(self.inner.home())
+    }
+
+    /// Shortcut for ``vehicle.telemetry().origin()``.
+    fn origin(&self) -> PyMetricHandle {
+        PyMetricHandle::geo_point_3d_msl(self.inner.origin())
     }
 
     fn identity(&self) -> PyVehicleIdentity {

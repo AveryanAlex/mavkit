@@ -1230,7 +1230,7 @@ impl PyMetricHandle {
         }
     }
 
-    fn geo_point_3d_msl(inner: mavkit::MetricHandle<mavkit::GeoPoint3dMsl>) -> Self {
+    pub(crate) fn geo_point_3d_msl(inner: mavkit::MetricHandle<mavkit::GeoPoint3dMsl>) -> Self {
         Self {
             inner: MetricHandleKind::GeoPoint3dMsl(inner),
         }

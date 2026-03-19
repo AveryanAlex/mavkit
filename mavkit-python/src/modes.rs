@@ -316,6 +316,10 @@ impl PyCurrentModeHandle {
     fn new(inner: mavkit::ObservationHandle<mavkit::CurrentMode>) -> Self {
         Self { inner }
     }
+
+    pub(crate) fn from_observation(inner: mavkit::ObservationHandle<mavkit::CurrentMode>) -> Self {
+        Self::new(inner)
+    }
 }
 
 #[pymethods]
