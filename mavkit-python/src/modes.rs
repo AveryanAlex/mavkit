@@ -374,6 +374,25 @@ impl PyModesHandle {
         PyCurrentModeHandle::new(self.inner.available_modes().current())
     }
 
+    fn __len__(&self) -> usize {
+        self.inner.available_modes().len()
+    }
+
+    fn __bool__(&self) -> bool {
+        !self.inner.available_modes().is_empty()
+    }
+
+    fn __iter__(&self) -> Vec<PyModeDescriptor> {
+        self.inner
+            .available_modes()
+            .catalog()
+            .latest()
+            .unwrap_or_default()
+            .into_iter()
+            .map(PyModeDescriptor::from)
+            .collect()
+    }
+
     fn __repr__(&self) -> String {
         format!("ModesHandle({})", vehicle_label(&self.inner))
     }
