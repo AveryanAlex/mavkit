@@ -8,8 +8,7 @@ async def main():
     bind_addr = os.environ.get("MAVKIT_EXAMPLE_UDP_BIND", "0.0.0.0:14550")
     message_count = int(os.environ.get("MAVKIT_EXAMPLE_RAW_COUNT", "5"))
 
-    vehicle = await mavkit.Vehicle.connect_udp(bind_addr)
-    try:
+    async with await mavkit.Vehicle.connect_udp(bind_addr) as vehicle:
         identity = vehicle.identity()
         raw = vehicle.raw()
         stream = raw.subscribe()
@@ -24,8 +23,6 @@ async def main():
                 f"message_id={message.message_id} name={message.message_name} "
                 f"sys={message.system_id} comp={message.component_id} payload_len={len(message.payload)}"
             )
-    finally:
-        await vehicle.disconnect()
 
 
 asyncio.run(main())

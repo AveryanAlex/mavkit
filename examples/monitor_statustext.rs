@@ -11,10 +11,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let status_text = vehicle.telemetry().messages().status_text();
     let mut subscription = status_text.subscribe();
 
-    loop {
-        if let Some(sample) = subscription.recv().await {
-            let msg = sample.value;
-            println!("[{:?}] {}", msg.severity, msg.text);
-        }
+    while let Some(sample) = subscription.recv().await {
+        let msg = sample.value;
+        println!("[{:?}] {}", msg.severity, msg.text);
     }
+
+    Ok(())
 }

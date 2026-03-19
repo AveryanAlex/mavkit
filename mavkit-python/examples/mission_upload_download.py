@@ -6,11 +6,12 @@ import mavkit
 
 def waypoint(lat: float, lon: float, alt: float) -> mavkit.MissionItem:
     return mavkit.MissionItem(
-        command=mavkit.NavWaypoint(
-            latitude_deg=lat,
-            longitude_deg=lon,
-            altitude_m=alt,
-            frame=mavkit.MissionFrame.GlobalRelativeAltInt,
+        command=mavkit.NavWaypoint.from_point(
+            position=mavkit.GeoPoint3d.rel_home(
+                latitude_deg=lat,
+                longitude_deg=lon,
+                relative_alt_m=alt,
+            ),
         ),
     )
 
@@ -18,8 +19,7 @@ def waypoint(lat: float, lon: float, alt: float) -> mavkit.MissionItem:
 async def main():
     bind_addr = os.environ.get("MAVKIT_EXAMPLE_UDP_BIND", "0.0.0.0:14550")
 
-    vehicle = await mavkit.Vehicle.connect_udp(bind_addr)
-    try:
+    async with await mavkit.Vehicle.connect_udp(bind_addr) as vehicle:
         mission = vehicle.mission()
 
         plan = mavkit.MissionPlan(
@@ -42,7 +42,6 @@ async def main():
         equivalent = mavkit.plans_equivalent(
             mavkit.normalize_for_compare(plan),
             mavkit.normalize_for_compare(downloaded),
-            mavkit.CompareTolerance(),
         )
 
         upload_progress = upload_op.latest()
@@ -58,8 +57,6 @@ async def main():
         print(f"uploaded items: {len(plan.items)}")
         print(f"downloaded items: {len(downloaded.items)}")
         print(f"roundtrip equivalent: {equivalent}")
-    finally:
-        await vehicle.disconnect()
 
 
 asyncio.run(main())

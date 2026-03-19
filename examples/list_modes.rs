@@ -11,22 +11,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let catalog_handle = modes.catalog();
     let identity = vehicle.identity();
 
-    let current = if let Some(current) = current_handle.latest() {
-        current
-    } else {
-        current_handle.wait().await?
-    };
+    let current = current_handle.wait().await?;
 
     println!(
         "current mode: {} (id={})\n",
         current.name, current.custom_mode
     );
 
-    let catalog = if let Some(catalog) = catalog_handle.latest() {
-        catalog
-    } else {
-        catalog_handle.wait().await?
-    };
+    let catalog = catalog_handle.wait().await?;
 
     if catalog.is_empty() {
         println!(

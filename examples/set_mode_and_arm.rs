@@ -10,16 +10,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let current_mode = vehicle.available_modes().current();
     let armed = vehicle.telemetry().armed();
 
-    let before_mode = if let Some(mode_sample) = current_mode.latest() {
-        mode_sample.name
-    } else {
-        current_mode.wait().await?.name
-    };
-    let before_armed = if let Some(armed_sample) = armed.latest() {
-        armed_sample.value
-    } else {
-        armed.wait().await?.value
-    };
+    let before_mode = current_mode.wait().await?.name;
+    let before_armed = armed.wait().await?.value;
     println!("before: mode={} armed={}", before_mode, before_armed);
 
     println!("setting mode to {mode}...");
