@@ -1965,7 +1965,9 @@ impl PyVehicle {
 mod tests {
     use super::*;
     use mavkit::dialect;
-    use mavlink::{AsyncMavConnection, MavHeader, MavlinkVersion};
+    use mavlink::{
+        AsyncMavConnection, MAVLinkMessageRaw, MAVLinkV2MessageRaw, MavHeader, MavlinkVersion,
+    };
     use std::sync::{Arc, Mutex};
     use std::time::Duration;
     use tokio::sync::mpsc;
