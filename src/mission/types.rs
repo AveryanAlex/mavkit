@@ -163,6 +163,43 @@ impl StoredPlanState for MissionState {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::mission::test_support::sample_item;
+
+    fn dummy_item() -> MissionItem {
+        sample_item()
+    }
+
+    #[test]
+    fn new_creates_plan_with_items() {
+        let plan = MissionPlan::new(vec![dummy_item(), dummy_item()]);
+        assert_eq!(plan.len(), 2);
+    }
+
+    #[test]
+    fn empty_creates_empty_plan() {
+        let plan = MissionPlan::empty();
+        assert!(plan.is_empty());
+        assert_eq!(plan.len(), 0);
+    }
+
+    #[test]
+    fn from_iterator_collects_items() {
+        let items = vec![dummy_item(), dummy_item(), dummy_item()];
+        let plan: MissionPlan = items.into_iter().collect();
+        assert_eq!(plan.len(), 3);
+    }
+
+    #[test]
+    fn len_and_is_empty_reflect_contents() {
+        let plan = MissionPlan::new(vec![dummy_item()]);
+        assert_eq!(plan.len(), 1);
+        assert!(!plan.is_empty());
+    }
+}
+
 /// Severity level of a mission validation issue.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

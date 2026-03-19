@@ -130,4 +130,17 @@ mod tests {
         assert!(text.contains("mission"));
         assert!(text.contains("upload"));
     }
+
+    #[test]
+    fn timeout_preserves_context_string() {
+        let err = VehicleError::Timeout("waiting for mode change".into());
+        let text = err.to_string();
+        assert!(
+            text.contains("waiting for mode change"),
+            "Timeout display should include context: {text}"
+        );
+
+        let err2 = VehicleError::Timeout("sending command".into());
+        assert!(err2.to_string().contains("sending command"));
+    }
 }

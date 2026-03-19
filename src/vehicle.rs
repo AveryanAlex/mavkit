@@ -787,6 +787,32 @@ mod tests {
         let _ = vehicle.ardupilot();
     }
 
+    #[test]
+    fn current_mode_shortcut_matches_handle_path() {
+        let vehicle = dummy_vehicle();
+        // Both paths should compile and return the same observation type.
+        let via_shortcut = vehicle.current_mode();
+        let via_handle = vehicle.available_modes().current();
+        // No data yet — both should be None on a bare vehicle.
+        assert_eq!(via_shortcut.latest().is_none(), via_handle.latest().is_none());
+    }
+
+    #[test]
+    fn home_and_origin_shortcuts_compile() {
+        let vehicle = dummy_vehicle();
+        let _home = vehicle.home();
+        let _origin = vehicle.origin();
+        // Metric handles on a bare vehicle have no data.
+        assert!(vehicle.home().latest().is_none());
+        assert!(vehicle.origin().latest().is_none());
+    }
+
+    #[test]
+    fn params_get_returns_none_when_no_download() {
+        let vehicle = dummy_vehicle();
+        assert!(vehicle.params().get("BATT_CAPACITY").is_none());
+    }
+
     #[tokio::test]
     async fn info_handle_defaults_to_sys_locator_until_metadata_arrives() {
         let (vehicle, msg_tx) = connect_mock_vehicle().await;
@@ -1502,5 +1528,76 @@ mod tests {
         assert!(matches!(wait_result, Err(VehicleError::Disconnected)));
 
         drop(msg_tx);
+    }
+
+    #[tokio::test]
+    async fn fence_wait_timeout_returns_default_state() {
+        // Domain handles have an initial default value, so wait_timeout
+        // succeeds immediately with the default state.
+        let vehicle = dummy_vehicle();
+        let state = vehicle
+            .fence()
+            .wait_timeout(Duration::from_millis(50))
+            .await
+            .expect("should return default state");
+        assert!(state.plan.is_none());
+    }
+
+    #[tokio::test]
+    async fn rally_wait_timeout_returns_default_state() {
+        let vehicle = dummy_vehicle();
+        let state = vehicle
+            .rally()
+            .wait_timeout(Duration::from_millis(50))
+            .await
+            .expect("should return default state");
+        assert!(state.plan.is_none());
+    }
+
+    #[tokio::test]
+    async fn mission_wait_timeout_returns_default_state() {
+        let vehicle = dummy_vehicle();
+        let state = vehicle
+            .mission()
+            .wait_timeout(Duration::from_millis(50))
+            .await
+            .expect("should return default state");
+        assert!(state.plan.is_none());
+    }
+
+    #[tokio::test]
+    async fn params_wait_timeout_returns_default_state() {
+        let vehicle = dummy_vehicle();
+        let state = vehicle
+            .params()
+            .wait_timeout(Duration::from_millis(50))
+            .await
+            .expect("should return default state");
+        assert!(state.store.is_none());
+    }
+
+    #[tokio::test]
+    async fn param_download_op_wait_timeout_returns_error() {
+        let vehicle = dummy_vehicle();
+        let op = vehicle.params().download_all().expect("should start");
+        let result = op.wait_timeout(Duration::from_millis(10)).await;
+        // Without an event loop the oneshot drops → Disconnected, or times out.
+        assert!(
+            matches!(result, Err(VehicleError::Timeout(_)) | Err(VehicleError::Disconnected)),
+            "expected Timeout or Disconnected, got {result:?}"
+        );
+    }
+
+    #[tokio::test]
+    async fn mission_op_wait_timeout_returns_error() {
+        let (vehicle, _msg_tx) = connect_mock_vehicle().await;
+        let op = vehicle.mission().download().expect("should start download");
+        let result = op.wait_timeout(Duration::from_millis(50)).await;
+        // Transfer won't complete in 50ms without matching protocol messages.
+        assert!(
+            result.is_err(),
+            "expected error without protocol responses, got {result:?}"
+        );
+        vehicle.disconnect().await.expect("disconnect should succeed");
     }
 }

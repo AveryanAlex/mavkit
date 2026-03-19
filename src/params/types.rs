@@ -82,6 +82,97 @@ impl IntoIterator for ParamStore {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sample_store() -> ParamStore {
+        let mut params = HashMap::new();
+        params.insert(
+            "BATT_CAPACITY".to_string(),
+            Param {
+                name: "BATT_CAPACITY".to_string(),
+                value: 3300.0,
+                param_type: ParamType::Real32,
+                index: 0,
+            },
+        );
+        params.insert(
+            "ARMING_CHECK".to_string(),
+            Param {
+                name: "ARMING_CHECK".to_string(),
+                value: 1.0,
+                param_type: ParamType::Int32,
+                index: 1,
+            },
+        );
+        ParamStore {
+            params,
+            expected_count: 2,
+        }
+    }
+
+    #[test]
+    fn get_returns_existing_param() {
+        let store = sample_store();
+        let param = store.get("BATT_CAPACITY").expect("param should exist");
+        assert_eq!(param.value, 3300.0);
+    }
+
+    #[test]
+    fn get_returns_none_for_missing() {
+        let store = sample_store();
+        assert!(store.get("NO_SUCH_PARAM").is_none());
+    }
+
+    #[test]
+    fn contains_checks_presence() {
+        let store = sample_store();
+        assert!(store.contains("ARMING_CHECK"));
+        assert!(!store.contains("NONEXISTENT"));
+    }
+
+    #[test]
+    fn len_and_is_empty() {
+        let store = sample_store();
+        assert_eq!(store.len(), 2);
+        assert!(!store.is_empty());
+
+        let empty = ParamStore::default();
+        assert_eq!(empty.len(), 0);
+        assert!(empty.is_empty());
+    }
+
+    #[test]
+    fn iter_yields_all_pairs() {
+        let store = sample_store();
+        let pairs: Vec<_> = store.iter().collect();
+        assert_eq!(pairs.len(), 2);
+    }
+
+    #[test]
+    fn names_yields_all_keys() {
+        let store = sample_store();
+        let mut names: Vec<_> = store.names().cloned().collect();
+        names.sort();
+        assert_eq!(names, vec!["ARMING_CHECK", "BATT_CAPACITY"]);
+    }
+
+    #[test]
+    fn into_iter_ref_works() {
+        let store = sample_store();
+        let count = (&store).into_iter().count();
+        assert_eq!(count, 2);
+    }
+
+    #[test]
+    fn into_iter_owned_works() {
+        let store = sample_store();
+        let items: Vec<_> = store.into_iter().collect();
+        assert_eq!(items.len(), 2);
+    }
+}
+
 /// Result of a single parameter write, with requested and confirmed values.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParamWriteResult {
