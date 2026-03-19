@@ -15,12 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let vehicle = Vehicle::connect_udp(&bind_addr).await?;
     let mission = vehicle.mission();
 
-    let plan = MissionPlan {
-        items: vec![
-            waypoint(47.397742, 8.545594, 25.0),
-            waypoint(47.398100, 8.546100, 30.0),
-        ],
-    };
+    let plan = MissionPlan::new(vec![
+        waypoint(47.397742, 8.545594, 25.0),
+        waypoint(47.398100, 8.546100, 30.0),
+    ]);
 
     mission.upload(plan.clone())?.wait().await?;
     let downloaded = mission.download()?.wait().await?;

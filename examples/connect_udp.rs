@@ -7,7 +7,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let vehicle = Vehicle::connect_udp(&bind_addr).await?;
     let identity = vehicle.identity();
-    let current_mode = vehicle.available_modes().current().wait().await?;
+    let current_mode = vehicle.current_mode().wait().await?;
     let armed = vehicle.telemetry().armed().wait().await?.value;
     let position = vehicle.telemetry().position().global().wait().await?.value;
 

@@ -7,7 +7,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mode = std::env::var("MAVKIT_EXAMPLE_MODE").unwrap_or_else(|_| "GUIDED".to_string());
 
     let vehicle = Vehicle::connect_udp(&bind_addr).await?;
-    let current_mode = vehicle.available_modes().current();
+    let current_mode = vehicle.current_mode();
     let armed = vehicle.telemetry().armed();
 
     let before_mode = current_mode.wait().await?.name;
