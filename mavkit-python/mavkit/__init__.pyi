@@ -1704,7 +1704,6 @@ class MissionItem:
     def __init__(
         self,
         *,
-        seq: int,
         command: (
             NavWaypoint
             | NavTakeoff
@@ -1785,8 +1784,6 @@ class MissionItem:
         current: bool = False,
         autocontinue: bool = True,
     ) -> None: ...
-    @property
-    def seq(self) -> int: ...
     @property
     def command(self) -> int: ...
     @property

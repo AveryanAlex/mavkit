@@ -48,7 +48,6 @@ pub(super) fn from_mav_frame(frame: dialect::MavFrame) -> MissionFrame {
 pub(super) fn from_mission_item_int(data: &dialect::MISSION_ITEM_INT_DATA) -> MissionItem {
     let frame = from_mav_frame(data.frame);
     MissionItem {
-        seq: data.seq,
         command: commands::MissionCommand::from_wire(
             data.command as u16,
             commands::MissionFrame::from(frame),
@@ -75,7 +74,6 @@ fn from_mission_item_float(data: &dialect::MISSION_ITEM_DATA) -> MissionItem {
     );
 
     MissionItem {
-        seq: data.seq,
         command: commands::MissionCommand::from_wire(
             data.command as u16,
             commands::MissionFrame::from(from_mav_frame(data.frame)),
@@ -162,7 +160,7 @@ fn send_requested_item_msg(
             x,
             y,
             z,
-            seq: item.seq,
+            seq,
             command,
             target_system: target.system_id,
             target_component: target.component_id,

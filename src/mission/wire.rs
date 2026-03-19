@@ -3,7 +3,6 @@ use super::types::{MissionItem, MissionPlan, MissionType};
 
 fn mission_home_placeholder() -> MissionItem {
     MissionItem {
-        seq: 0,
         command: MissionCommand::Other(RawMissionCommand {
             command: 16,
             frame: MissionFrame::Global,
@@ -47,9 +46,8 @@ pub fn items_for_wire_upload(plan: &MissionPlan) -> Vec<MissionItem> {
 
     let mut wire = Vec::with_capacity(plan.items.len() + 1);
     wire.push(mission_home_placeholder());
-    for (index, item) in plan.items.iter().enumerate() {
+    for item in &plan.items {
         wire.push(MissionItem {
-            seq: (index + 1) as u16,
             command: encode_command_for_wire(&item.command),
             current: item.current,
             autocontinue: item.autocontinue,
@@ -74,7 +72,6 @@ pub fn plan_from_wire_download(
         .skip(1)
         .enumerate()
         .map(|(index, item)| MissionItem {
-            seq: index as u16,
             command: decode_command_from_wire(&item.command),
             current: index == 0,
             autocontinue: item.autocontinue,
@@ -94,9 +91,8 @@ mod tests {
     use crate::mission::commands::{DoCommand, DoJump, NavCommand, NavWaypoint};
     use crate::mission::validate_plan;
 
-    fn typed_waypoint_item(seq: u16, latitude_deg: f64) -> MissionItem {
+    fn typed_waypoint_item(latitude_deg: f64, current: bool) -> MissionItem {
         MissionItem {
-            seq,
             command: MissionCommand::from(NavWaypoint {
                 position: GeoPoint3d::RelHome(GeoPoint3dRelHome {
                     latitude_deg,
@@ -108,14 +104,13 @@ mod tests {
                 pass_radius_m: 0.0,
                 yaw_deg: 0.0,
             }),
-            current: seq == 0,
+            current,
             autocontinue: true,
         }
     }
 
-    fn typed_jump_item(seq: u16, target_index: u16) -> MissionItem {
+    fn typed_jump_item(target_index: u16) -> MissionItem {
         MissionItem {
-            seq,
             command: MissionCommand::from(DoJump {
                 target_index,
                 repeat_count: 1,
@@ -125,9 +120,8 @@ mod tests {
         }
     }
 
-    fn raw_wire_waypoint(seq: u16) -> MissionItem {
+    fn raw_wire_waypoint() -> MissionItem {
         MissionItem {
-            seq,
             command: MissionCommand::Other(RawMissionCommand {
                 command: 16,
                 frame: MissionFrame::GlobalRelativeAlt,
@@ -144,9 +138,8 @@ mod tests {
         }
     }
 
-    fn raw_wire_jump(seq: u16, target_index: u16) -> MissionItem {
+    fn raw_wire_jump(target_index: u16) -> MissionItem {
         MissionItem {
-            seq,
             command: MissionCommand::Other(RawMissionCommand {
                 command: 177,
                 frame: MissionFrame::Mission,
@@ -165,8 +158,8 @@ mod tests {
 
     #[test]
     fn wire_upload_prepends_placeholder_for_mission_type() {
-        let first = typed_waypoint_item(8, 47.397_742);
-        let second = typed_waypoint_item(99, 47.397_842);
+        let first = typed_waypoint_item(47.397_742, false);
+        let second = typed_waypoint_item(47.397_842, false);
         let plan = MissionPlan {
             mission_type: MissionType::Mission,
             items: vec![first, second],
@@ -174,13 +167,10 @@ mod tests {
 
         let wire = items_for_wire_upload(&plan);
         assert_eq!(wire.len(), 3);
-        assert_eq!(wire[0].seq, 0);
 
         let (command, frame, _, _, _, _) = wire[0].command.clone().into_wire();
         assert_eq!(command, 16);
         assert_eq!(frame, MissionFrame::Global);
-        assert_eq!(wire[1].seq, 1);
-        assert_eq!(wire[2].seq, 2);
         assert!(matches!(&wire[1].command, MissionCommand::Other(_)));
 
         let expected = plan.items[0].command.clone().into_wire();
@@ -189,7 +179,7 @@ mod tests {
 
     #[test]
     fn wire_upload_passthrough_for_fence() {
-        let item = typed_waypoint_item(12, 47.397_742);
+        let item = typed_waypoint_item(47.397_742, false);
         let plan = MissionPlan {
             mission_type: MissionType::Fence,
             items: vec![item],
@@ -203,14 +193,12 @@ mod tests {
     fn wire_download_strips_hidden_home_for_mission_type() {
         let wire_items = vec![
             mission_home_placeholder(),
-            raw_wire_waypoint(1),
-            raw_wire_jump(2, 1),
+            raw_wire_waypoint(),
+            raw_wire_jump(1),
         ];
         let plan = plan_from_wire_download(MissionType::Mission, wire_items);
 
         assert_eq!(plan.items.len(), 2);
-        assert_eq!(plan.items[0].seq, 0);
-        assert_eq!(plan.items[1].seq, 1);
         assert!(plan.items[0].current);
         assert!(matches!(
             &plan.items[0].command,
@@ -227,7 +215,7 @@ mod tests {
 
     #[test]
     fn wire_download_passthrough_for_fence() {
-        let wire_items = vec![raw_wire_waypoint(0), raw_wire_jump(1, 0)];
+        let wire_items = vec![raw_wire_waypoint(), raw_wire_jump(0)];
         let plan = plan_from_wire_download(MissionType::Fence, wire_items.clone());
 
         assert_eq!(plan.items, wire_items);
@@ -237,7 +225,7 @@ mod tests {
     fn typed_roundtrip() {
         let plan = MissionPlan {
             mission_type: MissionType::Mission,
-            items: vec![typed_waypoint_item(0, 47.397_742), typed_jump_item(1, 0)],
+            items: vec![typed_waypoint_item(47.397_742, true), typed_jump_item(0)],
         };
 
         let wire = items_for_wire_upload(&plan);
@@ -250,7 +238,7 @@ mod tests {
     fn jump_validation() {
         let invalid = MissionPlan {
             mission_type: MissionType::Mission,
-            items: vec![typed_jump_item(0, 1)],
+            items: vec![typed_jump_item(1)],
         };
 
         let issues = validate_plan(&invalid);
@@ -270,7 +258,6 @@ mod tests {
 
         let wire = items_for_wire_upload(&plan);
         assert_eq!(wire.len(), 1);
-        assert_eq!(wire[0].seq, 0);
 
         let (command, frame, _, _, _, _) = wire[0].command.clone().into_wire();
         assert_eq!(command, 16);

@@ -256,9 +256,8 @@ pub async fn run_roundtrip_case(plan: MissionPlan) {
     }
 }
 
-pub fn waypoint(seq: u16, lat: f64, lon: f64, alt: f32) -> MissionItem {
+pub fn waypoint(lat: f64, lon: f64, alt: f32) -> MissionItem {
     MissionItem {
-        seq,
         command: MissionCommand::from(NavWaypoint {
             position: GeoPoint3d::RelHome(GeoPoint3dRelHome {
                 latitude_deg: lat,
@@ -270,7 +269,7 @@ pub fn waypoint(seq: u16, lat: f64, lon: f64, alt: f32) -> MissionItem {
             pass_radius_m: 0.0,
             yaw_deg: 0.0,
         }),
-        current: seq == 0,
+        current: false,
         autocontinue: true,
     }
 }
@@ -280,11 +279,13 @@ pub fn sample_plan_mission(item_count: usize) -> MissionPlan {
     let base_lon = 8.545_594;
     let mut items = Vec::with_capacity(item_count);
     for i in 0..item_count {
-        let seq = i as u16;
         let lat = base_lat + (i as f64) * 0.000_2;
         let lon = base_lon + (i as f64) * 0.000_2;
         let alt = 25.0 + (i as f32);
-        items.push(waypoint(seq, lat, lon, alt));
+        items.push(waypoint(lat, lon, alt));
+    }
+    if let Some(first) = items.first_mut() {
+        first.current = true;
     }
 
     MissionPlan {

@@ -4,16 +4,14 @@ import os
 import mavkit
 
 
-def waypoint(seq: int, lat: float, lon: float, alt: float) -> mavkit.MissionItem:
+def waypoint(lat: float, lon: float, alt: float) -> mavkit.MissionItem:
     return mavkit.MissionItem(
-        seq=seq,
         command=mavkit.NavWaypoint(
             latitude_deg=lat,
             longitude_deg=lon,
             altitude_m=alt,
             frame=mavkit.MissionFrame.GlobalRelativeAltInt,
         ),
-        current=seq == 0,
     )
 
 
@@ -24,12 +22,22 @@ async def main():
     try:
         mission = vehicle.mission()
 
+        items = [
+            waypoint(47.397742, 8.545594, 25.0),
+            waypoint(47.398100, 8.546100, 30.0),
+        ]
+        items[0] = mavkit.MissionItem(
+            command=mavkit.NavWaypoint(
+                latitude_deg=47.397742,
+                longitude_deg=8.545594,
+                altitude_m=25.0,
+                frame=mavkit.MissionFrame.GlobalRelativeAltInt,
+            ),
+            current=True,
+        )
         plan = mavkit.MissionPlan(
             mission_type=mavkit.MissionType.Mission,
-            items=[
-                waypoint(0, 47.397742, 8.545594, 25.0),
-                waypoint(1, 47.398100, 8.546100, 30.0),
-            ],
+            items=items,
         )
 
         issues = mavkit.validate_plan(plan)

@@ -246,8 +246,7 @@ fn mission_plan_from_rally_plan(plan: &RallyPlan) -> Result<MissionPlan, Vehicle
     let items: Vec<MissionItem> = plan
         .points
         .iter()
-        .enumerate()
-        .map(|(index, point)| rally_item(index as u16, point))
+        .map(rally_item)
         .collect::<Result<_, _>>()?;
 
     Ok(MissionPlan {
@@ -271,11 +270,10 @@ fn rally_plan_from_mission_plan(plan: MissionPlan) -> Result<RallyPlan, VehicleE
     Ok(RallyPlan { points })
 }
 
-fn rally_item(seq: u16, point: &GeoPoint3d) -> Result<MissionItem, VehicleError> {
+fn rally_item(point: &GeoPoint3d) -> Result<MissionItem, VehicleError> {
     let (frame, x, y, z) = point_to_wire(point)?;
 
     Ok(MissionItem {
-        seq,
         command: MissionCommand::Other(RawMissionCommand {
             command: MAV_CMD_NAV_RALLY_POINT,
             frame,

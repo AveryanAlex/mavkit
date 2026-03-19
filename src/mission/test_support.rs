@@ -1,9 +1,8 @@
 use super::commands::{MissionCommand, MissionFrame, RawMissionCommand};
 use super::types::MissionItem;
 
-pub fn sample_item(seq: u16) -> MissionItem {
+pub fn sample_item() -> MissionItem {
     MissionItem {
-        seq,
         command: MissionCommand::Other(RawMissionCommand {
             command: 16,
             frame: MissionFrame::GlobalRelativeAlt,
@@ -15,7 +14,7 @@ pub fn sample_item(seq: u16) -> MissionItem {
             y: 85_455_970,
             z: 42.123_456,
         }),
-        current: seq == 0,
+        current: false,
         autocontinue: true,
     }
 }

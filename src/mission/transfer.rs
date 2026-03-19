@@ -210,7 +210,6 @@ mod tests {
         let mut items = Vec::with_capacity(count);
         for seq in 0..count {
             items.push(MissionItem {
-                seq: seq as u16,
                 command: MissionCommand::Other(RawMissionCommand {
                     command: 16,
                     frame: CommandFrame::GlobalRelativeAlt,

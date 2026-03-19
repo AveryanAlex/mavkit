@@ -1550,6 +1550,7 @@ fn mission_ack_accepted_msg_for_type(mission_type: mavkit::MissionType) -> diale
 #[cfg(feature = "test-support")]
 fn mission_item_int_msg(
     item: &mavkit::MissionItem,
+    seq: u16,
     mission_type: mavkit::MissionType,
 ) -> PyResult<dialect::MavMessage> {
     let (command, frame, params, x, y, z) = item.command.clone().into_wire();
@@ -1569,7 +1570,7 @@ fn mission_item_int_msg(
             x,
             y,
             z,
-            seq: item.seq,
+            seq,
             command,
             target_system: 0,
             target_component: 0,
@@ -1643,8 +1644,8 @@ impl PyTestVehicleHarness {
         let mission_type = plan.inner.mission_type;
         let wire_items = mavkit::items_for_wire_upload(&plan.inner);
         let mut responses = Vec::with_capacity(wire_items.len() + 1);
-        for item in &wire_items {
-            responses.push(mission_request_int_msg(item.seq, mission_type));
+        for seq in 0..wire_items.len() {
+            responses.push(mission_request_int_msg(seq as u16, mission_type));
         }
         responses.push(mission_ack_accepted_msg_for_type(mission_type));
 
@@ -1672,8 +1673,8 @@ impl PyTestVehicleHarness {
         })?;
         let mut responses = Vec::with_capacity(wire_items.len() + 1);
         responses.push(mission_count_msg(wire_item_count, mission_type));
-        for item in &wire_items {
-            responses.push(mission_item_int_msg(item, mission_type)?);
+        for (seq, item) in wire_items.iter().enumerate() {
+            responses.push(mission_item_int_msg(item, seq as u16, mission_type)?);
         }
 
         pyo3_async_runtimes::tokio::future_into_py(py, async move {

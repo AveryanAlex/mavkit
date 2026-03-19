@@ -40,7 +40,6 @@ impl MissionFrame {
 /// A single mission item. Coordinates `x`/`y` are in degE7 for global frames.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MissionItem {
-    pub seq: u16,
     pub command: MissionCommand,
     pub current: bool,
     pub autocontinue: bool,
@@ -56,9 +55,8 @@ pub struct HomePosition {
 
 impl HomePosition {
     /// Convert to a MAV_CMD_NAV_WAYPOINT mission item at the given sequence number.
-    pub fn to_mission_item(&self, seq: u16) -> MissionItem {
+    pub fn to_mission_item(&self) -> MissionItem {
         MissionItem {
-            seq,
             command: MissionCommand::Other(RawMissionCommand {
                 command: 16,
                 frame: CommandFrame::Global,

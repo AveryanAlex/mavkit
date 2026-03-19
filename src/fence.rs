@@ -306,7 +306,6 @@ fn mission_plan_from_fence_plan(plan: &FencePlan) -> Result<MissionPlan, Vehicle
 
     if let Some(return_point) = &plan.return_point {
         items.push(fence_item(
-            0,
             MAV_CMD_NAV_FENCE_RETURN_POINT,
             0.0,
             0.0,
@@ -337,7 +336,6 @@ fn mission_plan_from_fence_plan(plan: &FencePlan) -> Result<MissionPlan, Vehicle
             FenceRegion::InclusionCircle(region) => {
                 validate_radius("inclusion circle", region.radius_m)?;
                 items.push(fence_item(
-                    items.len() as u16,
                     MAV_CMD_NAV_FENCE_CIRCLE_INCLUSION,
                     region.radius_m,
                     f32::from(region.inclusion_group),
@@ -347,7 +345,6 @@ fn mission_plan_from_fence_plan(plan: &FencePlan) -> Result<MissionPlan, Vehicle
             FenceRegion::ExclusionCircle(region) => {
                 validate_radius("exclusion circle", region.radius_m)?;
                 items.push(fence_item(
-                    items.len() as u16,
                     MAV_CMD_NAV_FENCE_CIRCLE_EXCLUSION,
                     region.radius_m,
                     0.0,
@@ -508,7 +505,6 @@ fn append_polygon_items(
     let vertex_count = vertices.len() as f32;
     for vertex in vertices {
         items.push(fence_item(
-            items.len() as u16,
             command,
             vertex_count,
             f32::from(param2),
@@ -519,14 +515,12 @@ fn append_polygon_items(
 }
 
 fn fence_item(
-    seq: u16,
     command: u16,
     param1: f32,
     param2: f32,
     point: &GeoPoint2d,
 ) -> Result<MissionItem, VehicleError> {
     Ok(MissionItem {
-        seq,
         command: MissionCommand::Other(RawMissionCommand {
             command,
             frame: WireMissionFrame::Global,

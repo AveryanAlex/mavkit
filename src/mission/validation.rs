@@ -30,16 +30,6 @@ pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
     }
 
     for (expected, item) in plan.items.iter().enumerate() {
-        let expected_seq = expected as u16;
-        if item.seq != expected_seq {
-            issues.push(MissionIssue {
-                code: "plan.non_contiguous_sequence".to_string(),
-                message: format!("Expected sequence {} but found {}", expected_seq, item.seq),
-                seq: Some(item.seq),
-                severity: IssueSeverity::Error,
-            });
-        }
-
         let (wire_command, frame, params, x, y, z) = item.command.clone().into_wire();
         for (name, value) in [
             ("param1", params[0]),
@@ -52,7 +42,7 @@ pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
                 issues.push(MissionIssue {
                     code: "item.non_finite_value".to_string(),
                     message: format!("{name} must be finite"),
-                    seq: Some(item.seq),
+                    seq: Some(expected as u16),
                     severity: IssueSeverity::Error,
                 });
             }
@@ -70,7 +60,7 @@ pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
                     jump.target_index,
                     plan.items.len()
                 ),
-                seq: Some(item.seq),
+                seq: Some(expected as u16),
                 severity: IssueSeverity::Error,
             });
         }
@@ -85,7 +75,7 @@ pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
                 issues.push(MissionIssue {
                     code: "item.latitude_out_of_range".to_string(),
                     message: format!("Latitude {latitude} is outside [-90, 90]"),
-                    seq: Some(item.seq),
+                    seq: Some(expected as u16),
                     severity: IssueSeverity::Error,
                 });
             }
@@ -94,7 +84,7 @@ pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
                 issues.push(MissionIssue {
                     code: "item.longitude_out_of_range".to_string(),
                     message: format!("Longitude {longitude} is outside [-180, 180]"),
-                    seq: Some(item.seq),
+                    seq: Some(expected as u16),
                     severity: IssueSeverity::Error,
                 });
             }
@@ -106,8 +96,7 @@ pub fn validate_plan(plan: &MissionPlan) -> Vec<MissionIssue> {
 
 pub fn normalize_for_compare(plan: &MissionPlan) -> MissionPlan {
     let mut normalized = plan.clone();
-    for (index, item) in normalized.items.iter_mut().enumerate() {
-        item.seq = index as u16;
+    for item in normalized.items.iter_mut() {
         let (command, frame, mut params, x, y, mut z) = item.command.clone().into_wire();
         params[0] = round_to(params[0], 1e-4);
         params[1] = round_to(params[1], 1e-4);
@@ -128,8 +117,7 @@ pub fn plans_equivalent(lhs: &MissionPlan, rhs: &MissionPlan, tolerance: Compare
         let (lc, lf, lp, lx, ly, lz) = left.command.clone().into_wire();
         let (rc, rf, rp, rx, ry, rz) = right.command.clone().into_wire();
 
-        left.seq == right.seq
-            && left.current == right.current
+        left.current == right.current
             && left.autocontinue == right.autocontinue
             && lc == rc
             && lf == rf
@@ -158,42 +146,6 @@ mod tests {
     use crate::mission::test_support::sample_item;
     use crate::mission::{MissionItem, MissionType};
 
-    fn raw(command: u16, frame: MissionFrame, x: i32, y: i32, z: f32) -> MissionCommand {
-        MissionCommand::Other(RawMissionCommand {
-            command,
-            frame,
-            param1: 0.0,
-            param2: 0.0,
-            param3: 0.0,
-            param4: 0.0,
-            x,
-            y,
-            z,
-        })
-    }
-
-    #[test]
-    fn detects_non_contiguous_sequence() {
-        let second = sample_item(2);
-        let plan = MissionPlan {
-            mission_type: MissionType::Mission,
-            items: vec![
-                MissionItem {
-                    command: raw(16, MissionFrame::GlobalRelativeAlt, 1, 2, 3.0),
-                    ..sample_item(0)
-                },
-                second,
-            ],
-        };
-
-        let issues = validate_plan(&plan);
-        assert!(
-            issues
-                .iter()
-                .any(|issue| issue.code == "plan.non_contiguous_sequence")
-        );
-    }
-
     #[test]
     fn detects_invalid_global_coordinates_and_nan() {
         let plan = MissionPlan {
@@ -210,7 +162,7 @@ mod tests {
                     y: 2_100_000_000,
                     z: f32::NAN,
                 }),
-                ..sample_item(0)
+                ..sample_item()
             }],
         };
 
@@ -248,7 +200,7 @@ mod tests {
                     y: 85_455_970,
                     z: 42.0001,
                 }),
-                ..sample_item(0)
+                ..sample_item()
             }],
         };
         let mut drifted = base.clone();
@@ -278,7 +230,7 @@ mod tests {
                     target_index: 1,
                     repeat_count: 1,
                 }),
-                ..sample_item(0)
+                ..sample_item()
             }],
         };
 

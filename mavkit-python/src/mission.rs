@@ -2755,10 +2755,9 @@ pub struct PyMissionItem {
 #[pymethods]
 impl PyMissionItem {
     #[new]
-    #[pyo3(signature = (*, seq, command, frame=None, x=0, y=0, z=0.0, param1=0.0, param2=0.0, param3=0.0, param4=0.0, current=false, autocontinue=true))]
+    #[pyo3(signature = (*, command, frame=None, x=0, y=0, z=0.0, param1=0.0, param2=0.0, param3=0.0, param4=0.0, current=false, autocontinue=true))]
     #[allow(clippy::too_many_arguments)]
     fn new(
-        seq: u16,
         command: &Bound<'_, PyAny>,
         frame: Option<PyMissionFrame>,
         x: i32,
@@ -2813,7 +2812,6 @@ impl PyMissionItem {
 
         Ok(Self {
             inner: mavkit::MissionItem {
-                seq,
                 command: mission_command,
                 current,
                 autocontinue,
@@ -2821,10 +2819,6 @@ impl PyMissionItem {
         })
     }
 
-    #[getter]
-    fn seq(&self) -> u16 {
-        self.inner.seq
-    }
     #[getter]
     fn command(&self) -> u16 {
         wire_parts(&self.inner).0
@@ -2872,8 +2866,7 @@ impl PyMissionItem {
 
     fn __repr__(&self) -> String {
         format!(
-            "MissionItem(seq={}, cmd={}, frame={:?})",
-            self.inner.seq,
+            "MissionItem(cmd={}, frame={:?})",
             self.command(),
             self.frame()
         )

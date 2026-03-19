@@ -1560,7 +1560,6 @@ fn from_mission_item_int_converts_correctly() {
     };
     let item = from_mission_item_int(&data);
     let (_, frame, _params, x, y, z) = item.command.clone().into_wire();
-    assert_eq!(item.seq, 0);
     assert_eq!(x, 473_977_420);
     assert_eq!(y, 85_455_940);
     assert_eq!(z, 100.0);

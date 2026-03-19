@@ -387,7 +387,6 @@ macro_rules! mission_commands {
         impl<T: Into<MissionCommand>> From<T> for MissionItem {
             fn from(value: T) -> Self {
                 Self {
-                    seq: 0,
                     command: value.into(),
                     current: false,
                     autocontinue: true,
@@ -3213,7 +3212,6 @@ mod tests {
             MissionItemFrame::from(frame),
             MissionItemFrame::GlobalRelativeAltInt
         );
-        assert_eq!(mission_item.seq, 0);
         assert!(!mission_item.current);
         assert!(mission_item.autocontinue);
         assert_eq!(params[0], 5.0);

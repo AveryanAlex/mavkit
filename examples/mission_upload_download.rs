@@ -3,9 +3,8 @@ use mavkit::{
     NavWaypoint, Vehicle, normalize_for_compare, plans_equivalent,
 };
 
-fn waypoint(seq: u16, lat: f64, lon: f64, alt: f32) -> MissionItem {
+fn waypoint(lat: f64, lon: f64, alt: f32) -> MissionItem {
     MissionItem {
-        seq,
         command: NavWaypoint {
             position: GeoPoint3d::RelHome(GeoPoint3dRelHome {
                 latitude_deg: lat,
@@ -18,7 +17,7 @@ fn waypoint(seq: u16, lat: f64, lon: f64, alt: f32) -> MissionItem {
             yaw_deg: 0.0,
         }
         .into(),
-        current: seq == 0,
+        current: false,
         autocontinue: true,
     }
 }
@@ -31,12 +30,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let vehicle = Vehicle::connect_udp(&bind_addr).await?;
     let mission = vehicle.mission();
 
+    let mut items = vec![
+        waypoint(47.397742, 8.545594, 25.0),
+        waypoint(47.398100, 8.546100, 30.0),
+    ];
+    items[0].current = true;
     let plan = MissionPlan {
         mission_type: MissionType::Mission,
-        items: vec![
-            waypoint(0, 47.397742, 8.545594, 25.0),
-            waypoint(1, 47.398100, 8.546100, 30.0),
-        ],
+        items,
     };
 
     mission.upload(plan.clone())?.wait().await?;
