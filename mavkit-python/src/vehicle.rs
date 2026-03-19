@@ -861,6 +861,16 @@ macro_rules! define_progress_op {
                     map(value)
                 })
             }
+
+            fn wait_timeout<'py>(&self, py: Python<'py>, timeout_secs: f64) -> PyResult<Bound<'py, PyAny>> {
+                let inner = self.inner.clone();
+                let timeout = duration_from_secs(timeout_secs)?;
+                let map = $map;
+                pyo3_async_runtimes::tokio::future_into_py(py, async move {
+                    let value = inner.wait_timeout(timeout).await.map_err(to_py_err)?;
+                    map(value)
+                })
+            }
         }
     };
 }
