@@ -403,6 +403,15 @@ impl PyParamDownloadOp {
             Ok(PyParamStore { inner: store })
         })
     }
+
+    fn wait_timeout<'py>(&self, py: Python<'py>, timeout_secs: f64) -> PyResult<Bound<'py, PyAny>> {
+        let inner = self.inner.clone();
+        let timeout = duration_from_secs(timeout_secs)?;
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let store = inner.wait_timeout(timeout).await.map_err(to_py_err)?;
+            Ok(PyParamStore { inner: store })
+        })
+    }
 }
 
 #[pyclass(name = "ParamWriteBatchOp", frozen, skip_from_py_object)]
@@ -431,6 +440,18 @@ impl PyParamWriteBatchOp {
         let inner = self.inner.clone();
         pyo3_async_runtimes::tokio::future_into_py(py, async move {
             let results = inner.wait().await.map_err(to_py_err)?;
+            Ok(results
+                .into_iter()
+                .map(|inner| PyParamWriteResult { inner })
+                .collect::<Vec<_>>())
+        })
+    }
+
+    fn wait_timeout<'py>(&self, py: Python<'py>, timeout_secs: f64) -> PyResult<Bound<'py, PyAny>> {
+        let inner = self.inner.clone();
+        let timeout = duration_from_secs(timeout_secs)?;
+        pyo3_async_runtimes::tokio::future_into_py(py, async move {
+            let results = inner.wait_timeout(timeout).await.map_err(to_py_err)?;
             Ok(results
                 .into_iter()
                 .map(|inner| PyParamWriteResult { inner })

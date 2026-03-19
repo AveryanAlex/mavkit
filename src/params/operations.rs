@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::error::VehicleError;
 use crate::observation::{ObservationHandle, ObservationSubscription};
 use crate::types::ParamOperationProgress;
@@ -41,6 +43,22 @@ impl<T: Send + 'static> ParamOperationHandle<T> {
         };
 
         receiver.await.map_err(|_| VehicleError::Disconnected)?
+    }
+
+    /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if the
+    /// operation does not complete within `timeout`.
+    pub async fn wait_timeout(&self, timeout: Duration) -> Result<T, VehicleError> {
+        let receiver = {
+            let mut guard = self.result_rx.lock().await;
+            guard.take().ok_or_else(|| {
+                VehicleError::Unsupported("operation result already consumed".to_string())
+            })?
+        };
+
+        tokio::time::timeout(timeout, receiver)
+            .await
+            .map_err(|_| VehicleError::Timeout("param operation wait".into()))?
+            .map_err(|_| VehicleError::Disconnected)?
     }
 
     pub fn cancel(&self) {
