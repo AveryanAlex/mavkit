@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::command::Command;
 use crate::error::VehicleError;
 use crate::geo::{
@@ -127,6 +129,10 @@ impl<'a> RallyHandle<'a> {
 
     pub async fn wait(&self) -> RallyState {
         self.inner.rally.state().wait().await.unwrap_or_default()
+    }
+
+    pub async fn wait_timeout(&self, timeout: Duration) -> Result<RallyState, VehicleError> {
+        self.inner.rally.state().wait_timeout(timeout).await
     }
 
     pub fn subscribe(&self) -> ObservationSubscription<RallyState> {

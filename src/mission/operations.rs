@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::command::Command;
 use crate::error::VehicleError;
 use crate::observation::{ObservationHandle, ObservationSubscription};
@@ -45,6 +47,20 @@ impl<T: Send + 'static> MissionOperationHandle<T> {
         };
 
         receiver.await.map_err(|_| VehicleError::Disconnected)?
+    }
+
+    pub async fn wait_timeout(&self, timeout: Duration) -> Result<T, VehicleError> {
+        let receiver = {
+            let mut guard = self.result_rx.lock().await;
+            guard.take().ok_or_else(|| {
+                VehicleError::Unsupported("operation result already consumed".to_string())
+            })?
+        };
+
+        tokio::time::timeout(timeout, receiver)
+            .await
+            .map_err(|_| VehicleError::Timeout)?
+            .map_err(|_| VehicleError::Disconnected)?
     }
 
     pub fn cancel(&self) {

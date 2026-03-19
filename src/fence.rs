@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::command::Command;
 use crate::error::VehicleError;
 use crate::geo::{GeoPoint2d, try_latitude_e7, try_longitude_e7};
@@ -194,6 +196,10 @@ impl<'a> FenceHandle<'a> {
 
     pub async fn wait(&self) -> FenceState {
         self.inner.fence.state().wait().await.unwrap_or_default()
+    }
+
+    pub async fn wait_timeout(&self, timeout: Duration) -> Result<FenceState, VehicleError> {
+        self.inner.fence.state().wait_timeout(timeout).await
     }
 
     pub fn subscribe(&self) -> ObservationSubscription<FenceState> {
