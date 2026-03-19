@@ -77,6 +77,9 @@ jobs:
       - name: Build extension
         run: uv run maturin develop
 
+      - name: Mypy
+        run: uv run mypy
+
       - name: Smoke test
         run: uv run python -c "import mavkit; print(dir(mavkit))"
 

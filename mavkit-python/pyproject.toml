@@ -15,8 +15,21 @@ classifiers = [
 ]
 
 [dependency-groups]
-dev = ["maturin>=1.7,<2.0", "ruff>=0.11", "pytest>=8.0"]
+dev = [
+    "maturin>=1.7,<2.0",
+    "ruff>=0.11",
+    "pytest>=8.0",
+    "mypy>=1.19.1",
+]
 
 [tool.maturin]
 features = ["pyo3/extension-module", "test-support"]
 python-source = "."
+
+[tool.mypy]
+python_version = "3.9"
+files = ["mavkit", "examples", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["_pytest.*"]
+follow_imports = "skip"
