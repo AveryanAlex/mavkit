@@ -59,7 +59,7 @@ impl<T: Send + 'static> MissionOperationHandle<T> {
 
         tokio::time::timeout(timeout, receiver)
             .await
-            .map_err(|_| VehicleError::Timeout)?
+            .map_err(|_| VehicleError::Timeout("operation wait".into()))?
             .map_err(|_| VehicleError::Disconnected)?
     }
 

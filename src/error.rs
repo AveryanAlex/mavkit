@@ -35,8 +35,8 @@ pub enum VehicleError {
     CommandRejected { command: u16, result: CommandResult },
     #[error("command outcome unknown: command={command}")]
     OutcomeUnknown { command: u16 },
-    #[error("operation timed out")]
-    Timeout,
+    #[error("operation timed out: {0}")]
+    Timeout(String),
     #[error("unsupported: {0}")]
     Unsupported(String),
     #[error("invalid parameter: {0}")]

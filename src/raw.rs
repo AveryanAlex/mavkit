@@ -169,7 +169,7 @@ impl<'a> RawHandle<'a> {
             stream.next().await.ok_or(VehicleError::Disconnected)
         })
         .await
-        .map_err(|_| VehicleError::Timeout)?
+        .map_err(|_| VehicleError::Timeout("raw command".into()))?
     }
 
     pub async fn set_message_interval(

@@ -105,7 +105,7 @@ pub(super) async fn handle_param_download_all(
                     ctx.writers
                         .param_progress
                         .send_replace(Some(ParamOperationProgress::Failed));
-                    return Err(VehicleError::Timeout);
+                    return Err(VehicleError::Timeout("parameter download".into()));
                 }
                 _ = &mut round_deadline => break,
                 result = recv_routed(&mut ctx.inbound_rx) => {
@@ -174,7 +174,7 @@ pub(super) async fn handle_param_download_all(
                 ctx.writers
                     .param_progress
                     .send_replace(Some(ParamOperationProgress::Failed));
-                return Err(VehicleError::Timeout);
+                return Err(VehicleError::Timeout("parameter write".into()));
             }
         } else {
             retries = 0;
@@ -301,7 +301,7 @@ pub(super) async fn handle_param_write(
         }
     }
 
-    Err(VehicleError::Timeout)
+    Err(VehicleError::Timeout("parameter write".into()))
 }
 
 // ---------------------------------------------------------------------------

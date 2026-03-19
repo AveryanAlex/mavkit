@@ -266,7 +266,7 @@ async fn wait_for_fresh_sample<M: Clone + Send + Sync + 'static>(
 
     match tokio::time::timeout(timeout, wait).await {
         Ok(result) => result,
-        Err(_) => Err(VehicleError::Timeout),
+        Err(_) => Err(VehicleError::Timeout("message wait".into())),
     }
 }
 

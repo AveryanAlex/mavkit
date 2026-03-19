@@ -523,7 +523,7 @@ impl<'a> MissionHandle<'a> {
             wait_for_match,
         )
         .await
-        .map_err(|_| VehicleError::Timeout)?
+        .map_err(|_| VehicleError::Timeout("mission domain command".into()))?
     }
 }
 

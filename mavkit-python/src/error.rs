@@ -25,7 +25,7 @@ pub fn to_py_err(e: mavkit::VehicleError) -> PyErr {
         mavkit::VehicleError::Disconnected => DisconnectedError::new_err(msg),
         mavkit::VehicleError::CommandRejected { .. }
         | mavkit::VehicleError::OutcomeUnknown { .. } => CommandRejectedError::new_err(msg),
-        mavkit::VehicleError::Timeout => TimeoutError::new_err(msg),
+        mavkit::VehicleError::Timeout(_) => TimeoutError::new_err(msg),
         mavkit::VehicleError::Unsupported(_) => UnsupportedError::new_err(msg),
         mavkit::VehicleError::InvalidParameter(_) => InvalidParameterError::new_err(msg),
         mavkit::VehicleError::ModeNotAvailable(_) => ModeNotAvailableError::new_err(msg),

@@ -226,7 +226,7 @@ impl AckCommandDispatcher {
             }
         }
 
-        Err(VehicleError::Timeout)
+        Err(VehicleError::Timeout("command ack".into()))
     }
 
     async fn run_command_int(
@@ -287,7 +287,7 @@ impl AckCommandDispatcher {
             }
         }
 
-        Err(VehicleError::Timeout)
+        Err(VehicleError::Timeout("command ack".into()))
     }
 
     async fn wait_for_terminal_ack(
@@ -301,14 +301,14 @@ impl AckCommandDispatcher {
         loop {
             let now = tokio::time::Instant::now();
             if now >= deadline {
-                return Err(VehicleError::Timeout);
+                return Err(VehicleError::Timeout("command ack".into()));
             }
             let remaining = deadline - now;
 
             let maybe_ack =
                 Self::recv_ack_or_timeout(ack_rx, remaining, cancel, true, command_id).await?;
             match maybe_ack {
-                None => return Err(VehicleError::Timeout),
+                None => return Err(VehicleError::Timeout("command ack".into())),
                 Some(ack) if Self::is_in_progress(ack.result) => continue,
                 Some(ack) => return Self::map_terminal_ack(command_id, ack),
             }

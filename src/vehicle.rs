@@ -163,7 +163,7 @@ impl VehicleInner {
 
         tokio::time::timeout(self._config.command_completion_timeout, wait_for_match)
             .await
-            .map_err(|_| VehicleError::Timeout)?
+            .map_err(|_| VehicleError::Timeout("waiting for mode change".into()))?
     }
 }
 
@@ -361,7 +361,7 @@ impl Vehicle {
 
         tokio::select! {
             result = ready_wait => result?,
-            _ = tokio::time::sleep(connect_timeout) => return Err(VehicleError::Timeout),
+            _ = tokio::time::sleep(connect_timeout) => return Err(VehicleError::Timeout("connecting to vehicle".into())),
         }
 
         Ok(vehicle)
@@ -578,7 +578,7 @@ impl Vehicle {
             wait_for_match,
         )
         .await
-        .map_err(|_| VehicleError::Timeout)?
+        .map_err(|_| VehicleError::Timeout("sending command".into()))?
     }
 
     pub(crate) async fn send_command<T>(

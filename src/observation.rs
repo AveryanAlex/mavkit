@@ -176,7 +176,7 @@ impl<T: Clone + Send + Sync + 'static> ObservationHandle<T> {
 
         match tokio::time::timeout(timeout, self.wait()).await {
             Ok(result) => result,
-            Err(_) => Err(VehicleError::Timeout),
+            Err(_) => Err(VehicleError::Timeout("observation wait".into())),
         }
     }
 
@@ -397,7 +397,7 @@ mod tests {
     async fn wait_timeout() {
         let (_writer, handle) = watch_fixture();
         let result = handle.wait_timeout(Duration::from_millis(20)).await;
-        assert!(matches!(result, Err(VehicleError::Timeout)));
+        assert!(matches!(result, Err(VehicleError::Timeout(_))));
     }
 
     #[tokio::test]

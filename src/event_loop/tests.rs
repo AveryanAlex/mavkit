@@ -1066,7 +1066,7 @@ async fn arm_timeout_returns_error() {
         .await
         .expect("reply should arrive before outer timeout")
         .unwrap();
-    assert!(matches!(result, Err(VehicleError::Timeout)));
+    assert!(matches!(result, Err(VehicleError::Timeout(_))));
 
     cmd_tx.send(Command::Shutdown).await.unwrap();
     handle.await.unwrap();

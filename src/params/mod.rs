@@ -506,7 +506,7 @@ mod tests {
             .await
             .expect("second download should resolve")
             .expect("second download task should join");
-        assert!(matches!(second_result, Err(VehicleError::Timeout)));
+        assert!(matches!(second_result, Err(VehicleError::Timeout(_))));
 
         let latest = vehicle
             .params()
