@@ -131,6 +131,8 @@ impl<'a> RallyHandle<'a> {
         self.inner.rally.state().wait().await.unwrap_or_default()
     }
 
+    /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if no
+    /// state update arrives within `timeout`.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<RallyState, VehicleError> {
         self.inner.rally.state().wait_timeout(timeout).await
     }

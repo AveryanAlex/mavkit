@@ -198,6 +198,8 @@ impl<'a> FenceHandle<'a> {
         self.inner.fence.state().wait().await.unwrap_or_default()
     }
 
+    /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if no
+    /// state update arrives within `timeout`.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<FenceState, VehicleError> {
         self.inner.fence.state().wait_timeout(timeout).await
     }

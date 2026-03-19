@@ -49,6 +49,8 @@ impl<T: Send + 'static> MissionOperationHandle<T> {
         receiver.await.map_err(|_| VehicleError::Disconnected)?
     }
 
+    /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if the
+    /// operation does not complete within `timeout`.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<T, VehicleError> {
         let receiver = {
             let mut guard = self.result_rx.lock().await;
