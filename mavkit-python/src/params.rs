@@ -113,8 +113,25 @@ impl PyParamStore {
             .collect()
     }
 
+    fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+
     fn __len__(&self) -> usize {
         self.inner.params.len()
+    }
+
+    fn __bool__(&self) -> bool {
+        !self.inner.is_empty()
+    }
+
+    fn __iter__(&self) -> Vec<PyParam> {
+        let mut items: Vec<_> = self.inner.params.values().collect();
+        items.sort_by_key(|p| &p.name);
+        items
+            .into_iter()
+            .map(|p| PyParam { inner: p.clone() })
+            .collect()
     }
 
     fn __contains__(&self, name: &str) -> bool {
