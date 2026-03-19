@@ -1,7 +1,8 @@
 use crate::command::Command;
 use crate::error::VehicleError;
 use crate::geo::{
-    GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain, try_quantize_degrees_e7,
+    GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain, try_latitude_e7,
+    try_longitude_e7,
 };
 use crate::mission::commands::MissionFrame as WireMissionFrame;
 use crate::mission::operations::MissionOperationHandle;
@@ -295,20 +296,20 @@ fn point_to_wire(point: &GeoPoint3d) -> Result<(WireMissionFrame, i32, i32, f32)
     match point {
         GeoPoint3d::Msl(point) => Ok((
             WireMissionFrame::Global,
-            try_quantize_degrees_e7(point.latitude_deg, "rally latitude")?,
-            try_quantize_degrees_e7(point.longitude_deg, "rally longitude")?,
+            try_latitude_e7(point.latitude_deg)?,
+            try_longitude_e7(point.longitude_deg)?,
             point.altitude_msl_m as f32,
         )),
         GeoPoint3d::RelHome(point) => Ok((
             WireMissionFrame::GlobalRelativeAlt,
-            try_quantize_degrees_e7(point.latitude_deg, "rally latitude")?,
-            try_quantize_degrees_e7(point.longitude_deg, "rally longitude")?,
+            try_latitude_e7(point.latitude_deg)?,
+            try_longitude_e7(point.longitude_deg)?,
             point.relative_alt_m as f32,
         )),
         GeoPoint3d::Terrain(point) => Ok((
             WireMissionFrame::GlobalTerrainAlt,
-            try_quantize_degrees_e7(point.latitude_deg, "rally latitude")?,
-            try_quantize_degrees_e7(point.longitude_deg, "rally longitude")?,
+            try_latitude_e7(point.latitude_deg)?,
+            try_longitude_e7(point.longitude_deg)?,
             point.altitude_terrain_m as f32,
         )),
     }

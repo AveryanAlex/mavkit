@@ -5,7 +5,7 @@ use crate::dialect;
 use crate::error::VehicleError;
 use crate::event_loop::{InitManager, run_event_loop_with_init};
 use crate::fence::FenceDomain;
-use crate::geo::{GeoPoint3dMsl, try_quantize_degrees_e7};
+use crate::geo::{GeoPoint3dMsl, try_latitude_e7, try_longitude_e7};
 use crate::info::{InfoDomain, InfoHandle};
 use crate::mission::{MissionDomain, MissionProtocolScope, send_domain_command};
 use crate::modes::{ModeDomain, ModesHandle, mode_number};
@@ -40,8 +40,8 @@ impl TryFrom<&GeoPoint3dMsl> for WireNormalizedGeo {
 
     fn try_from(point: &GeoPoint3dMsl) -> Result<Self, Self::Error> {
         Ok(Self {
-            latitude_e7: try_quantize_degrees_e7(point.latitude_deg, "latitude_deg")?,
-            longitude_e7: try_quantize_degrees_e7(point.longitude_deg, "longitude_deg")?,
+            latitude_e7: try_latitude_e7(point.latitude_deg)?,
+            longitude_e7: try_longitude_e7(point.longitude_deg)?,
             altitude_mm: quantize_meters_mm(point.altitude_msl_m),
         })
     }
@@ -457,8 +457,8 @@ impl Vehicle {
     }
 
     pub async fn set_home(&self, position: GeoPoint3dMsl) -> Result<(), VehicleError> {
-        let lat_e7 = try_quantize_degrees_e7(position.latitude_deg, "latitude_deg")?;
-        let lon_e7 = try_quantize_degrees_e7(position.longitude_deg, "longitude_deg")?;
+        let lat_e7 = try_latitude_e7(position.latitude_deg)?;
+        let lon_e7 = try_longitude_e7(position.longitude_deg)?;
         self.send_command(|reply| Command::RawCommandInt {
             payload: crate::command::RawCommandIntPayload {
                 command: dialect::MavCmd::MAV_CMD_DO_SET_HOME,

@@ -1,6 +1,6 @@
 use crate::command::Command;
 use crate::error::VehicleError;
-use crate::geo::{GeoPoint2d, try_quantize_degrees_e7};
+use crate::geo::{GeoPoint2d, try_latitude_e7, try_longitude_e7};
 use crate::mission::commands::MissionFrame as WireMissionFrame;
 use crate::mission::operations::MissionOperationHandle;
 use crate::mission::{
@@ -534,8 +534,8 @@ fn fence_item(
             param2,
             param3: 0.0,
             param4: 0.0,
-            x: try_quantize_degrees_e7(point.latitude_deg, "fence latitude")?,
-            y: try_quantize_degrees_e7(point.longitude_deg, "fence longitude")?,
+            x: try_latitude_e7(point.latitude_deg)?,
+            y: try_longitude_e7(point.longitude_deg)?,
             z: 0.0,
         }),
         current: false,

@@ -99,20 +99,32 @@ pub(crate) fn quantize_degrees_e7(value: f64) -> i32 {
     scaled.round() as i32
 }
 
-pub(crate) fn try_quantize_degrees_e7(value: f64, field: &str) -> Result<i32, VehicleError> {
+/// Validate and quantize a latitude (±90°) to degE7.
+pub(crate) fn try_latitude_e7(value: f64) -> Result<i32, VehicleError> {
+    validate_coordinate(value, -90.0, 90.0, "latitude")
+}
+
+/// Validate and quantize a longitude (±180°) to degE7.
+pub(crate) fn try_longitude_e7(value: f64) -> Result<i32, VehicleError> {
+    validate_coordinate(value, -180.0, 180.0, "longitude")
+}
+
+fn validate_coordinate(
+    value: f64,
+    min_deg: f64,
+    max_deg: f64,
+    name: &str,
+) -> Result<i32, VehicleError> {
     if !value.is_finite() {
         return Err(VehicleError::InvalidParameter(format!(
-            "{field} must be finite, got {value}"
+            "{name} must be finite, got {value}"
         )));
     }
-
-    let rounded = (value * 1e7).round();
-    if rounded < i32::MIN as f64 || rounded > i32::MAX as f64 {
+    if !(min_deg..=max_deg).contains(&value) {
         return Err(VehicleError::InvalidParameter(format!(
-            "{field} is out of degE7 i32 range, got {value}"
+            "{name} must be in [{min_deg}, {max_deg}], got {value}"
         )));
     }
-
     Ok(quantize_degrees_e7(value))
 }
 

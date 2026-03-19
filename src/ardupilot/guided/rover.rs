@@ -2,7 +2,7 @@ use super::ArduRoverGuidedHandle;
 use crate::command::{Command, RawCommandIntPayload};
 use crate::dialect;
 use crate::error::VehicleError;
-use crate::geo::{GeoPoint2d, try_quantize_degrees_e7};
+use crate::geo::{GeoPoint2d, try_latitude_e7, try_longitude_e7};
 use crate::mission::send_domain_command;
 
 const VELOCITY_YAW_RATE_TYPE_MASK: u16 = 0x05E7;
@@ -10,8 +10,8 @@ const VELOCITY_YAW_RATE_TYPE_MASK: u16 = 0x05E7;
 impl<'a> ArduRoverGuidedHandle<'a> {
     pub async fn drive_to(&self, target: GeoPoint2d) -> Result<(), VehicleError> {
         self._session.ensure_active()?;
-        let lat_e7 = try_quantize_degrees_e7(target.latitude_deg, "latitude_deg")?;
-        let lon_e7 = try_quantize_degrees_e7(target.longitude_deg, "longitude_deg")?;
+        let lat_e7 = try_latitude_e7(target.latitude_deg)?;
+        let lon_e7 = try_longitude_e7(target.longitude_deg)?;
 
         send_domain_command(self._session.command_tx(), |reply| Command::RawCommandInt {
             payload: RawCommandIntPayload {
