@@ -37,8 +37,8 @@ pub use ardupilot::{
     ArduPlaneVtolHandle, ArduRoverGuidedHandle, ArduRoverHandle, ArduSubGuidedHandle,
     ArduSubHandle, GuidedSpecific, RelativeClimbTarget, SubGotoDepthTarget,
 };
-pub use config::VehicleConfig;
-pub use error::VehicleError;
+pub use config::{InitDomainPolicy, InitPolicyConfig, VehicleConfig};
+pub use error::{CommandResult, VehicleError};
 pub use fence::{
     FenceClearOp, FenceDownloadOp, FenceExclusionCircle, FenceExclusionPolygon,
     FenceInclusionCircle, FenceInclusionPolygon, FencePlan, FenceRegion, FenceState, FenceUploadOp,
