@@ -7,7 +7,9 @@ use super::params::{
 use super::*;
 use crate::dialect::{self, MavCmd, MavModeFlag, MavState};
 use crate::mission::{MissionFrame, MissionType};
+use crate::observation::SupportState;
 use crate::state::{self, LinkState, create_channels};
+use crate::telemetry::TelemetryHandle;
 use crate::test_support::MockConnection;
 use mavlink::MavHeader;
 use std::time::Duration;
@@ -195,6 +197,7 @@ fn heartbeat_updates_vehicle_state() {
 #[test]
 fn vfr_hud_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::VFR_HUD(dialect::VFR_HUD_DATA {
@@ -207,18 +210,46 @@ fn vfr_hud_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.altitude_m, Some(100.0));
-    assert_eq!(t.speed_mps, Some(10.0));
-    assert_eq!(t.heading_deg, Some(180.0));
-    assert_eq!(t.climb_rate_mps, Some(2.5));
-    assert_eq!(t.throttle_pct, Some(55.0));
-    assert_eq!(t.airspeed_mps, Some(12.5));
+    assert_eq!(
+        telemetry.messages().vfr_hud().latest().unwrap().value.alt,
+        100.0
+    );
+    assert_eq!(
+        telemetry
+            .position()
+            .groundspeed_mps()
+            .latest()
+            .unwrap()
+            .value,
+        10.0
+    );
+    assert_eq!(
+        telemetry.position().heading_deg().latest().unwrap().value,
+        180.0
+    );
+    assert_eq!(
+        telemetry
+            .position()
+            .climb_rate_mps()
+            .latest()
+            .unwrap()
+            .value,
+        2.5
+    );
+    assert_eq!(
+        telemetry.position().throttle_pct().latest().unwrap().value,
+        55.0
+    );
+    assert_eq!(
+        telemetry.position().airspeed_mps().latest().unwrap().value,
+        12.5
+    );
 }
 
 #[test]
 fn global_position_int_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::GLOBAL_POSITION_INT(dialect::GLOBAL_POSITION_INT_DATA {
@@ -234,16 +265,20 @@ fn global_position_int_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.altitude_m, Some(50.0));
-    assert!((t.latitude_deg.unwrap() - 47.397742).abs() < 0.0001);
-    assert!((t.longitude_deg.unwrap() - 8.545594).abs() < 0.0001);
-    assert_eq!(t.heading_deg, Some(270.0));
+    let position = telemetry.position().global().latest().unwrap().value;
+    assert_eq!(position.relative_alt_m, 50.0);
+    assert!((position.latitude_deg - 47.397742).abs() < 0.0001);
+    assert!((position.longitude_deg - 8.545594).abs() < 0.0001);
+    assert_eq!(
+        telemetry.position().heading_deg().latest().unwrap().value,
+        270.0
+    );
 }
 
 #[test]
 fn sys_status_updates_battery() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::SYS_STATUS(dialect::SYS_STATUS_DATA {
@@ -266,15 +301,18 @@ fn sys_status_updates_battery() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.battery_pct, Some(75.0));
-    assert!((t.battery_voltage_v.unwrap() - 12.6).abs() < 0.001);
-    assert!((t.battery_current_a.unwrap() - 5.0).abs() < 0.001);
+    assert_eq!(
+        telemetry.battery().remaining_pct().latest().unwrap().value,
+        75.0
+    );
+    assert!((telemetry.battery().voltage_v().latest().unwrap().value - 12.6).abs() < 0.001);
+    assert!((telemetry.battery().current_a().latest().unwrap().value - 5.0).abs() < 0.001);
 }
 
 #[test]
 fn gps_raw_int_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::GPS_RAW_INT(dialect::GPS_RAW_INT_DATA {
@@ -297,10 +335,10 @@ fn gps_raw_int_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.gps_satellites, Some(12));
-    assert!((t.gps_hdop.unwrap() - 1.5).abs() < 0.01);
-    assert_eq!(t.gps_fix_type, Some(state::GpsFixType::Fix3d));
+    let quality = telemetry.gps().quality().latest().unwrap().value;
+    assert_eq!(quality.satellites, Some(12));
+    assert!((quality.hdop.unwrap() - 1.5).abs() < 0.01);
+    assert_eq!(quality.fix_type, state::GpsFixType::Fix3d);
 }
 
 #[test]
@@ -356,6 +394,7 @@ fn home_position_updates_state() {
 #[test]
 fn attitude_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::ATTITUDE(dialect::ATTITUDE_DATA {
@@ -369,10 +408,10 @@ fn attitude_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert!((t.roll_deg.unwrap() - 30.0).abs() < 0.1);
-    assert!((t.pitch_deg.unwrap() - (-45.0)).abs() < 0.1);
-    assert!((t.yaw_deg.unwrap() - 180.0).abs() < 0.1);
+    let euler = telemetry.attitude().euler().latest().unwrap().value;
+    assert!((euler.roll_deg - 30.0).abs() < 0.1);
+    assert!((euler.pitch_deg - (-45.0)).abs() < 0.1);
+    assert!((euler.yaw_deg - 180.0).abs() < 0.1);
 }
 
 #[test]
@@ -397,6 +436,7 @@ fn statustext_updates_state() {
 #[test]
 fn nav_controller_output_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::NAV_CONTROLLER_OUTPUT(dialect::NAV_CONTROLLER_OUTPUT_DATA {
@@ -411,16 +451,19 @@ fn nav_controller_output_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.wp_dist_m, Some(150.0));
-    assert_eq!(t.nav_bearing_deg, Some(90.0));
-    assert_eq!(t.target_bearing_deg, Some(95.0));
-    assert_eq!(t.xtrack_error_m, Some(1.5));
+    let waypoint = telemetry.navigation().waypoint().latest().unwrap().value;
+    assert_eq!(waypoint.distance_m, 150.0);
+    assert_eq!(waypoint.bearing_deg, 90.0);
+
+    let guidance = telemetry.navigation().guidance().latest().unwrap().value;
+    assert_eq!(guidance.bearing_deg, 95.0);
+    assert_eq!(guidance.cross_track_error_m, 1.5);
 }
 
 #[test]
 fn terrain_report_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::TERRAIN_REPORT(dialect::TERRAIN_REPORT_DATA {
@@ -434,9 +477,9 @@ fn terrain_report_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.terrain_height_m, Some(250.0));
-    assert_eq!(t.height_above_terrain_m, Some(50.0));
+    let terrain = telemetry.terrain().clearance().latest().unwrap().value;
+    assert_eq!(terrain.terrain_height_m, 250.0);
+    assert_eq!(terrain.height_above_terrain_m, 50.0);
 }
 
 // -----------------------------------------------------------------------
@@ -1732,6 +1775,7 @@ async fn auto_request_home_only_sent_once() {
 #[test]
 fn battery_status_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
 
@@ -1758,19 +1802,43 @@ fn battery_status_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    let cells = t.battery_voltage_cells.as_ref().unwrap();
+    let cells = &telemetry
+        .battery()
+        .cells()
+        .latest()
+        .unwrap()
+        .value
+        .voltages_v;
     assert_eq!(cells.len(), 3);
     assert!((cells[0] - 4.2).abs() < 0.001);
     assert!((cells[1] - 4.15).abs() < 0.001);
-    assert_eq!(t.battery_time_remaining_s, Some(1800));
+    assert_eq!(
+        telemetry
+            .battery()
+            .time_remaining_s()
+            .latest()
+            .unwrap()
+            .value,
+        1800
+    );
     // energy_consumed: 7200 / 36.0 = 200.0 Wh
-    assert!((t.energy_consumed_wh.unwrap() - 200.0).abs() < 0.01);
+    assert!(
+        (telemetry
+            .battery()
+            .energy_consumed_wh()
+            .latest()
+            .unwrap()
+            .value
+            - 200.0)
+            .abs()
+            < 0.01
+    );
 }
 
 #[test]
 fn rc_channels_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::RC_CHANNELS(dialect::RC_CHANNELS_DATA {
@@ -1798,16 +1866,139 @@ fn rc_channels_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    let rc = t.rc_channels.as_ref().unwrap();
-    assert_eq!(rc.len(), 4);
-    assert_eq!(rc[2], 1000);
-    assert_eq!(t.rc_rssi, Some(200));
+    assert_eq!(
+        telemetry
+            .rc()
+            .channel_pwm_us(2)
+            .unwrap()
+            .latest()
+            .unwrap()
+            .value,
+        1000
+    );
+    assert_eq!(telemetry.rc().rssi_pct().latest().unwrap().value, 200);
+    assert!(telemetry.rc().channel_pwm_us(4).unwrap().latest().is_none());
+}
+
+#[test]
+fn rc_channels_shrinking_count_clears_stale_metrics() {
+    let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
+    let target: Option<VehicleTarget> = None;
+    let header = default_header();
+
+    let full_msg = dialect::MavMessage::RC_CHANNELS(dialect::RC_CHANNELS_DATA {
+        time_boot_ms: 0,
+        chancount: 18,
+        chan1_raw: 1500,
+        chan2_raw: 1500,
+        chan3_raw: 1000,
+        chan4_raw: 1500,
+        chan5_raw: 1600,
+        chan6_raw: 0,
+        chan7_raw: 0,
+        chan8_raw: 0,
+        chan9_raw: 0,
+        chan10_raw: 0,
+        chan11_raw: 0,
+        chan12_raw: 0,
+        chan13_raw: 0,
+        chan14_raw: 0,
+        chan15_raw: 0,
+        chan16_raw: 0,
+        chan17_raw: 0,
+        chan18_raw: 0,
+        rssi: 200,
+    });
+    update_state(&header, &full_msg, &writers, &target);
+
+    assert_eq!(
+        telemetry
+            .rc()
+            .channel_pwm_us(4)
+            .unwrap()
+            .latest()
+            .unwrap()
+            .value,
+        1600
+    );
+
+    let shortened_msg = dialect::MavMessage::RC_CHANNELS(dialect::RC_CHANNELS_DATA {
+        time_boot_ms: 100,
+        chancount: 4,
+        chan1_raw: 1500,
+        chan2_raw: 1500,
+        chan3_raw: 1000,
+        chan4_raw: 1500,
+        chan5_raw: 1600,
+        chan6_raw: 0,
+        chan7_raw: 0,
+        chan8_raw: 0,
+        chan9_raw: 0,
+        chan10_raw: 0,
+        chan11_raw: 0,
+        chan12_raw: 0,
+        chan13_raw: 0,
+        chan14_raw: 0,
+        chan15_raw: 0,
+        chan16_raw: 0,
+        chan17_raw: 0,
+        chan18_raw: 0,
+        rssi: 200,
+    });
+    update_state(&header, &shortened_msg, &writers, &target);
+
+    assert!(telemetry.rc().channel_pwm_us(4).unwrap().latest().is_none());
+    assert_eq!(
+        telemetry.rc().channel_pwm_us(4).unwrap().support().latest(),
+        Some(SupportState::Unsupported)
+    );
+
+    let restored_msg = dialect::MavMessage::RC_CHANNELS(dialect::RC_CHANNELS_DATA {
+        time_boot_ms: 200,
+        chancount: 18,
+        chan1_raw: 1500,
+        chan2_raw: 1500,
+        chan3_raw: 1000,
+        chan4_raw: 1500,
+        chan5_raw: 1700,
+        chan6_raw: 0,
+        chan7_raw: 0,
+        chan8_raw: 0,
+        chan9_raw: 0,
+        chan10_raw: 0,
+        chan11_raw: 0,
+        chan12_raw: 0,
+        chan13_raw: 0,
+        chan14_raw: 0,
+        chan15_raw: 0,
+        chan16_raw: 0,
+        chan17_raw: 0,
+        chan18_raw: 0,
+        rssi: 200,
+    });
+    update_state(&header, &restored_msg, &writers, &target);
+
+    assert_eq!(
+        telemetry
+            .rc()
+            .channel_pwm_us(4)
+            .unwrap()
+            .latest()
+            .unwrap()
+            .value,
+        1700
+    );
+    assert_eq!(
+        telemetry.rc().channel_pwm_us(4).unwrap().support().latest(),
+        Some(SupportState::Supported)
+    );
 }
 
 #[test]
 fn servo_output_updates_telemetry() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::SERVO_OUTPUT_RAW(dialect::SERVO_OUTPUT_RAW_DATA {
@@ -1832,11 +2023,36 @@ fn servo_output_updates_telemetry() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    let servos = t.servo_outputs.as_ref().unwrap();
-    assert_eq!(servos.len(), 16);
-    assert_eq!(servos[0], 1100);
-    assert_eq!(servos[3], 1400);
+    assert_eq!(
+        telemetry
+            .actuators()
+            .servo_pwm_us(0)
+            .unwrap()
+            .latest()
+            .unwrap()
+            .value,
+        1100
+    );
+    assert_eq!(
+        telemetry
+            .actuators()
+            .servo_pwm_us(3)
+            .unwrap()
+            .latest()
+            .unwrap()
+            .value,
+        1400
+    );
+    assert_eq!(
+        telemetry
+            .actuators()
+            .servo_pwm_us(15)
+            .unwrap()
+            .latest()
+            .unwrap()
+            .value,
+        0
+    );
 }
 
 #[test]
@@ -1859,10 +2075,12 @@ fn empty_statustext_ignored() {
 #[test]
 fn sys_status_sentinel_values_ignored() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
-    // Use sentinel values that should not update telemetry
-    let msg = dialect::MavMessage::SYS_STATUS(dialect::SYS_STATUS_DATA {
+
+    // Fresh invalid values should not publish a battery sample.
+    let invalid_msg = dialect::MavMessage::SYS_STATUS(dialect::SYS_STATUS_DATA {
         onboard_control_sensors_present: dialect::MavSysStatusSensor::empty(),
         onboard_control_sensors_enabled: dialect::MavSysStatusSensor::empty(),
         onboard_control_sensors_health: dialect::MavSysStatusSensor::empty(),
@@ -1880,17 +2098,54 @@ fn sys_status_sentinel_values_ignored() {
         onboard_control_sensors_enabled_extended: dialect::MavSysStatusSensorExtended::empty(),
         onboard_control_sensors_health_extended: dialect::MavSysStatusSensorExtended::empty(),
     });
-    update_state(&header, &msg, &writers, &target);
+    update_state(&header, &invalid_msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.battery_pct, None);
-    assert_eq!(t.battery_voltage_v, None);
-    assert_eq!(t.battery_current_a, None);
+    assert!(telemetry.battery().remaining_pct().latest().is_none());
+    assert!(telemetry.battery().voltage_v().latest().is_none());
+    assert!(telemetry.battery().current_a().latest().is_none());
+
+    // Once a valid sample exists, sentinel values must not clear it.
+    let valid_msg = dialect::MavMessage::SYS_STATUS(dialect::SYS_STATUS_DATA {
+        onboard_control_sensors_present: dialect::MavSysStatusSensor::empty(),
+        onboard_control_sensors_enabled: dialect::MavSysStatusSensor::empty(),
+        onboard_control_sensors_health: dialect::MavSysStatusSensor::empty(),
+        load: 0,
+        voltage_battery: 12600,
+        current_battery: 500,
+        battery_remaining: 75,
+        drop_rate_comm: 0,
+        errors_comm: 0,
+        errors_count1: 0,
+        errors_count2: 0,
+        errors_count3: 0,
+        errors_count4: 0,
+        onboard_control_sensors_present_extended: dialect::MavSysStatusSensorExtended::empty(),
+        onboard_control_sensors_enabled_extended: dialect::MavSysStatusSensorExtended::empty(),
+        onboard_control_sensors_health_extended: dialect::MavSysStatusSensorExtended::empty(),
+    });
+    update_state(&header, &valid_msg, &writers, &target);
+
+    assert_eq!(
+        telemetry.battery().remaining_pct().latest().unwrap().value,
+        75.0
+    );
+    assert!((telemetry.battery().voltage_v().latest().unwrap().value - 12.6).abs() < 0.001);
+    assert!((telemetry.battery().current_a().latest().unwrap().value - 5.0).abs() < 0.001);
+
+    update_state(&header, &invalid_msg, &writers, &target);
+
+    assert_eq!(
+        telemetry.battery().remaining_pct().latest().unwrap().value,
+        75.0
+    );
+    assert!((telemetry.battery().voltage_v().latest().unwrap().value - 12.6).abs() < 0.001);
+    assert!((telemetry.battery().current_a().latest().unwrap().value - 5.0).abs() < 0.001);
 }
 
 #[test]
 fn gps_sentinel_values_ignored() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::GPS_RAW_INT(dialect::GPS_RAW_INT_DATA {
@@ -1913,14 +2168,16 @@ fn gps_sentinel_values_ignored() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.gps_satellites, None);
-    assert_eq!(t.gps_hdop, None);
+    let quality = telemetry.gps().quality().latest().unwrap().value;
+    assert_eq!(quality.fix_type, state::GpsFixType::NoFix);
+    assert_eq!(quality.satellites, None);
+    assert_eq!(quality.hdop, None);
 }
 
 #[test]
 fn global_position_int_hdg_max_ignored() {
     let (writers, channels) = create_channels();
+    let telemetry = TelemetryHandle::new(&channels.telemetry_handles);
     let target: Option<VehicleTarget> = None;
     let header = default_header();
     let msg = dialect::MavMessage::GLOBAL_POSITION_INT(dialect::GLOBAL_POSITION_INT_DATA {
@@ -1936,8 +2193,7 @@ fn global_position_int_hdg_max_ignored() {
     });
     update_state(&header, &msg, &writers, &target);
 
-    let t = channels.telemetry.borrow();
-    assert_eq!(t.heading_deg, None);
+    assert!(telemetry.position().heading_deg().latest().is_none());
 }
 
 #[test]

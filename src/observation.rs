@@ -220,6 +220,19 @@ impl<T: Clone + Send + Sync + 'static> ObservationWriter<T> {
             }
         }
     }
+
+    pub(crate) fn clear(&self) {
+        match self.backing.as_ref() {
+            ObservationBacking::Watch(store) => {
+                store.tx.send_replace(None);
+            }
+            ObservationBacking::Broadcast(store) => {
+                if let Ok(mut latest) = store.latest.lock() {
+                    *latest = None;
+                }
+            }
+        }
+    }
 }
 
 impl<T: Clone + Send + Sync + 'static> ObservationSubscription<T> {

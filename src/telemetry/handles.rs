@@ -25,6 +25,7 @@ const SERVO_OUTPUT_COUNT: usize = 16;
 #[derive(Clone)]
 pub(crate) struct MetricSlotWriter<T: Clone + Send + Sync + 'static> {
     sample: ObservationWriter<MetricSample<T>>,
+    support: ObservationWriter<SupportState>,
 }
 
 impl<T: Clone + Send + Sync + 'static> MetricSlotWriter<T> {
@@ -34,12 +35,18 @@ impl<T: Clone + Send + Sync + 'static> MetricSlotWriter<T> {
         source: TelemetryMessageKind,
         vehicle_time: Option<VehicleTimestamp>,
     ) {
+        let _ = self.support.publish(SupportState::Supported);
         let _ = self.sample.publish(MetricSample {
             value,
             source,
             vehicle_time,
             received_at: Instant::now(),
         });
+    }
+
+    pub(crate) fn clear(&self) {
+        let _ = self.support.publish(SupportState::Unsupported);
+        self.sample.clear();
     }
 }
 
@@ -179,6 +186,7 @@ fn metric_slot<T: Clone + Send + Sync + 'static>() -> (MetricSlotWriter<T>, Metr
     (
         MetricSlotWriter {
             sample: sample_writer,
+            support: support_writer,
         },
         MetricHandle::new(sample_observation, support_observation),
     )

@@ -58,32 +58,6 @@ pub(super) fn update_state(
                 .message_writers
                 .vfr_hud
                 .publish(data.clone(), None);
-            let alt = Some(f64::from(data.alt));
-            let spd = Some(f64::from(data.groundspeed));
-            let hdg = Some(f64::from(data.heading));
-            let climb = Some(f64::from(data.climb));
-            let thr = Some(f64::from(data.throttle));
-            let air = Some(f64::from(data.airspeed));
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                c |= set_if_changed(&mut t.altitude_m, alt);
-                c |= set_if_changed(&mut t.speed_mps, spd);
-                c |= set_if_changed(&mut t.heading_deg, hdg);
-                c |= set_if_changed(&mut t.climb_rate_mps, climb);
-                c |= set_if_changed(&mut t.throttle_pct, thr);
-                c |= set_if_changed(&mut t.airspeed_mps, air);
-                c
-            });
-            writers.position.send_if_modified(|p| {
-                let mut c = false;
-                c |= set_if_changed(&mut p.altitude_m, alt);
-                c |= set_if_changed(&mut p.speed_mps, spd);
-                c |= set_if_changed(&mut p.heading_deg, hdg);
-                c |= set_if_changed(&mut p.climb_rate_mps, climb);
-                c |= set_if_changed(&mut p.throttle_pct, thr);
-                c |= set_if_changed(&mut p.airspeed_mps, air);
-                c
-            });
 
             writers.telemetry_metrics.position_groundspeed_mps.publish(
                 f64::from(data.groundspeed),
@@ -112,39 +86,8 @@ pub(super) fn update_state(
             );
         }
         dialect::MavMessage::GLOBAL_POSITION_INT(data) => {
-            let alt = Some(f64::from(data.relative_alt) / 1000.0);
-            let lat = Some(f64::from(data.lat) / 1e7);
-            let lon = Some(f64::from(data.lon) / 1e7);
             let vx = f64::from(data.vx) / 100.0;
             let vy = f64::from(data.vy) / 100.0;
-            let spd = Some((vx * vx + vy * vy).sqrt());
-            let hdg = if data.hdg != u16::MAX {
-                Some(f64::from(data.hdg) / 100.0)
-            } else {
-                None
-            };
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                c |= set_if_changed(&mut t.altitude_m, alt);
-                c |= set_if_changed(&mut t.latitude_deg, lat);
-                c |= set_if_changed(&mut t.longitude_deg, lon);
-                c |= set_if_changed(&mut t.speed_mps, spd);
-                if let Some(h) = hdg {
-                    c |= set_if_changed(&mut t.heading_deg, Some(h));
-                }
-                c
-            });
-            writers.position.send_if_modified(|p| {
-                let mut c = false;
-                c |= set_if_changed(&mut p.altitude_m, alt);
-                c |= set_if_changed(&mut p.latitude_deg, lat);
-                c |= set_if_changed(&mut p.longitude_deg, lon);
-                c |= set_if_changed(&mut p.speed_mps, spd);
-                if let Some(h) = hdg {
-                    c |= set_if_changed(&mut p.heading_deg, Some(h));
-                }
-                c
-            });
 
             let vehicle_time = infer_timestamp_from_time_boot_ms(
                 TelemetryMessageKind::GlobalPositionInt,
@@ -221,32 +164,6 @@ pub(super) fn update_state(
             } else {
                 None
             };
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                if let Some(v) = pct {
-                    c |= set_if_changed(&mut t.battery_pct, Some(v));
-                }
-                if let Some(v) = volt {
-                    c |= set_if_changed(&mut t.battery_voltage_v, Some(v));
-                }
-                if let Some(v) = cur {
-                    c |= set_if_changed(&mut t.battery_current_a, Some(v));
-                }
-                c
-            });
-            writers.battery.send_if_modified(|b| {
-                let mut c = false;
-                if let Some(v) = pct {
-                    c |= set_if_changed(&mut b.remaining_pct, Some(v));
-                }
-                if let Some(v) = volt {
-                    c |= set_if_changed(&mut b.voltage_v, Some(v));
-                }
-                if let Some(v) = cur {
-                    c |= set_if_changed(&mut b.current_a, Some(v));
-                }
-                c
-            });
 
             writers
                 .telemetry_metrics
@@ -271,7 +188,6 @@ pub(super) fn update_state(
             );
         }
         dialect::MavMessage::GPS_RAW_INT(data) => {
-            let fix = Some(GpsFixType::from_raw(data.fix_type as u8));
             let sats = if data.satellites_visible != u8::MAX {
                 Some(data.satellites_visible)
             } else {
@@ -282,28 +198,6 @@ pub(super) fn update_state(
             } else {
                 None
             };
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                c |= set_if_changed(&mut t.gps_fix_type, fix);
-                if let Some(v) = sats {
-                    c |= set_if_changed(&mut t.gps_satellites, Some(v));
-                }
-                if let Some(v) = hdop {
-                    c |= set_if_changed(&mut t.gps_hdop, Some(v));
-                }
-                c
-            });
-            writers.gps.send_if_modified(|g| {
-                let mut c = false;
-                c |= set_if_changed(&mut g.fix_type, fix);
-                if let Some(v) = sats {
-                    c |= set_if_changed(&mut g.satellites, Some(v));
-                }
-                if let Some(v) = hdop {
-                    c |= set_if_changed(&mut g.hdop, Some(v));
-                }
-                c
-            });
 
             let vehicle_time =
                 infer_timestamp_from_time_usec(TelemetryMessageKind::GpsRawInt, data.time_usec);
@@ -384,24 +278,6 @@ pub(super) fn update_state(
             );
         }
         dialect::MavMessage::ATTITUDE(data) => {
-            let roll = Some(f64::from(data.roll.to_degrees()));
-            let pitch = Some(f64::from(data.pitch.to_degrees()));
-            let yaw = Some(f64::from(data.yaw.to_degrees()));
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                c |= set_if_changed(&mut t.roll_deg, roll);
-                c |= set_if_changed(&mut t.pitch_deg, pitch);
-                c |= set_if_changed(&mut t.yaw_deg, yaw);
-                c
-            });
-            writers.attitude.send_if_modified(|a| {
-                let mut c = false;
-                c |= set_if_changed(&mut a.roll_deg, roll);
-                c |= set_if_changed(&mut a.pitch_deg, pitch);
-                c |= set_if_changed(&mut a.yaw_deg, yaw);
-                c
-            });
-
             let vehicle_time = infer_timestamp_from_time_boot_ms(
                 TelemetryMessageKind::Attitude,
                 data.time_boot_ms,
@@ -427,26 +303,6 @@ pub(super) fn update_state(
                 .message_writers
                 .nav_controller_output
                 .publish(data.clone(), None);
-            let wp = Some(f64::from(data.wp_dist));
-            let nav = Some(f64::from(data.nav_bearing));
-            let tgt = Some(f64::from(data.target_bearing));
-            let xt = Some(f64::from(data.xtrack_error));
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                c |= set_if_changed(&mut t.wp_dist_m, wp);
-                c |= set_if_changed(&mut t.nav_bearing_deg, nav);
-                c |= set_if_changed(&mut t.target_bearing_deg, tgt);
-                c |= set_if_changed(&mut t.xtrack_error_m, xt);
-                c
-            });
-            writers.navigation.send_if_modified(|n| {
-                let mut c = false;
-                c |= set_if_changed(&mut n.wp_dist_m, wp);
-                c |= set_if_changed(&mut n.nav_bearing_deg, nav);
-                c |= set_if_changed(&mut n.target_bearing_deg, tgt);
-                c |= set_if_changed(&mut n.xtrack_error_m, xt);
-                c
-            });
 
             writers.telemetry_metrics.navigation_waypoint.publish(
                 WaypointProgress {
@@ -471,20 +327,6 @@ pub(super) fn update_state(
                 .message_writers
                 .terrain_report
                 .publish(data.clone(), None);
-            let th = Some(f64::from(data.terrain_height));
-            let hat = Some(f64::from(data.current_height));
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                c |= set_if_changed(&mut t.terrain_height_m, th);
-                c |= set_if_changed(&mut t.height_above_terrain_m, hat);
-                c
-            });
-            writers.terrain.send_if_modified(|tr| {
-                let mut c = false;
-                c |= set_if_changed(&mut tr.terrain_height_m, th);
-                c |= set_if_changed(&mut tr.height_above_terrain_m, hat);
-                c
-            });
 
             writers.telemetry_metrics.terrain_clearance.publish(
                 TerrainClearance {
@@ -518,32 +360,6 @@ pub(super) fn update_state(
             } else {
                 None
             };
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                if let Some(ref v) = cells_opt {
-                    c |= set_if_changed(&mut t.battery_voltage_cells, Some(v.clone()));
-                }
-                if let Some(v) = energy {
-                    c |= set_if_changed(&mut t.energy_consumed_wh, Some(v));
-                }
-                if let Some(v) = remaining {
-                    c |= set_if_changed(&mut t.battery_time_remaining_s, Some(v));
-                }
-                c
-            });
-            writers.battery.send_if_modified(|b| {
-                let mut c = false;
-                if let Some(ref v) = cells_opt {
-                    c |= set_if_changed(&mut b.voltage_cells, Some(v.clone()));
-                }
-                if let Some(v) = energy {
-                    c |= set_if_changed(&mut b.energy_consumed_wh, Some(v));
-                }
-                if let Some(v) = remaining {
-                    c |= set_if_changed(&mut b.time_remaining_s, Some(v));
-                }
-                c
-            });
 
             if data.id == 0 {
                 let remaining_pct = if data.battery_remaining >= 0 {
@@ -570,48 +386,11 @@ pub(super) fn update_state(
         }
         dialect::MavMessage::RC_CHANNELS(data) => {
             let count = (data.chancount as usize).min(RC_CHANNELS_MAX);
-            let all = [
-                data.chan1_raw,
-                data.chan2_raw,
-                data.chan3_raw,
-                data.chan4_raw,
-                data.chan5_raw,
-                data.chan6_raw,
-                data.chan7_raw,
-                data.chan8_raw,
-                data.chan9_raw,
-                data.chan10_raw,
-                data.chan11_raw,
-                data.chan12_raw,
-                data.chan13_raw,
-                data.chan14_raw,
-                data.chan15_raw,
-                data.chan16_raw,
-                data.chan17_raw,
-                data.chan18_raw,
-            ];
-            let ch = Some(all[..count].to_vec());
             let rssi = if data.rssi != u8::MAX {
                 Some(data.rssi)
             } else {
                 None
             };
-            writers.telemetry.send_if_modified(|t| {
-                let mut c = false;
-                c |= set_if_changed(&mut t.rc_channels, ch.clone());
-                if let Some(v) = rssi {
-                    c |= set_if_changed(&mut t.rc_rssi, Some(v));
-                }
-                c
-            });
-            writers.rc_channels.send_if_modified(|rc| {
-                let mut c = false;
-                c |= set_if_changed(&mut rc.channels, ch.clone());
-                if let Some(v) = rssi {
-                    c |= set_if_changed(&mut rc.rssi, Some(v));
-                }
-                c
-            });
 
             let vehicle_time = infer_timestamp_from_time_boot_ms(
                 TelemetryMessageKind::RcChannels,
@@ -651,6 +430,10 @@ pub(super) fn update_state(
                 );
             }
 
+            for index in count..RC_CHANNELS_MAX {
+                writers.telemetry_metrics.rc_channels_pwm_us[index].clear();
+            }
+
             if let Some(rssi_pct) = rssi {
                 writers.telemetry_metrics.rc_rssi_pct.publish(
                     rssi_pct,
@@ -660,31 +443,6 @@ pub(super) fn update_state(
             }
         }
         dialect::MavMessage::SERVO_OUTPUT_RAW(data) => {
-            let servos = Some(vec![
-                data.servo1_raw,
-                data.servo2_raw,
-                data.servo3_raw,
-                data.servo4_raw,
-                data.servo5_raw,
-                data.servo6_raw,
-                data.servo7_raw,
-                data.servo8_raw,
-                data.servo9_raw,
-                data.servo10_raw,
-                data.servo11_raw,
-                data.servo12_raw,
-                data.servo13_raw,
-                data.servo14_raw,
-                data.servo15_raw,
-                data.servo16_raw,
-            ]);
-            writers
-                .telemetry
-                .send_if_modified(|t| set_if_changed(&mut t.servo_outputs, servos.clone()));
-            writers
-                .rc_channels
-                .send_if_modified(|rc| set_if_changed(&mut rc.servo_outputs, servos.clone()));
-
             let vehicle_time = infer_timestamp_from_time_usec(
                 TelemetryMessageKind::ServoOutputRaw,
                 u64::from(data.time_usec),
