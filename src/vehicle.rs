@@ -15,10 +15,14 @@ use crate::params::ParamsDomain;
 use crate::rally::RallyDomain;
 use crate::raw::RawHandle;
 use crate::state::{StateChannels, VehicleState, create_channels};
+#[cfg(feature = "stream")]
+use crate::stream_connection::StreamConnection;
 use crate::support::{SupportDomain, SupportHandle};
 use crate::telemetry::TelemetryHandle;
 use std::sync::Arc;
 use std::time::Instant;
+#[cfg(feature = "stream")]
+use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 
@@ -241,6 +245,23 @@ impl<'a> DomainHandle<'a> for ParamsHandle<'a> {
 impl Vehicle {
     pub async fn connect(address: &str) -> Result<Self, VehicleError> {
         Self::connect_with_config(address, VehicleConfig::default()).await
+    }
+
+    /// Constructs a vehicle from async stream halves for custom byte-stream transports.
+    ///
+    /// This is a `stream`-feature convenience wrapper around
+    /// [`StreamConnection`] and [`Vehicle::from_connection`].
+    #[cfg(feature = "stream")]
+    pub async fn from_stream_parts<R, W>(
+        reader: R,
+        writer: W,
+        config: VehicleConfig,
+    ) -> Result<Self, VehicleError>
+    where
+        R: AsyncRead + Unpin + Send + 'static,
+        W: AsyncWrite + Unpin + Send + 'static,
+    {
+        Self::from_connection(Box::new(StreamConnection::new(reader, writer)), config).await
     }
 
     pub async fn connect_udp(bind_addr: &str) -> Result<Self, VehicleError> {
@@ -615,8 +636,16 @@ mod tests {
     use crate::geo::quantize_degrees_e7;
     use crate::test_support::{MockConnection, SentMessages};
     use mavlink::MavHeader;
+    #[cfg(feature = "stream")]
+    use mavlink::async_peek_reader::AsyncPeekReader;
+    #[cfg(feature = "stream")]
+    use mavlink::{
+        MavlinkVersion, ReadVersion, read_versioned_msg_async, write_versioned_msg_async,
+    };
     use std::sync::Arc;
     use std::time::Duration;
+    #[cfg(feature = "stream")]
+    use tokio::io::{duplex, split};
     use tokio::time::timeout;
 
     fn default_header() -> MavHeader {
@@ -1539,6 +1568,131 @@ mod tests {
         assert!(
             matches!(err, VehicleError::ConnectionFailed(message) if message.contains("mock connection closed"))
         );
+    }
+
+    #[cfg(feature = "stream")]
+    #[tokio::test]
+    async fn from_stream_parts_waits_for_first_heartbeat_and_populates_identity() {
+        let (client, server) = duplex(1024);
+        let (client_read, client_write) = split(client);
+        let (_server_read, mut server_write) = split(server);
+
+        let connect_task = tokio::spawn(async move {
+            Vehicle::from_stream_parts(client_read, client_write, fast_config()).await
+        });
+
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        assert!(
+            !connect_task.is_finished(),
+            "connect should stay pending until the first heartbeat arrives"
+        );
+
+        write_versioned_msg_async(
+            &mut server_write,
+            MavlinkVersion::V2,
+            default_header(),
+            &heartbeat_msg(true, 5),
+        )
+        .await
+        .expect("heartbeat should be written to the stream peer");
+
+        let vehicle = timeout(Duration::from_millis(250), connect_task)
+            .await
+            .expect("connect should finish after the heartbeat")
+            .expect("connect task should join")
+            .expect("connect should succeed");
+
+        assert_eq!(
+            vehicle.identity(),
+            VehicleIdentity {
+                system_id: 1,
+                component_id: 1,
+                autopilot: AutopilotType::ArduPilotMega,
+                vehicle_type: VehicleType::Quadrotor,
+            }
+        );
+        assert!(vehicle.available_modes().current().latest().is_some());
+
+        vehicle
+            .disconnect()
+            .await
+            .expect("disconnect should succeed");
+    }
+
+    #[cfg(feature = "stream")]
+    #[tokio::test]
+    async fn from_stream_parts_supports_command_round_trip() {
+        let (client, server) = duplex(1024);
+        let (client_read, client_write) = split(client);
+        let (server_read, mut server_write) = split(server);
+        let mut server_read = AsyncPeekReader::new(server_read);
+
+        let connect_task = tokio::spawn(async move {
+            Vehicle::from_stream_parts(client_read, client_write, fast_config()).await
+        });
+
+        write_versioned_msg_async(
+            &mut server_write,
+            MavlinkVersion::V2,
+            default_header(),
+            &heartbeat_msg(false, 7),
+        )
+        .await
+        .expect("heartbeat should be written to the stream peer");
+
+        let vehicle = timeout(Duration::from_millis(250), connect_task)
+            .await
+            .expect("connect should finish after the heartbeat")
+            .expect("connect task should join")
+            .expect("connect should succeed");
+
+        let arm_task = {
+            let vehicle = vehicle.clone();
+            tokio::spawn(async move { vehicle.arm(false).await })
+        };
+
+        let arm_command = timeout(Duration::from_millis(250), async {
+            loop {
+                let (_, message) = read_versioned_msg_async::<dialect::MavMessage, _>(
+                    &mut server_read,
+                    ReadVersion::Any,
+                )
+                .await
+                .expect("outgoing command should be readable from the stream peer");
+
+                match message {
+                    dialect::MavMessage::COMMAND_LONG(data)
+                        if data.command == dialect::MavCmd::MAV_CMD_COMPONENT_ARM_DISARM =>
+                    {
+                        break data;
+                    }
+                    _ => {}
+                }
+            }
+        })
+        .await
+        .expect("arm command should be observed before timeout");
+
+        assert_eq!(arm_command.param1, 1.0);
+
+        write_versioned_msg_async(
+            &mut server_write,
+            MavlinkVersion::V2,
+            default_header(),
+            &ack_msg(
+                dialect::MavCmd::MAV_CMD_COMPONENT_ARM_DISARM,
+                dialect::MavResult::MAV_RESULT_ACCEPTED,
+            ),
+        )
+        .await
+        .expect("ack should be written to the stream peer");
+
+        assert!(arm_task.await.expect("arm task should join").is_ok());
+
+        vehicle
+            .disconnect()
+            .await
+            .expect("disconnect should succeed");
     }
 
     #[tokio::test]
