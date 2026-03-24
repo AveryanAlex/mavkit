@@ -674,7 +674,9 @@ class TestStoredPlanTypes:
     def test_rally_plan_with_multiple_point_variants(self):
         plan = mavkit.RallyPlan(
             points=[
-                mavkit.GeoPoint3dMsl(latitude_deg=47.42, longitude_deg=-122.2, altitude_msl_m=30.0),
+                mavkit.GeoPoint3dMsl(
+                    latitude_deg=47.42, longitude_deg=-122.2, altitude_msl_m=30.0
+                ),
                 mavkit.GeoPoint3dRelHome(
                     latitude_deg=47.43,
                     longitude_deg=-122.1,

@@ -11,7 +11,7 @@ over UDP, TCP, or serial, with support for telemetry, commands, missions, and pa
 pip install mavkit
 ```
 
-Requires Python 3.9+. Pre-built wheels are available for Linux (x86_64, aarch64), macOS (x86_64, ARM), and Windows (x86_64).
+Requires Python 3.10+. Pre-built wheels are available for Linux (x86_64, aarch64), macOS (x86_64, ARM), and Windows (x86_64).
 
 ## Quick Start
 

@@ -7,7 +7,7 @@ name = "mavkit"
 version = "0.4.0"
 description = "Python bindings for mavkit – Async MAVLink SDK"
 license = { text = "MIT OR Apache-2.0" }
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 readme = "README.md"
 classifiers = [
     "Programming Language :: Rust",
@@ -27,9 +27,5 @@ features = ["pyo3/extension-module", "test-support"]
 python-source = "."
 
 [tool.mypy]
-python_version = "3.9"
-files = ["mavkit", "examples", "tests"]
-
-[[tool.mypy.overrides]]
-module = ["_pytest.*"]
-follow_imports = "skip"
+python_version = "3.10"
+files = ["mavkit", "examples", "tests_typing"]

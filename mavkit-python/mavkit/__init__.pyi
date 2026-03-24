@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from types import TracebackType
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, final
+from typing_extensions import Self
 from collections.abc import Coroutine, Iterator
 
 __version__: str
 
 _T = TypeVar("_T")
-SupportName = str
-VehicleTime = tuple[str, float | int]
 
 class _AsyncSubscription(Generic[_T]):
     def recv(self) -> Coroutine[Any, Any, _T]: ...
@@ -20,6 +19,7 @@ class _ObservationHandle(Generic[_T]):
     def wait(self) -> Coroutine[Any, Any, _T]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, _T]: ...
 
+@final
 class SystemStatus:
     Unknown: SystemStatus
     Boot: SystemStatus
@@ -30,6 +30,7 @@ class SystemStatus:
     Emergency: SystemStatus
     Poweroff: SystemStatus
 
+@final
 class VehicleType:
     Unknown: VehicleType
     FixedWing: VehicleType
@@ -44,12 +45,14 @@ class VehicleType:
     Submarine: VehicleType
     Generic: VehicleType
 
+@final
 class AutopilotType:
     Unknown: AutopilotType
     Generic: AutopilotType
     ArduPilotMega: AutopilotType
     Px4: AutopilotType
 
+@final
 class GpsFixType:
     NoFix: GpsFixType
     Fix2d: GpsFixType
@@ -58,6 +61,7 @@ class GpsFixType:
     RtkFloat: GpsFixType
     RtkFixed: GpsFixType
 
+@final
 class MavSeverity:
     Emergency: MavSeverity
     Alert: MavSeverity
@@ -68,11 +72,13 @@ class MavSeverity:
     Info: MavSeverity
     Debug: MavSeverity
 
+@final
 class MissionType:
     Mission: MissionType
     Fence: MissionType
     Rally: MissionType
 
+@final
 class MissionFrame:
     Mission: MissionFrame
     GlobalInt: MissionFrame
@@ -81,14 +87,17 @@ class MissionFrame:
     LocalNed: MissionFrame
     Other: MissionFrame
 
+@final
 class IssueSeverity:
     Error: IssueSeverity
     Warning: IssueSeverity
 
+@final
 class TransferDirection:
     Upload: TransferDirection
     Download: TransferDirection
 
+@final
 class TransferPhase:
     Idle: TransferPhase
     RequestCount: TransferPhase
@@ -98,6 +107,7 @@ class TransferPhase:
     Failed: TransferPhase
     Cancelled: TransferPhase
 
+@final
 class ParamTransferPhase:
     Idle: ParamTransferPhase
     Downloading: ParamTransferPhase
@@ -106,6 +116,7 @@ class ParamTransferPhase:
     Failed: ParamTransferPhase
     Cancelled: ParamTransferPhase
 
+@final
 class ParamType:
     Uint8: ParamType
     Int8: ParamType
@@ -115,34 +126,41 @@ class ParamType:
     Int32: ParamType
     Real32: ParamType
 
+@final
 class SyncState:
     Unknown: SyncState
     Current: SyncState
     PossiblyStale: SyncState
 
+@final
 class ParamOperationKind:
     DownloadAll: ParamOperationKind
     WriteBatch: ParamOperationKind
 
+@final
 class SupportState:
     Unknown: SupportState
     Supported: SupportState
     Unsupported: SupportState
 
+@final
 class LinkState:
     Connecting: LinkState
     Connected: LinkState
     Disconnected: LinkState
     Error: LinkState
 
+@final
 class ModeCatalogSource:
     AvailableModes: ModeCatalogSource
     StaticArduPilotTable: ModeCatalogSource
 
+@final
 class CurrentModeSource:
     Heartbeat: CurrentModeSource
     CurrentModeMessage: CurrentModeSource
 
+@final
 class SensorHealthState:
     NotPresent: SensorHealthState
     Disabled: SensorHealthState
@@ -162,6 +180,7 @@ class OperationConflictError(MavkitError): ...
 class CancelledError(MavkitError): ...
 class ValidationError(MavkitError): ...
 
+@final
 class MissionState:
     @property
     def plan(self) -> MissionPlan | None: ...
@@ -176,6 +195,7 @@ class MissionState:
     @property
     def active_op(self) -> str | None: ...
 
+@final
 class VehicleIdentity:
     @property
     def system_id(self) -> int: ...
@@ -186,15 +206,16 @@ class VehicleIdentity:
     @property
     def vehicle_type(self) -> VehicleType: ...
 
+@final
 class GlobalPosition:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_msl_m: float,
         relative_alt_m: float,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def latitude_deg(self) -> float: ...
     @property
@@ -204,8 +225,9 @@ class GlobalPosition:
     @property
     def relative_alt_m(self) -> float: ...
 
+@final
 class EulerAttitude:
-    def __init__(self, roll_deg: float, pitch_deg: float, yaw_deg: float) -> None: ...
+    def __new__(cls, roll_deg: float, pitch_deg: float, yaw_deg: float) -> Self: ...
     @property
     def roll_deg(self) -> float: ...
     @property
@@ -213,13 +235,14 @@ class EulerAttitude:
     @property
     def yaw_deg(self) -> float: ...
 
+@final
 class GpsQuality:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         fix_type: GpsFixType,
         satellites: int | None,
         hdop: float | None,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def fix_type(self) -> GpsFixType: ...
     @property
@@ -227,42 +250,47 @@ class GpsQuality:
     @property
     def hdop(self) -> float | None: ...
 
+@final
 class CellVoltages:
-    def __init__(self, voltages_v: list[float]) -> None: ...
+    def __new__(cls, voltages_v: list[float]) -> Self: ...
     @property
     def voltages_v(self) -> list[float]: ...
 
+@final
 class WaypointProgress:
-    def __init__(self, distance_m: float, bearing_deg: float) -> None: ...
+    def __new__(cls, distance_m: float, bearing_deg: float) -> Self: ...
     @property
     def distance_m(self) -> float: ...
     @property
     def bearing_deg(self) -> float: ...
 
+@final
 class GuidanceState:
-    def __init__(self, bearing_deg: float, cross_track_error_m: float) -> None: ...
+    def __new__(cls, bearing_deg: float, cross_track_error_m: float) -> Self: ...
     @property
     def bearing_deg(self) -> float: ...
     @property
     def cross_track_error_m(self) -> float: ...
 
+@final
 class TerrainClearance:
-    def __init__(
-        self, terrain_height_m: float, height_above_terrain_m: float
-    ) -> None: ...
+    def __new__(
+        cls, terrain_height_m: float, height_above_terrain_m: float
+    ) -> Self: ...
     @property
     def terrain_height_m(self) -> float: ...
     @property
     def height_above_terrain_m(self) -> float: ...
 
+@final
 class GeoPoint3dMsl:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_msl_m: float,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def latitude_deg(self) -> float: ...
     @property
@@ -270,17 +298,19 @@ class GeoPoint3dMsl:
     @property
     def altitude_msl_m(self) -> float: ...
 
+@final
 class GeoPoint2d:
-    def __init__(self, *, latitude_deg: float, longitude_deg: float) -> None: ...
+    def __new__(cls, *, latitude_deg: float, longitude_deg: float) -> Self: ...
     @property
     def latitude_deg(self) -> float: ...
     @property
     def longitude_deg(self) -> float: ...
 
+@final
 class GeoPoint3dRelHome:
-    def __init__(
-        self, *, latitude_deg: float, longitude_deg: float, relative_alt_m: float
-    ) -> None: ...
+    def __new__(
+        cls, *, latitude_deg: float, longitude_deg: float, relative_alt_m: float
+    ) -> Self: ...
     @property
     def latitude_deg(self) -> float: ...
     @property
@@ -288,14 +318,15 @@ class GeoPoint3dRelHome:
     @property
     def relative_alt_m(self) -> float: ...
 
+@final
 class GeoPoint3dTerrain:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_terrain_m: float,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def latitude_deg(self) -> float: ...
     @property
@@ -303,22 +334,25 @@ class GeoPoint3dTerrain:
     @property
     def altitude_terrain_m(self) -> float: ...
 
+@final
 class FenceInclusionPolygon:
-    def __init__(self, *, vertices: list[GeoPoint2d], inclusion_group: int) -> None: ...
+    def __new__(cls, *, vertices: list[GeoPoint2d], inclusion_group: int) -> Self: ...
     @property
     def vertices(self) -> list[GeoPoint2d]: ...
     @property
     def inclusion_group(self) -> int: ...
 
+@final
 class FenceExclusionPolygon:
-    def __init__(self, *, vertices: list[GeoPoint2d]) -> None: ...
+    def __new__(cls, *, vertices: list[GeoPoint2d]) -> Self: ...
     @property
     def vertices(self) -> list[GeoPoint2d]: ...
 
+@final
 class FenceInclusionCircle:
-    def __init__(
-        self, *, center: GeoPoint2d, radius_m: float, inclusion_group: int
-    ) -> None: ...
+    def __new__(
+        cls, *, center: GeoPoint2d, radius_m: float, inclusion_group: int
+    ) -> Self: ...
     @property
     def center(self) -> GeoPoint2d: ...
     @property
@@ -326,16 +360,18 @@ class FenceInclusionCircle:
     @property
     def inclusion_group(self) -> int: ...
 
+@final
 class FenceExclusionCircle:
-    def __init__(self, *, center: GeoPoint2d, radius_m: float) -> None: ...
+    def __new__(cls, *, center: GeoPoint2d, radius_m: float) -> Self: ...
     @property
     def center(self) -> GeoPoint2d: ...
     @property
     def radius_m(self) -> float: ...
 
+@final
 class FencePlan:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         return_point: GeoPoint2d | None = None,
         regions: list[
@@ -344,7 +380,7 @@ class FencePlan:
             | FenceInclusionCircle
             | FenceExclusionCircle
         ],
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def return_point(self) -> GeoPoint2d | None: ...
     @property
@@ -357,15 +393,17 @@ class FencePlan:
         | FenceExclusionCircle
     ]: ...
 
+@final
 class RallyPlan:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         points: list[GeoPoint3dMsl | GeoPoint3dRelHome | GeoPoint3dTerrain],
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def points(self) -> list[GeoPoint3dMsl | GeoPoint3dRelHome | GeoPoint3dTerrain]: ...
 
+@final
 class FenceState:
     @property
     def plan(self) -> FencePlan | None: ...
@@ -374,6 +412,7 @@ class FenceState:
     @property
     def active_op(self) -> str | None: ...
 
+@final
 class RallyState:
     @property
     def plan(self) -> RallyPlan | None: ...
@@ -382,9 +421,10 @@ class RallyState:
     @property
     def active_op(self) -> str | None: ...
 
+@final
 class SensorHealthSummary:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         gyro: SensorHealthState,
         accel: SensorHealthState,
@@ -396,7 +436,7 @@ class SensorHealthSummary:
         battery: SensorHealthState,
         terrain: SensorHealthState,
         geofence: SensorHealthState,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def gyro(self) -> SensorHealthState: ...
     @property
@@ -418,15 +458,16 @@ class SensorHealthSummary:
     @property
     def geofence(self) -> SensorHealthState: ...
 
+@final
 class StatusTextEvent:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         text: str,
         severity: MavSeverity,
         id: int,
         source_system: int,
         source_component: int,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def text(self) -> str: ...
     @property
@@ -438,46 +479,56 @@ class StatusTextEvent:
     @property
     def source_component(self) -> int: ...
 
+@final
 class MetricSample:
     @property
     def value(self) -> Any: ...
     @property
     def source(self) -> str: ...
     @property
-    def vehicle_time(self) -> VehicleTime | None: ...
+    def vehicle_time(self) -> tuple[str, float | int] | None: ...
     @property
     def received_at_monotonic_s(self) -> float: ...
 
+@final
 class MessageSample:
     @property
     def value(self) -> Any: ...
     @property
-    def vehicle_time(self) -> VehicleTime | None: ...
+    def vehicle_time(self) -> tuple[str, float | int] | None: ...
     @property
     def received_at_monotonic_s(self) -> float: ...
 
+@final
 class MetricSubscription(_AsyncSubscription[MetricSample]): ...
+
+@final
 class MessageSubscription(_AsyncSubscription[MessageSample]): ...
 
+@final
 class MetricHandle(_ObservationHandle[MetricSample]):
-    def support(self) -> SupportName | None: ...
+    def support(self) -> str | None: ...
     def subscribe(self) -> MetricSubscription: ...
 
+@final
 class PeriodicMessageHandle(_ObservationHandle[MessageSample]):
-    def support(self) -> SupportName | None: ...
+    def support(self) -> str | None: ...
     def subscribe(self) -> MessageSubscription: ...
     def request(self, timeout_secs: float) -> Coroutine[Any, Any, MessageSample]: ...
     def set_rate(self, hz: float) -> Coroutine[Any, Any, None]: ...
 
+@final
 class EventMessageHandle(_ObservationHandle[MessageSample]):
-    def support(self) -> SupportName | None: ...
+    def support(self) -> str | None: ...
     def subscribe(self) -> MessageSubscription: ...
     def request(self, timeout_secs: float) -> Coroutine[Any, Any, MessageSample]: ...
 
+@final
 class MessageHandle(_ObservationHandle[MessageSample]):
-    def support(self) -> SupportName | None: ...
+    def support(self) -> str | None: ...
     def subscribe(self) -> MessageSubscription: ...
 
+@final
 class TelemetryPositionNamespace:
     def global_pos(self) -> MetricHandle: ...
     def groundspeed_mps(self) -> MetricHandle: ...
@@ -486,9 +537,11 @@ class TelemetryPositionNamespace:
     def heading_deg(self) -> MetricHandle: ...
     def throttle_pct(self) -> MetricHandle: ...
 
+@final
 class TelemetryAttitudeNamespace:
     def euler(self) -> MetricHandle: ...
 
+@final
 class TelemetryBatteryNamespace:
     def remaining_pct(self) -> MetricHandle: ...
     def voltage_v(self) -> MetricHandle: ...
@@ -497,24 +550,30 @@ class TelemetryBatteryNamespace:
     def time_remaining_s(self) -> MetricHandle: ...
     def cells(self) -> MetricHandle: ...
 
+@final
 class TelemetryGpsNamespace:
     def quality(self) -> MetricHandle: ...
     def position_msl(self) -> MetricHandle: ...
 
+@final
 class TelemetryNavigationNamespace:
     def waypoint(self) -> MetricHandle: ...
     def guidance(self) -> MetricHandle: ...
 
+@final
 class TelemetryTerrainNamespace:
     def clearance(self) -> MetricHandle: ...
 
+@final
 class TelemetryRcNamespace:
     def channel_pwm_us(self, index: int) -> MetricHandle: ...
     def rssi_pct(self) -> MetricHandle: ...
 
+@final
 class TelemetryActuatorsNamespace:
     def servo_pwm_us(self, index: int) -> MetricHandle: ...
 
+@final
 class TelemetryMessagesHandle:
     def vfr_hud(self) -> PeriodicMessageHandle: ...
     def global_position_int(self) -> PeriodicMessageHandle: ...
@@ -531,6 +590,7 @@ class TelemetryMessagesHandle:
     def gps_global_origin(self) -> EventMessageHandle: ...
     def status_text(self) -> MessageHandle: ...
 
+@final
 class TelemetryHandle:
     def position(self) -> TelemetryPositionNamespace: ...
     def attitude(self) -> TelemetryAttitudeNamespace: ...
@@ -546,11 +606,14 @@ class TelemetryHandle:
     def home(self) -> MetricHandle: ...
     def origin(self) -> MetricHandle: ...
 
+@final
 class SupportStateSubscription(_AsyncSubscription[SupportState]): ...
 
+@final
 class SupportStateHandle(_ObservationHandle[SupportState]):
     def subscribe(self) -> SupportStateSubscription: ...
 
+@final
 class SupportHandle:
     def command_int(self) -> SupportStateHandle: ...
     def ftp(self) -> SupportStateHandle: ...
@@ -559,25 +622,29 @@ class SupportHandle:
     def mission_rally(self) -> SupportStateHandle: ...
     def ardupilot(self) -> SupportStateHandle: ...
 
+@final
 class LinkStateSubscription(_AsyncSubscription[LinkState]):
     @property
     def last_error_message(self) -> str | None: ...
 
+@final
 class LinkStateHandle(_ObservationHandle[LinkState]):
     def subscribe(self) -> LinkStateSubscription: ...
 
+@final
 class LinkHandle:
     def state(self) -> LinkStateHandle: ...
 
+@final
 class ModeDescriptor:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         custom_mode: int,
         name: str,
         user_selectable: bool,
         source: ModeCatalogSource,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def custom_mode(self) -> int: ...
     @property
@@ -587,15 +654,16 @@ class ModeDescriptor:
     @property
     def source(self) -> ModeCatalogSource: ...
 
+@final
 class CurrentMode:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         custom_mode: int,
         name: str,
         intended_custom_mode: int | None = None,
         source: CurrentModeSource,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def custom_mode(self) -> int: ...
     @property
@@ -605,16 +673,21 @@ class CurrentMode:
     @property
     def source(self) -> CurrentModeSource: ...
 
+@final
 class ModeCatalogSubscription(_AsyncSubscription[list[ModeDescriptor]]): ...
 
+@final
 class ModeCatalogHandle(_ObservationHandle[list[ModeDescriptor]]):
     def subscribe(self) -> ModeCatalogSubscription: ...
 
+@final
 class CurrentModeSubscription(_AsyncSubscription[CurrentMode]): ...
 
+@final
 class CurrentModeHandle(_ObservationHandle[CurrentMode]):
     def subscribe(self) -> CurrentModeSubscription: ...
 
+@final
 class ModesHandle:
     def support(self) -> SupportStateHandle: ...
     def catalog(self) -> ModeCatalogHandle: ...
@@ -623,15 +696,16 @@ class ModesHandle:
     def __bool__(self) -> bool: ...
     def __iter__(self) -> Iterator[ModeDescriptor]: ...
 
+@final
 class FirmwareInfo:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         version: str | None = None,
         custom_version: list[int] | None = None,
         git_hash: str | None = None,
         os_version: str | None = None,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def version(self) -> str | None: ...
     @property
@@ -641,16 +715,17 @@ class FirmwareInfo:
     @property
     def os_version(self) -> str | None: ...
 
+@final
 class HardwareInfo:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         board_vendor_id: int | None = None,
         board_product_id: int | None = None,
         usb_vendor_id: int | None = None,
         usb_product_id: int | None = None,
         board_version: int | None = None,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def board_vendor_id(self) -> int | None: ...
     @property
@@ -662,15 +737,16 @@ class HardwareInfo:
     @property
     def board_version(self) -> int | None: ...
 
+@final
 class UniqueIds:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         hardware_uid: list[int] | None = None,
         uid: int | None = None,
         remote_id: str | None = None,
         board_id: str | None = None,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def hardware_uid(self) -> list[int] | None: ...
     @property
@@ -680,16 +756,17 @@ class UniqueIds:
     @property
     def board_id(self) -> str | None: ...
 
+@final
 class PersistentIdentity:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         state: str,
         system_id: int | None = None,
         component_id: int | None = None,
         canonical_id: str | None = None,
         aliases: list[str] | None = None,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def state(self) -> str: ...
     @property
@@ -701,26 +778,35 @@ class PersistentIdentity:
     @property
     def aliases(self) -> list[str]: ...
 
+@final
 class FirmwareInfoSubscription(_AsyncSubscription[FirmwareInfo]): ...
 
+@final
 class FirmwareInfoHandle(_ObservationHandle[FirmwareInfo]):
     def subscribe(self) -> FirmwareInfoSubscription: ...
 
+@final
 class HardwareInfoSubscription(_AsyncSubscription[HardwareInfo]): ...
 
+@final
 class HardwareInfoHandle(_ObservationHandle[HardwareInfo]):
     def subscribe(self) -> HardwareInfoSubscription: ...
 
+@final
 class UniqueIdsSubscription(_AsyncSubscription[UniqueIds]): ...
 
+@final
 class UniqueIdsHandle(_ObservationHandle[UniqueIds]):
     def subscribe(self) -> UniqueIdsSubscription: ...
 
+@final
 class PersistentIdentitySubscription(_AsyncSubscription[PersistentIdentity]): ...
 
+@final
 class PersistentIdentityHandle(_ObservationHandle[PersistentIdentity]):
     def subscribe(self) -> PersistentIdentitySubscription: ...
 
+@final
 class InfoHandle:
     def firmware(self) -> FirmwareInfoHandle: ...
     def hardware(self) -> HardwareInfoHandle: ...
@@ -729,9 +815,10 @@ class InfoHandle:
     def best_display_id(self) -> str: ...
     def persistent_identity(self) -> PersistentIdentityHandle: ...
 
+@final
 class RawMissionCommand:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         command: int,
         frame: MissionFrame,
@@ -743,7 +830,7 @@ class RawMissionCommand:
         param3: float = 0.0,
         param4: float = 0.0,
         frame_raw: int | None = None,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def command(self) -> int: ...
     @property
@@ -765,6 +852,7 @@ class RawMissionCommand:
     @property
     def param4(self) -> float: ...
 
+@final
 class GeoPoint3d:
     @staticmethod
     def msl(
@@ -787,9 +875,10 @@ class GeoPoint3d:
     @property
     def altitude_m(self) -> float: ...
 
+@final
 class NavWaypoint:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
@@ -799,7 +888,7 @@ class NavWaypoint:
         acceptance_radius_m: float = 0.0,
         pass_radius_m: float = 0.0,
         yaw_deg: float = 0.0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -826,16 +915,17 @@ class NavWaypoint:
         yaw_deg: float = 0.0,
     ) -> NavWaypoint: ...
 
+@final
 class NavTakeoff:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         pitch_deg: float = 0.0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -849,16 +939,17 @@ class NavTakeoff:
     @staticmethod
     def from_point(*, position: GeoPoint3d, pitch_deg: float = 0.0) -> NavTakeoff: ...
 
+@final
 class NavLand:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         abort_alt_m: float = 0.0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -872,9 +963,10 @@ class NavLand:
     @staticmethod
     def from_point(*, position: GeoPoint3d, abort_alt_m: float = 0.0) -> NavLand: ...
 
+@final
 class NavLoiterTime:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
@@ -883,7 +975,7 @@ class NavLoiterTime:
         time_s: float = 0.0,
         direction: str = "clockwise",
         exit_xtrack: bool = False,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -907,24 +999,27 @@ class NavLoiterTime:
         exit_xtrack: bool = False,
     ) -> NavLoiterTime: ...
 
+@final
 class NavGuidedEnable:
-    def __init__(self, *, enabled: bool) -> None: ...
+    def __new__(cls, *, enabled: bool) -> Self: ...
     @property
     def enabled(self) -> bool: ...
 
+@final
 class NavReturnToLaunch:
     def __init__(self) -> None: ...
 
+@final
 class NavSplineWaypoint:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         hold_time_s: float = 0.0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -940,9 +1035,10 @@ class NavSplineWaypoint:
         *, position: GeoPoint3d, hold_time_s: float = 0.0
     ) -> NavSplineWaypoint: ...
 
+@final
 class NavArcWaypoint:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
@@ -950,7 +1046,7 @@ class NavArcWaypoint:
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         arc_angle_deg: float,
         direction: str = "clockwise",
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -968,9 +1064,10 @@ class NavArcWaypoint:
         *, position: GeoPoint3d, arc_angle_deg: float, direction: str = "clockwise"
     ) -> NavArcWaypoint: ...
 
+@final
 class NavLoiterUnlimited:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
@@ -978,7 +1075,7 @@ class NavLoiterUnlimited:
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         radius_m: float = 0.0,
         direction: str = "clockwise",
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -996,9 +1093,10 @@ class NavLoiterUnlimited:
         *, position: GeoPoint3d, radius_m: float = 0.0, direction: str = "clockwise"
     ) -> NavLoiterUnlimited: ...
 
+@final
 class NavLoiterTurns:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
@@ -1008,7 +1106,7 @@ class NavLoiterTurns:
         radius_m: float = 0.0,
         direction: str = "clockwise",
         exit_xtrack: bool = False,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1035,9 +1133,10 @@ class NavLoiterTurns:
         exit_xtrack: bool = False,
     ) -> NavLoiterTurns: ...
 
+@final
 class NavLoiterToAlt:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
@@ -1046,7 +1145,7 @@ class NavLoiterToAlt:
         radius_m: float = 0.0,
         direction: str = "clockwise",
         exit_xtrack: bool = False,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1070,16 +1169,17 @@ class NavLoiterToAlt:
         exit_xtrack: bool = False,
     ) -> NavLoiterToAlt: ...
 
+@final
 class NavContinueAndChangeAlt:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         action: str = "neutral",
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1095,10 +1195,11 @@ class NavContinueAndChangeAlt:
         *, position: GeoPoint3d, action: str = "neutral"
     ) -> NavContinueAndChangeAlt: ...
 
+@final
 class NavDelay:
-    def __init__(
-        self, *, seconds: float, hour_utc: float, min_utc: float, sec_utc: float
-    ) -> None: ...
+    def __new__(
+        cls, *, seconds: float, hour_utc: float, min_utc: float, sec_utc: float
+    ) -> Self: ...
     @property
     def seconds(self) -> float: ...
     @property
@@ -1108,10 +1209,11 @@ class NavDelay:
     @property
     def sec_utc(self) -> float: ...
 
+@final
 class NavAltitudeWait:
-    def __init__(
-        self, *, altitude_m: float, descent_rate_mps: float, wiggle_time_s: float
-    ) -> None: ...
+    def __new__(
+        cls, *, altitude_m: float, descent_rate_mps: float, wiggle_time_s: float
+    ) -> Self: ...
     @property
     def altitude_m(self) -> float: ...
     @property
@@ -1119,15 +1221,16 @@ class NavAltitudeWait:
     @property
     def wiggle_time_s(self) -> float: ...
 
+@final
 class NavVtolTakeoff:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1139,16 +1242,17 @@ class NavVtolTakeoff:
     @staticmethod
     def from_point(*, position: GeoPoint3d) -> NavVtolTakeoff: ...
 
+@final
 class NavVtolLand:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         options: int = 0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1162,16 +1266,17 @@ class NavVtolLand:
     @staticmethod
     def from_point(*, position: GeoPoint3d, options: int = 0) -> NavVtolLand: ...
 
+@final
 class NavPayloadPlace:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         max_descent_m: float = 0.0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1187,10 +1292,9 @@ class NavPayloadPlace:
         *, position: GeoPoint3d, max_descent_m: float = 0.0
     ) -> NavPayloadPlace: ...
 
+@final
 class NavSetYawSpeed:
-    def __init__(
-        self, *, angle_deg: float, speed_mps: float, relative: bool
-    ) -> None: ...
+    def __new__(cls, *, angle_deg: float, speed_mps: float, relative: bool) -> Self: ...
     @property
     def angle_deg(self) -> float: ...
     @property
@@ -1198,9 +1302,10 @@ class NavSetYawSpeed:
     @property
     def relative(self) -> bool: ...
 
+@final
 class NavScriptTime:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         command: int,
         timeout_s: float,
@@ -1208,7 +1313,7 @@ class NavScriptTime:
         arg2: float,
         arg3: int,
         arg4: int,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def command(self) -> int: ...
     @property
@@ -1222,16 +1327,17 @@ class NavScriptTime:
     @property
     def arg4(self) -> int: ...
 
+@final
 class NavAttitudeTime:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         time_s: float,
         roll_deg: float,
         pitch_deg: float,
         yaw_deg: float,
         climb_rate_mps: float,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def time_s(self) -> float: ...
     @property
@@ -1243,14 +1349,15 @@ class NavAttitudeTime:
     @property
     def climb_rate_mps(self) -> float: ...
 
+@final
 class DoChangeSpeed:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         speed_mps: float,
         throttle_pct: float = 0.0,
         speed_type: str = "groundspeed",
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def speed_type(self) -> str: ...
     @property
@@ -1258,16 +1365,17 @@ class DoChangeSpeed:
     @property
     def throttle_pct(self) -> float: ...
 
+@final
 class DoSetHome:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         use_current: bool = False,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1281,54 +1389,62 @@ class DoSetHome:
     @staticmethod
     def from_point(*, position: GeoPoint3d, use_current: bool = False) -> DoSetHome: ...
 
+@final
 class DoSetRelay:
-    def __init__(self, *, number: int, state: bool) -> None: ...
+    def __new__(cls, *, number: int, state: bool) -> Self: ...
     @property
     def number(self) -> int: ...
     @property
     def state(self) -> bool: ...
 
+@final
 class DoSetRoiNone:
     def __init__(self) -> None: ...
 
+@final
 class DoJump:
-    def __init__(self, *, target_index: int, repeat_count: int) -> None: ...
+    def __new__(cls, *, target_index: int, repeat_count: int) -> Self: ...
     @property
     def target_index(self) -> int: ...
     @property
     def repeat_count(self) -> int: ...
 
+@final
 class DoJumpTag:
-    def __init__(self, *, tag: int, repeat_count: int) -> None: ...
+    def __new__(cls, *, tag: int, repeat_count: int) -> Self: ...
     @property
     def tag(self) -> int: ...
     @property
     def repeat_count(self) -> int: ...
 
+@final
 class DoTag:
-    def __init__(self, *, tag: int) -> None: ...
+    def __new__(cls, *, tag: int) -> Self: ...
     @property
     def tag(self) -> int: ...
 
+@final
 class DoPauseContinue:
-    def __init__(self, *, pause: bool) -> None: ...
+    def __new__(cls, *, pause: bool) -> Self: ...
     @property
     def pause(self) -> bool: ...
 
+@final
 class DoSetReverse:
-    def __init__(self, *, reverse: bool) -> None: ...
+    def __new__(cls, *, reverse: bool) -> Self: ...
     @property
     def reverse(self) -> bool: ...
 
+@final
 class DoLandStart:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1340,15 +1456,16 @@ class DoLandStart:
     @staticmethod
     def from_point(*, position: GeoPoint3d) -> DoLandStart: ...
 
+@final
 class DoReturnPathStart:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1360,15 +1477,16 @@ class DoReturnPathStart:
     @staticmethod
     def from_point(*, position: GeoPoint3d) -> DoReturnPathStart: ...
 
+@final
 class DoGoAround:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1380,15 +1498,16 @@ class DoGoAround:
     @staticmethod
     def from_point(*, position: GeoPoint3d) -> DoGoAround: ...
 
+@final
 class DoSetRoiLocation:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1400,16 +1519,17 @@ class DoSetRoiLocation:
     @staticmethod
     def from_point(*, position: GeoPoint3d) -> DoSetRoiLocation: ...
 
+@final
 class DoSetRoi:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float,
         frame: MissionFrame = MissionFrame.GlobalRelativeAltInt,
         mode: int = 0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def frame(self) -> MissionFrame: ...
     @property
@@ -1423,10 +1543,9 @@ class DoSetRoi:
     @staticmethod
     def from_point(*, position: GeoPoint3d, mode: int = 0) -> DoSetRoi: ...
 
+@final
 class DoMountControl:
-    def __init__(
-        self, *, pitch_deg: float, roll_deg: float, yaw_deg: float
-    ) -> None: ...
+    def __new__(cls, *, pitch_deg: float, roll_deg: float, yaw_deg: float) -> Self: ...
     @property
     def pitch_deg(self) -> float: ...
     @property
@@ -1434,9 +1553,10 @@ class DoMountControl:
     @property
     def yaw_deg(self) -> float: ...
 
+@final
 class DoGimbalManagerPitchYaw:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         pitch_deg: float,
         yaw_deg: float,
@@ -1444,7 +1564,7 @@ class DoGimbalManagerPitchYaw:
         yaw_rate_dps: float,
         flags: int,
         gimbal_id: int,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def pitch_deg(self) -> float: ...
     @property
@@ -1458,16 +1578,18 @@ class DoGimbalManagerPitchYaw:
     @property
     def gimbal_id(self) -> int: ...
 
+@final
 class DoCamTriggerDistance:
-    def __init__(self, *, meters: float, trigger_now: bool) -> None: ...
+    def __new__(cls, *, meters: float, trigger_now: bool) -> Self: ...
     @property
     def meters(self) -> float: ...
     @property
     def trigger_now(self) -> bool: ...
 
+@final
 class DoDigicamConfigure:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         shooting_mode: int,
         shutter_speed: int,
@@ -1476,7 +1598,7 @@ class DoDigicamConfigure:
         exposure_type: int,
         cmd_id: int,
         cutoff_time: float,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def shooting_mode(self) -> int: ...
     @property
@@ -1492,9 +1614,10 @@ class DoDigicamConfigure:
     @property
     def cutoff_time(self) -> float: ...
 
+@final
 class DoDigicamControl:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         session: int,
         zoom_pos: int,
@@ -1502,7 +1625,7 @@ class DoDigicamControl:
         focus_lock: int,
         shooting_cmd: int,
         cmd_id: int,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def session(self) -> int: ...
     @property
@@ -1516,37 +1639,42 @@ class DoDigicamControl:
     @property
     def cmd_id(self) -> int: ...
 
+@final
 class DoFenceEnable:
-    def __init__(self, *, action: str) -> None: ...
+    def __new__(cls, *, action: str) -> Self: ...
     @property
     def action(self) -> str: ...
 
+@final
 class DoParachute:
-    def __init__(self, *, action: str) -> None: ...
+    def __new__(cls, *, action: str) -> Self: ...
     @property
     def action(self) -> str: ...
 
+@final
 class DoGripper:
-    def __init__(self, *, number: int, action: str) -> None: ...
+    def __new__(cls, *, number: int, action: str) -> Self: ...
     @property
     def number(self) -> int: ...
     @property
     def action(self) -> str: ...
 
+@final
 class DoSprayer:
-    def __init__(self, *, enabled: bool) -> None: ...
+    def __new__(cls, *, enabled: bool) -> Self: ...
     @property
     def enabled(self) -> bool: ...
 
+@final
 class DoWinch:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         number: int,
         action: str,
         release_length_m: float,
         release_rate_mps: float,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def number(self) -> int: ...
     @property
@@ -1556,15 +1684,16 @@ class DoWinch:
     @property
     def release_rate_mps(self) -> float: ...
 
+@final
 class DoEngineControl:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         start: bool,
         cold_start: bool,
         height_delay_m: float,
         allow_disarmed: bool,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def start(self) -> bool: ...
     @property
@@ -1574,27 +1703,31 @@ class DoEngineControl:
     @property
     def allow_disarmed(self) -> bool: ...
 
+@final
 class DoInvertedFlight:
-    def __init__(self, *, inverted: bool) -> None: ...
+    def __new__(cls, *, inverted: bool) -> Self: ...
     @property
     def inverted(self) -> bool: ...
 
+@final
 class DoAutotuneEnable:
-    def __init__(self, *, enabled: bool) -> None: ...
+    def __new__(cls, *, enabled: bool) -> Self: ...
     @property
     def enabled(self) -> bool: ...
 
+@final
 class DoSetServo:
-    def __init__(self, *, channel: int, pwm: int) -> None: ...
+    def __new__(cls, *, channel: int, pwm: int) -> Self: ...
     @property
     def channel(self) -> int: ...
     @property
     def pwm(self) -> int: ...
 
+@final
 class DoRepeatServo:
-    def __init__(
-        self, *, channel: int, pwm: int, count: int, cycle_time_s: float
-    ) -> None: ...
+    def __new__(
+        cls, *, channel: int, pwm: int, count: int, cycle_time_s: float
+    ) -> Self: ...
     @property
     def channel(self) -> int: ...
     @property
@@ -1604,8 +1737,9 @@ class DoRepeatServo:
     @property
     def cycle_time_s(self) -> float: ...
 
+@final
 class DoRepeatRelay:
-    def __init__(self, *, number: int, count: int, cycle_time_s: float) -> None: ...
+    def __new__(cls, *, number: int, count: int, cycle_time_s: float) -> Self: ...
     @property
     def number(self) -> int: ...
     @property
@@ -1613,20 +1747,23 @@ class DoRepeatRelay:
     @property
     def cycle_time_s(self) -> float: ...
 
+@final
 class DoSetResumeRepeatDist:
-    def __init__(self, *, distance_m: float) -> None: ...
+    def __new__(cls, *, distance_m: float) -> Self: ...
     @property
     def distance_m(self) -> float: ...
 
+@final
 class DoAuxFunction:
-    def __init__(self, *, function: int, switch_pos: int) -> None: ...
+    def __new__(cls, *, function: int, switch_pos: int) -> Self: ...
     @property
     def function(self) -> int: ...
     @property
     def switch_pos(self) -> int: ...
 
+@final
 class DoSendScriptMessage:
-    def __init__(self, *, id: int, p1: float, p2: float, p3: float) -> None: ...
+    def __new__(cls, *, id: int, p1: float, p2: float, p3: float) -> Self: ...
     @property
     def id(self) -> int: ...
     @property
@@ -1636,10 +1773,11 @@ class DoSendScriptMessage:
     @property
     def p3(self) -> float: ...
 
+@final
 class DoImageStartCapture:
-    def __init__(
-        self, *, instance: int, interval_s: float, total_images: int, start_number: int
-    ) -> None: ...
+    def __new__(
+        cls, *, instance: int, interval_s: float, total_images: int, start_number: int
+    ) -> Self: ...
     @property
     def instance(self) -> int: ...
     @property
@@ -1649,37 +1787,43 @@ class DoImageStartCapture:
     @property
     def start_number(self) -> int: ...
 
+@final
 class DoImageStopCapture:
-    def __init__(self, *, instance: int) -> None: ...
+    def __new__(cls, *, instance: int) -> Self: ...
     @property
     def instance(self) -> int: ...
 
+@final
 class DoVideoStartCapture:
-    def __init__(self, *, stream_id: int) -> None: ...
+    def __new__(cls, *, stream_id: int) -> Self: ...
     @property
     def stream_id(self) -> int: ...
 
+@final
 class DoVideoStopCapture:
-    def __init__(self, *, stream_id: int) -> None: ...
+    def __new__(cls, *, stream_id: int) -> Self: ...
     @property
     def stream_id(self) -> int: ...
 
+@final
 class DoSetCameraZoom:
-    def __init__(self, *, zoom_type: int, zoom_value: float) -> None: ...
+    def __new__(cls, *, zoom_type: int, zoom_value: float) -> Self: ...
     @property
     def zoom_type(self) -> int: ...
     @property
     def zoom_value(self) -> float: ...
 
+@final
 class DoSetCameraFocus:
-    def __init__(self, *, focus_type: int, focus_value: float) -> None: ...
+    def __new__(cls, *, focus_type: int, focus_value: float) -> Self: ...
     @property
     def focus_type(self) -> int: ...
     @property
     def focus_value(self) -> float: ...
 
+@final
 class DoSetCameraSource:
-    def __init__(self, *, instance: int, primary: int, secondary: int) -> None: ...
+    def __new__(cls, *, instance: int, primary: int, secondary: int) -> Self: ...
     @property
     def instance(self) -> int: ...
     @property
@@ -1687,15 +1831,16 @@ class DoSetCameraSource:
     @property
     def secondary(self) -> int: ...
 
+@final
 class DoGuidedLimits:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         max_time_s: float,
         min_alt_m: float,
         max_alt_m: float,
         max_horiz_m: float,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def max_time_s(self) -> float: ...
     @property
@@ -1705,30 +1850,34 @@ class DoGuidedLimits:
     @property
     def max_horiz_m(self) -> float: ...
 
+@final
 class DoVtolTransition:
-    def __init__(self, *, target_state: int) -> None: ...
+    def __new__(cls, *, target_state: int) -> Self: ...
     @property
     def target_state(self) -> int: ...
 
+@final
 class CondDelay:
-    def __init__(self, *, delay_s: float) -> None: ...
+    def __new__(cls, *, delay_s: float) -> Self: ...
     @property
     def delay_s(self) -> float: ...
 
+@final
 class CondDistance:
-    def __init__(self, *, distance_m: float) -> None: ...
+    def __new__(cls, *, distance_m: float) -> Self: ...
     @property
     def distance_m(self) -> float: ...
 
+@final
 class CondYaw:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         angle_deg: float,
         turn_rate_dps: float = 0.0,
         direction: str = "clockwise",
         relative: bool = False,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def angle_deg(self) -> float: ...
     @property
@@ -1738,9 +1887,10 @@ class CondYaw:
     @property
     def relative(self) -> bool: ...
 
+@final
 class MissionItem:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         command: (
             NavWaypoint
@@ -1821,7 +1971,7 @@ class MissionItem:
         param4: float = 0.0,
         current: bool = False,
         autocontinue: bool = True,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def command(self) -> int: ...
     @property
@@ -1845,14 +1995,15 @@ class MissionItem:
     @property
     def autocontinue(self) -> bool: ...
 
+@final
 class HomePosition:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_m: float = 0.0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def latitude_deg(self) -> float: ...
     @property
@@ -1860,12 +2011,14 @@ class HomePosition:
     @property
     def altitude_m(self) -> float: ...
 
+@final
 class MissionPlan:
-    def __init__(self, *, items: list[MissionItem]) -> None: ...
+    def __new__(cls, *, items: list[MissionItem]) -> Self: ...
     @property
     def items(self) -> list[MissionItem]: ...
     def __len__(self) -> int: ...
 
+@final
 class MissionIssue:
     @property
     def code(self) -> str: ...
@@ -1876,6 +2029,7 @@ class MissionIssue:
     @property
     def severity(self) -> IssueSeverity: ...
 
+@final
 class TransferProgress:
     @property
     def direction(self) -> TransferDirection: ...
@@ -1890,20 +2044,22 @@ class TransferProgress:
     @property
     def retries_used(self) -> int: ...
 
+@final
 class TransferError:
     @property
     def code(self) -> str: ...
     @property
     def message(self) -> str: ...
 
+@final
 class RetryPolicy:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         request_timeout_ms: int = 1500,
         item_timeout_ms: int = 250,
         max_retries: int = 5,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def request_timeout_ms(self) -> int: ...
     @property
@@ -1911,18 +2067,20 @@ class RetryPolicy:
     @property
     def max_retries(self) -> int: ...
 
+@final
 class CompareTolerance:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         param_epsilon: float = 0.0001,
         altitude_epsilon_m: float = 0.01,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def param_epsilon(self) -> float: ...
     @property
     def altitude_epsilon_m(self) -> float: ...
 
+@final
 class Param:
     @property
     def name(self) -> str: ...
@@ -1933,6 +2091,7 @@ class Param:
     @property
     def index(self) -> int: ...
 
+@final
 class ParamStore:
     @property
     def expected_count(self) -> int: ...
@@ -1946,6 +2105,7 @@ class ParamStore:
     def __contains__(self, name: str) -> bool: ...
     def __getitem__(self, name: str) -> Param: ...
 
+@final
 class ParamProgress:
     @property
     def phase(self) -> ParamTransferPhase: ...
@@ -1962,6 +2122,7 @@ class ParamProgress:
     @property
     def name(self) -> str | None: ...
 
+@final
 class ParamWriteResult:
     @property
     def name(self) -> str: ...
@@ -1972,6 +2133,7 @@ class ParamWriteResult:
     @property
     def success(self) -> bool: ...
 
+@final
 class ParamState:
     @property
     def store(self) -> ParamStore | None: ...
@@ -1980,12 +2142,22 @@ class ParamState:
     @property
     def active_op(self) -> ParamOperationKind | None: ...
 
+@final
 class ParamStateSubscription(_AsyncSubscription[ParamState]): ...
+
+@final
 class ParamProgressSubscription(_AsyncSubscription[ParamProgress]): ...
+
+@final
 class MissionStateSubscription(_AsyncSubscription[MissionState]): ...
+
+@final
 class FenceStateSubscription(_AsyncSubscription[FenceState]): ...
+
+@final
 class RallyStateSubscription(_AsyncSubscription[RallyState]): ...
 
+@final
 class MissionOperationProgress:
     @property
     def phase(self) -> str: ...
@@ -1994,8 +2166,10 @@ class MissionOperationProgress:
     @property
     def total(self) -> int: ...
 
+@final
 class MissionProgressSubscription(_AsyncSubscription[MissionOperationProgress]): ...
 
+@final
 class MissionUploadOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2003,6 +2177,7 @@ class MissionUploadOp:
     def wait(self) -> Coroutine[Any, Any, None]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, None]: ...
 
+@final
 class MissionDownloadOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2010,6 +2185,7 @@ class MissionDownloadOp:
     def wait(self) -> Coroutine[Any, Any, MissionPlan]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, MissionPlan]: ...
 
+@final
 class MissionClearOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2017,6 +2193,7 @@ class MissionClearOp:
     def wait(self) -> Coroutine[Any, Any, None]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, None]: ...
 
+@final
 class MissionVerifyOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2024,6 +2201,7 @@ class MissionVerifyOp:
     def wait(self) -> Coroutine[Any, Any, bool]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, bool]: ...
 
+@final
 class FenceUploadOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2031,6 +2209,7 @@ class FenceUploadOp:
     def wait(self) -> Coroutine[Any, Any, None]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, None]: ...
 
+@final
 class FenceDownloadOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2038,6 +2217,7 @@ class FenceDownloadOp:
     def wait(self) -> Coroutine[Any, Any, FencePlan]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, FencePlan]: ...
 
+@final
 class FenceClearOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2045,6 +2225,7 @@ class FenceClearOp:
     def wait(self) -> Coroutine[Any, Any, None]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, None]: ...
 
+@final
 class RallyUploadOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2052,6 +2233,7 @@ class RallyUploadOp:
     def wait(self) -> Coroutine[Any, Any, None]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, None]: ...
 
+@final
 class RallyDownloadOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2059,6 +2241,7 @@ class RallyDownloadOp:
     def wait(self) -> Coroutine[Any, Any, RallyPlan]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, RallyPlan]: ...
 
+@final
 class RallyClearOp:
     def latest(self) -> MissionOperationProgress | None: ...
     def subscribe(self) -> MissionProgressSubscription: ...
@@ -2066,6 +2249,7 @@ class RallyClearOp:
     def wait(self) -> Coroutine[Any, Any, None]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, None]: ...
 
+@final
 class ParamDownloadOp:
     def latest(self) -> ParamProgress | None: ...
     def subscribe(self) -> ParamProgressSubscription: ...
@@ -2073,6 +2257,7 @@ class ParamDownloadOp:
     def wait(self) -> Coroutine[Any, Any, ParamStore]: ...
     def wait_timeout(self, timeout_secs: float) -> Coroutine[Any, Any, ParamStore]: ...
 
+@final
 class ParamWriteBatchOp:
     def latest(self) -> ParamProgress | None: ...
     def subscribe(self) -> ParamProgressSubscription: ...
@@ -2082,6 +2267,7 @@ class ParamWriteBatchOp:
         self, timeout_secs: float
     ) -> Coroutine[Any, Any, list[ParamWriteResult]]: ...
 
+@final
 class ParamsHandle:
     def get(self, name: str) -> Param | None: ...
     def latest(self) -> ParamState | None: ...
@@ -2094,9 +2280,10 @@ class ParamsHandle:
     ) -> Coroutine[Any, Any, ParamWriteResult]: ...
     def write_batch(self, batch: list[tuple[str, float]]) -> ParamWriteBatchOp: ...
 
+@final
 class VehicleConfig:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         gcs_system_id: int = 255,
         gcs_component_id: int = 190,
@@ -2107,7 +2294,7 @@ class VehicleConfig:
         command_completion_timeout_secs: float = 10.0,
         transfer_timeout_secs: float = 30.0,
         retry_policy: RetryPolicy | None = None,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def gcs_system_id(self) -> int: ...
     @property
@@ -2127,6 +2314,7 @@ class VehicleConfig:
     @property
     def retry_policy(self) -> RetryPolicy: ...
 
+@final
 class CommandAck:
     @property
     def command(self) -> int: ...
@@ -2137,6 +2325,7 @@ class CommandAck:
     @property
     def result_param2(self) -> int | None: ...
 
+@final
 class MissionHandle:
     def latest(self) -> MissionState | None: ...
     def wait(self) -> Coroutine[Any, Any, MissionState]: ...
@@ -2151,6 +2340,7 @@ class MissionHandle:
     def set_current(self, index: int) -> Coroutine[Any, Any, None]: ...
     def __repr__(self) -> str: ...
 
+@final
 class FenceHandle:
     def support(self) -> SupportStateHandle: ...
     def latest(self) -> FenceState | None: ...
@@ -2162,6 +2352,7 @@ class FenceHandle:
     def clear(self) -> FenceClearOp: ...
     def __repr__(self) -> str: ...
 
+@final
 class RallyHandle:
     def support(self) -> SupportStateHandle: ...
     def latest(self) -> RallyState | None: ...
@@ -2173,6 +2364,7 @@ class RallyHandle:
     def clear(self) -> RallyClearOp: ...
     def __repr__(self) -> str: ...
 
+@final
 class RawHandle:
     def subscribe(self) -> RawMessageStream: ...
     def command_long(
@@ -2200,21 +2392,27 @@ class RawHandle:
     def send(self, message: RawMessage) -> Coroutine[Any, Any, None]: ...
     def __repr__(self) -> str: ...
 
+@final
 class ArduCopterHandle:
     def __repr__(self) -> str: ...
 
+@final
 class ArduPlaneVtolHandle:
     def __repr__(self) -> str: ...
 
+@final
 class ArduRoverHandle:
     def __repr__(self) -> str: ...
 
+@final
 class ArduSubHandle:
     def __repr__(self) -> str: ...
 
+@final
 class ArduPlaneHandle:
     def vtol(self) -> ArduPlaneVtolHandle | None: ...
 
+@final
 class ArduCopterGuidedHandle:
     def takeoff(self, relative_climb_m: float) -> Coroutine[Any, Any, None]: ...
     def goto(
@@ -2239,10 +2437,12 @@ class ArduCopterGuidedHandle:
     ) -> Coroutine[Any, Any, None]: ...
     def hold(self) -> Coroutine[Any, Any, None]: ...
 
+@final
 class ArduPlaneVtolGuidedHandle:
     def takeoff(self, relative_climb_m: float) -> Coroutine[Any, Any, None]: ...
     def hold(self) -> Coroutine[Any, Any, None]: ...
 
+@final
 class ArduPlaneGuidedHandle:
     def reposition(
         self,
@@ -2260,6 +2460,7 @@ class ArduPlaneGuidedHandle:
     ) -> Coroutine[Any, Any, None]: ...
     def vtol(self) -> ArduPlaneVtolGuidedHandle | None: ...
 
+@final
 class ArduRoverGuidedHandle:
     def drive_to(
         self,
@@ -2272,6 +2473,7 @@ class ArduRoverGuidedHandle:
     ) -> Coroutine[Any, Any, None]: ...
     def hold(self) -> Coroutine[Any, Any, None]: ...
 
+@final
 class ArduSubGuidedHandle:
     def goto_depth(
         self,
@@ -2289,6 +2491,7 @@ class ArduSubGuidedHandle:
     ) -> Coroutine[Any, Any, None]: ...
     def hold(self) -> Coroutine[Any, Any, None]: ...
 
+@final
 class ArduGuidedSession:
     def close(self) -> Coroutine[Any, Any, None]: ...
     def copter(self) -> ArduCopterGuidedHandle | None: ...
@@ -2303,6 +2506,7 @@ class ArduGuidedSession:
         _exc_tb: TracebackType | None = None,
     ) -> Coroutine[Any, Any, bool]: ...
 
+@final
 class ArduPilotHandle:
     def copter(self) -> ArduCopterHandle | None: ...
     def plane(self) -> ArduPlaneHandle | None: ...
@@ -2329,6 +2533,7 @@ class ArduPilotHandle:
     def reboot(self) -> Coroutine[Any, Any, None]: ...
     def reboot_to_bootloader(self) -> Coroutine[Any, Any, None]: ...
 
+@final
 class Vehicle:
     @staticmethod
     def connect(address: str) -> Coroutine[Any, Any, Vehicle]: ...
@@ -2395,6 +2600,7 @@ class Vehicle:
     ) -> Coroutine[Any, Any, bool]: ...
 
 # Test-support/dev-only API (available with test-support build feature).
+@final
 class _TestVehicleHarness:
     def push_command_ack_accepted(self, command: int) -> Coroutine[Any, Any, None]: ...
     def push_global_position_int(self) -> Coroutine[Any, Any, None]: ...
@@ -2410,16 +2616,17 @@ def _connect_test_vehicle() -> Coroutine[
     Any, Any, tuple[Vehicle, _TestVehicleHarness]
 ]: ...
 
+@final
 class RawMessage:
-    def __init__(
-        self,
+    def __new__(
+        cls,
         *,
         message_id: int,
         payload: bytes,
         system_id: int = 1,
         component_id: int = 1,
         sequence: int = 0,
-    ) -> None: ...
+    ) -> Self: ...
     @property
     def system_id(self) -> int: ...
     @property
@@ -2434,8 +2641,10 @@ class RawMessage:
     def message_name(self) -> str: ...
     def message_json(self) -> str: ...
 
+@final
 class RawMessageStream(_AsyncSubscription[RawMessage]): ...
 
+@final
 class TlogEntry:
     @property
     def timestamp_usec(self) -> int: ...
@@ -2445,6 +2654,7 @@ class TlogEntry:
     def message_name(self) -> str: ...
     def message_json(self) -> str: ...
 
+@final
 class TlogFile:
     @staticmethod
     def open(path: str) -> Coroutine[Any, Any, TlogFile]: ...
@@ -2454,8 +2664,9 @@ class TlogFile:
     ) -> Coroutine[Any, Any, list[TlogEntry]]: ...
     def time_range(self) -> Coroutine[Any, Any, tuple[int, int] | None]: ...
 
+@final
 class TlogWriter:
-    def __init__(self, path: str) -> None: ...
+    def __new__(cls, path: str) -> Self: ...
     def write(self, message: RawMessage) -> int: ...
     def write_entry(self, timestamp_usec: int, message: RawMessage) -> int: ...
     def flush(self) -> None: ...
@@ -2463,9 +2674,9 @@ class TlogWriter:
     def __enter__(self) -> TlogWriter: ...
     def __exit__(
         self,
-        exc_type: type[BaseException] | None,
-        exc_val: BaseException | None,
-        exc_tb: object,
+        exc_type: type[BaseException] | None = None,
+        exc_val: BaseException | None = None,
+        exc_tb: object | None = None,
     ) -> None: ...
 
 def validate_plan(plan: MissionPlan) -> list[MissionIssue]: ...

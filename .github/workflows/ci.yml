@@ -84,6 +84,9 @@ jobs:
       - name: Mypy
         run: uv run mypy
 
+      - name: Stubtest
+        run: uv run python -m mypy.stubtest mavkit --concise --ignore-disjoint-bases --allowlist stubtest-allowlist.txt
+
       - name: Smoke test
         run: uv run python -c "import mavkit; print(dir(mavkit))"
 
