@@ -69,16 +69,12 @@ mod tests {
     use super::{CommandResult, VehicleError};
 
     #[test]
-    fn command_result_variants_exist() {
-        let values = [
-            CommandResult::Denied,
-            CommandResult::Failed,
-            CommandResult::Unsupported,
-            CommandResult::TemporarilyRejected,
-            CommandResult::Other(42),
-        ];
-
-        assert_eq!(values.len(), 5);
+    fn command_result_display() {
+        assert_eq!(CommandResult::Denied.to_string(), "denied");
+        assert_eq!(CommandResult::Failed.to_string(), "failed");
+        assert_eq!(CommandResult::Unsupported.to_string(), "unsupported");
+        assert_eq!(CommandResult::TemporarilyRejected.to_string(), "temporarily_rejected");
+        assert_eq!(CommandResult::Other(42).to_string(), "other(42)");
     }
 
     #[test]
