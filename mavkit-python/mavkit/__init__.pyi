@@ -189,6 +189,7 @@ class VehicleIdentity:
 class GlobalPosition:
     def __init__(
         self,
+        *,
         latitude_deg: float,
         longitude_deg: float,
         altitude_msl_m: float,

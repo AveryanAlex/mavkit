@@ -179,6 +179,7 @@ impl From<mavkit::GlobalPosition> for PyGlobalPosition {
 #[pymethods]
 impl PyGlobalPosition {
     #[new]
+    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_msl_m, relative_alt_m))]
     fn new(
         latitude_deg: f64,
         longitude_deg: f64,
