@@ -5,6 +5,7 @@ use crate::params::{ParamStore, ParamWriteResult};
 use crate::raw::CommandAck;
 use std::time::Instant;
 use tokio::sync::oneshot;
+use tokio_util::sync::CancellationToken;
 
 pub(crate) struct RawCommandIntPayload {
     pub(crate) command: MavCmd,
@@ -73,20 +74,22 @@ pub(crate) enum Command {
     MissionUpload {
         plan: WireMissionPlan,
         reply: oneshot::Sender<Result<(), VehicleError>>,
+        cancel: CancellationToken,
     },
     MissionDownload {
         mission_type: MissionType,
         reply: oneshot::Sender<Result<WireMissionPlan, VehicleError>>,
+        cancel: CancellationToken,
     },
     MissionClear {
         mission_type: MissionType,
         reply: oneshot::Sender<Result<(), VehicleError>>,
+        cancel: CancellationToken,
     },
     MissionSetCurrent {
         seq: u16,
         reply: oneshot::Sender<Result<(), VehicleError>>,
     },
-    MissionCancelTransfer,
     ParamDownloadAll {
         reply: oneshot::Sender<Result<ParamStore, VehicleError>>,
     },

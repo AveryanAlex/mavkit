@@ -7,6 +7,7 @@ use crate::mission::{
 };
 use std::collections::HashSet;
 use std::time::Duration;
+use tokio_util::sync::CancellationToken;
 
 pub(super) fn to_mav_mission_type(mission_type: MissionType) -> dialect::MavMissionType {
     match mission_type {
@@ -178,6 +179,7 @@ fn send_requested_item_msg(
 pub(super) async fn handle_mission_upload(
     plan: WireMissionPlan,
     ctx: &mut CommandContext,
+    op_cancel: &CancellationToken,
 ) -> Result<(), VehicleError> {
     let wire_items = wire::items_for_wire_upload(&plan);
     let target = get_target(&ctx.vehicle_target)?;
@@ -200,20 +202,20 @@ pub(super) async fn handle_mission_upload(
 
     send_message(ctx.connection.as_ref(), &ctx.config, count_msg.clone()).await?;
 
-    // If empty plan, just wait for ACK
     if wire_items.is_empty() {
-        return wait_for_mission_ack(&mut machine, plan.mission_type, ctx, || count_msg.clone())
-            .await;
+        return wait_for_mission_ack(&mut machine, plan.mission_type, ctx, op_cancel, || {
+            count_msg.clone()
+        })
+        .await;
     }
 
     let mut acknowledged = HashSet::<u16>::new();
 
-    // Wait for MISSION_REQUEST_INT / MISSION_REQUEST messages
     while machine.progress().phase != TransferPhase::AwaitAck {
         let timeout = Duration::from_millis(machine.timeout_ms());
         let deadline = tokio::time::sleep(timeout);
         tokio::pin!(deadline);
-        let cancel = ctx.cancel.clone();
+        let cancel = op_cancel.clone();
 
         let msg = loop {
             tokio::select! {
@@ -271,14 +273,17 @@ pub(super) async fn handle_mission_upload(
         }
     }
 
-    // Await final ACK
-    wait_for_mission_ack(&mut machine, plan.mission_type, ctx, || count_msg.clone()).await
+    wait_for_mission_ack(&mut machine, plan.mission_type, ctx, op_cancel, || {
+        count_msg.clone()
+    })
+    .await
 }
 
 async fn wait_for_mission_ack<F>(
     machine: &mut MissionTransferMachine,
     mission_type: MissionType,
     ctx: &mut CommandContext,
+    op_cancel: &CancellationToken,
     retry_msg: F,
 ) -> Result<(), VehicleError>
 where
@@ -289,7 +294,7 @@ where
         let timeout = Duration::from_millis(machine.timeout_ms());
         let deadline = tokio::time::sleep(timeout);
         tokio::pin!(deadline);
-        let cancel = ctx.cancel.clone();
+        let cancel = op_cancel.clone();
 
         tokio::select! {
             biased;
@@ -338,6 +343,7 @@ where
 pub(super) async fn handle_mission_download(
     mission_type: MissionType,
     ctx: &mut CommandContext,
+    op_cancel: &CancellationToken,
 ) -> Result<WireMissionPlan, VehicleError> {
     let target = get_target(&ctx.vehicle_target)?;
     let mav_mission_type = to_mav_mission_type(mission_type);
@@ -357,12 +363,11 @@ pub(super) async fn handle_mission_download(
     )
     .await?;
 
-    // Wait for MISSION_COUNT
     let count = loop {
         let timeout = Duration::from_millis(machine.timeout_ms());
         let deadline = tokio::time::sleep(timeout);
         tokio::pin!(deadline);
-        let cancel = ctx.cancel.clone();
+        let cancel = op_cancel.clone();
 
         tokio::select! {
             biased;
@@ -433,7 +438,7 @@ pub(super) async fn handle_mission_download(
             let timeout = Duration::from_millis(machine.timeout_ms());
             let deadline = tokio::time::sleep(timeout);
             tokio::pin!(deadline);
-            let cancel = ctx.cancel.clone();
+            let cancel = op_cancel.clone();
 
             tokio::select! {
                 biased;
@@ -505,6 +510,7 @@ pub(super) async fn handle_mission_download(
 pub(super) async fn handle_mission_clear(
     mission_type: MissionType,
     ctx: &mut CommandContext,
+    op_cancel: &CancellationToken,
 ) -> Result<(), VehicleError> {
     let target = get_target(&ctx.vehicle_target)?;
     let mav_mission_type = to_mav_mission_type(mission_type);
@@ -520,7 +526,10 @@ pub(super) async fn handle_mission_clear(
 
     send_message(ctx.connection.as_ref(), &ctx.config, clear_msg.clone()).await?;
 
-    wait_for_mission_ack(&mut machine, mission_type, ctx, || clear_msg.clone()).await
+    wait_for_mission_ack(&mut machine, mission_type, ctx, op_cancel, || {
+        clear_msg.clone()
+    })
+    .await
 }
 
 // ---------------------------------------------------------------------------

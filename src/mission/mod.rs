@@ -252,15 +252,16 @@ fn verify_plans_match(expected: &MissionPlan, observed: &MissionPlan) -> bool {
 
 /// Run a domain operation with the shared progress-bridge + cancel + finalize lifecycle.
 ///
-/// The `make_command` closure builds the `Command` to send. The `on_result` closure
-/// receives the command outcome and the progress writer, handles domain state updates
-/// (note_*_success / note_operation_error / finish_operation), and returns the final
-/// result to deliver to the caller.
+/// `make_command` receives the reply sender **and** the per-operation cancel token.
+/// The token is embedded in the `Command` variant so the event-loop handler can
+/// select on it alongside the vehicle-wide cancel.
 pub(crate) fn run_domain_operation<C, T>(
     command_tx: mpsc::Sender<Command>,
     mission_progress_rx: tokio::sync::watch::Receiver<Option<TransferProgress>>,
     reservation: OperationReservation,
-    make_command: impl FnOnce(oneshot::Sender<Result<C, VehicleError>>) -> Command + Send + 'static,
+    make_command: impl FnOnce(oneshot::Sender<Result<C, VehicleError>>, CancellationToken) -> Command
+        + Send
+        + 'static,
     on_result: impl FnOnce(
         Result<C, VehicleError>,
         &ObservationWriter<MissionOperationProgress>,
@@ -280,7 +281,6 @@ where
         progress,
         result_rx,
         reservation.cancel.clone(),
-        command_tx.clone(),
     );
 
     let cancel = reservation.cancel;
@@ -295,7 +295,7 @@ where
 
         let command_result = tokio::select! {
             _ = cancel.cancelled() => Err(VehicleError::Cancelled),
-            result = send_domain_command(command_tx, make_command) => result,
+            result = send_domain_command(command_tx, |reply| make_command(reply, cancel.clone())) => result,
         };
 
         progress_stop.cancel();
@@ -369,9 +369,10 @@ impl<'a> MissionHandle<'a> {
             self.inner.command_tx.clone(),
             self.inner.stores.mission_progress.clone(),
             reservation,
-            |reply| Command::MissionUpload {
+            |reply, cancel| Command::MissionUpload {
                 plan: wire_plan,
                 reply,
+                cancel,
             },
             move |result, _| {
                 match &result {
@@ -398,9 +399,10 @@ impl<'a> MissionHandle<'a> {
             self.inner.command_tx.clone(),
             self.inner.stores.mission_progress.clone(),
             reservation,
-            |reply| Command::MissionDownload {
+            |reply, cancel| Command::MissionDownload {
                 mission_type: MissionType::Mission,
                 reply,
+                cancel,
             },
             move |result, _| {
                 let r = match result {
@@ -436,9 +438,10 @@ impl<'a> MissionHandle<'a> {
             self.inner.command_tx.clone(),
             self.inner.stores.mission_progress.clone(),
             reservation,
-            |reply| Command::MissionClear {
+            |reply, cancel| Command::MissionClear {
                 mission_type: MissionType::Mission,
                 reply,
+                cancel,
             },
             move |result, _| {
                 match &result {
@@ -465,9 +468,10 @@ impl<'a> MissionHandle<'a> {
             self.inner.command_tx.clone(),
             self.inner.stores.mission_progress.clone(),
             reservation,
-            |reply| Command::MissionDownload {
+            |reply, cancel| Command::MissionDownload {
                 mission_type: MissionType::Mission,
                 reply,
+                cancel,
             },
             move |result, pw| {
                 let r = match result {

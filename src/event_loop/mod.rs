@@ -200,6 +200,15 @@ fn publish_link_state(state_writers: &StateWriters, state: LinkState) {
     let _ = state_writers.link_state_observation.publish(state);
 }
 
+fn bridge_vehicle_cancel_to_op(vehicle: &CancellationToken, op: &CancellationToken) {
+    let vehicle = vehicle.clone();
+    let op = op.clone();
+    tokio::spawn(async move {
+        vehicle.cancelled().await;
+        op.cancel();
+    });
+}
+
 async fn route_incoming_message(
     ctx: &mut MessageRouterContext<'_>,
     header: MavHeader,
@@ -396,30 +405,36 @@ async fn handle_command(cmd: Command, ctx: &mut CommandContext) {
             let result = handle_set_origin(latitude, longitude, altitude, ctx).await;
             let _ = reply.send(result);
         }
-        Command::MissionUpload { plan, reply } => {
-            let result = handle_mission_upload(plan, ctx).await;
+        Command::MissionUpload {
+            plan,
+            reply,
+            cancel: op_cancel,
+        } => {
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_mission_upload(plan, ctx, &op_cancel).await;
             let _ = reply.send(result);
         }
         Command::MissionDownload {
             mission_type,
             reply,
+            cancel: op_cancel,
         } => {
-            let result = handle_mission_download(mission_type, ctx).await;
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_mission_download(mission_type, ctx, &op_cancel).await;
             let _ = reply.send(result);
         }
         Command::MissionClear {
             mission_type,
             reply,
+            cancel: op_cancel,
         } => {
-            let result = handle_mission_clear(mission_type, ctx).await;
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_mission_clear(mission_type, ctx, &op_cancel).await;
             let _ = reply.send(result);
         }
         Command::MissionSetCurrent { seq, reply } => {
             let result = handle_mission_set_current(seq, ctx).await;
             let _ = reply.send(result);
-        }
-        Command::MissionCancelTransfer => {
-            // Transfer cancellation currently relies on outer cancellation.
         }
         Command::ParamDownloadAll { reply } => {
             let result = handle_param_download_all(ctx).await;

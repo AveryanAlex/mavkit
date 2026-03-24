@@ -156,9 +156,10 @@ impl<'a> RallyHandle<'a> {
             self.inner.command_tx.clone(),
             self.inner.stores.mission_progress.clone(),
             reservation,
-            |reply| Command::MissionUpload {
+            |reply, cancel| Command::MissionUpload {
                 plan: wire_plan,
                 reply,
+                cancel,
             },
             move |result, _| {
                 match &result {
@@ -185,9 +186,10 @@ impl<'a> RallyHandle<'a> {
             self.inner.command_tx.clone(),
             self.inner.stores.mission_progress.clone(),
             reservation,
-            |reply| Command::MissionDownload {
+            |reply, cancel| Command::MissionDownload {
                 mission_type: MissionType::Rally,
                 reply,
+                cancel,
             },
             move |result, _| {
                 let r = match result {
@@ -226,9 +228,10 @@ impl<'a> RallyHandle<'a> {
             self.inner.command_tx.clone(),
             self.inner.stores.mission_progress.clone(),
             reservation,
-            |reply| Command::MissionClear {
+            |reply, cancel| Command::MissionClear {
                 mission_type: MissionType::Rally,
                 reply,
+                cancel,
             },
             move |result, _| {
                 match &result {

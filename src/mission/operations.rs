@@ -1,18 +1,21 @@
 use std::time::Duration;
 
-use crate::command::Command;
 use crate::error::VehicleError;
 use crate::observation::{ObservationHandle, ObservationSubscription};
 use crate::types::MissionOperationProgress;
-use tokio::sync::{Mutex, mpsc, oneshot};
+use tokio::sync::{Mutex, oneshot};
 use tokio_util::sync::CancellationToken;
 
 /// Handle for an in-flight mission-domain operation.
+///
+/// Cancellation is cooperative: calling [`cancel`](Self::cancel) or dropping
+/// the handle signals the per-operation `CancellationToken` that is embedded
+/// in the event-loop command. The handler selects on that token alongside the
+/// vehicle-wide cancel, so it exits promptly.
 pub struct MissionOperationHandle<T: Send + 'static> {
     progress: ObservationHandle<MissionOperationProgress>,
     result_rx: Mutex<Option<oneshot::Receiver<Result<T, VehicleError>>>>,
     cancel: CancellationToken,
-    command_tx: mpsc::Sender<Command>,
 }
 
 impl<T: Send + 'static> MissionOperationHandle<T> {
@@ -20,14 +23,16 @@ impl<T: Send + 'static> MissionOperationHandle<T> {
         progress: ObservationHandle<MissionOperationProgress>,
         result_rx: oneshot::Receiver<Result<T, VehicleError>>,
         cancel: CancellationToken,
-        command_tx: mpsc::Sender<Command>,
     ) -> Self {
         Self {
             progress,
             result_rx: Mutex::new(Some(result_rx)),
             cancel,
-            command_tx,
         }
+    }
+
+    pub fn cancel_token(&self) -> CancellationToken {
+        self.cancel.clone()
     }
 
     pub fn latest(&self) -> Option<MissionOperationProgress> {
@@ -67,14 +72,12 @@ impl<T: Send + 'static> MissionOperationHandle<T> {
 
     pub fn cancel(&self) {
         self.cancel.cancel();
-        let _ = self.command_tx.try_send(Command::MissionCancelTransfer);
     }
 }
 
 impl<T: Send + 'static> Drop for MissionOperationHandle<T> {
     fn drop(&mut self) {
         self.cancel.cancel();
-        let _ = self.command_tx.try_send(Command::MissionCancelTransfer);
     }
 }
 
@@ -97,8 +100,7 @@ mod tests {
         let cancel = CancellationToken::new();
         let (_writer, progress_handle) = ObservationHandle::<MissionOperationProgress>::watch();
         let (_tx, rx) = oneshot::channel::<Result<(), VehicleError>>();
-        let (cmd_tx, _cmd_rx) = mpsc::channel(1);
-        let handle = MissionOperationHandle::new(progress_handle, rx, cancel.clone(), cmd_tx);
+        let handle = MissionOperationHandle::new(progress_handle, rx, cancel.clone());
         drop(handle);
         assert!(cancel.is_cancelled());
     }
