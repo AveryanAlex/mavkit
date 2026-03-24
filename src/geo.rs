@@ -250,4 +250,35 @@ mod tests {
         assert_serde::<GeoPoint3dTerrain>();
         assert_serde::<GeoPoint3d>();
     }
+
+    #[test]
+    fn try_latitude_e7_boundaries() {
+        assert!(try_latitude_e7(90.0).is_ok());
+        assert!(try_latitude_e7(-90.0).is_ok());
+        assert!(try_latitude_e7(0.0).is_ok());
+        assert!(try_latitude_e7(90.0001).is_err());
+        assert!(try_latitude_e7(-90.0001).is_err());
+        assert!(try_latitude_e7(f64::NAN).is_err());
+        assert!(try_latitude_e7(f64::INFINITY).is_err());
+        assert!(try_latitude_e7(f64::NEG_INFINITY).is_err());
+    }
+
+    #[test]
+    fn try_longitude_e7_boundaries() {
+        assert!(try_longitude_e7(180.0).is_ok());
+        assert!(try_longitude_e7(-180.0).is_ok());
+        assert!(try_longitude_e7(0.0).is_ok());
+        assert!(try_longitude_e7(180.0001).is_err());
+        assert!(try_longitude_e7(-180.0001).is_err());
+        assert!(try_longitude_e7(f64::NAN).is_err());
+        assert!(try_longitude_e7(f64::INFINITY).is_err());
+        assert!(try_longitude_e7(f64::NEG_INFINITY).is_err());
+    }
+
+    #[test]
+    fn try_latitude_e7_quantization() {
+        assert_eq!(try_latitude_e7(90.0).unwrap(), 900_000_000);
+        assert_eq!(try_latitude_e7(-90.0).unwrap(), -900_000_000);
+        assert_eq!(try_latitude_e7(47.397742).unwrap(), 473_977_420);
+    }
 }
