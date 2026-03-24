@@ -73,7 +73,10 @@ mod tests {
         assert_eq!(CommandResult::Denied.to_string(), "denied");
         assert_eq!(CommandResult::Failed.to_string(), "failed");
         assert_eq!(CommandResult::Unsupported.to_string(), "unsupported");
-        assert_eq!(CommandResult::TemporarilyRejected.to_string(), "temporarily_rejected");
+        assert_eq!(
+            CommandResult::TemporarilyRejected.to_string(),
+            "temporarily_rejected"
+        );
         assert_eq!(CommandResult::Other(42).to_string(), "other(42)");
     }
 

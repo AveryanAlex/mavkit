@@ -385,11 +385,17 @@ mod tests {
 
         assert!(matches!(
             downloading,
-            ParamOperationProgress::Downloading { received: 12, expected: Some(42) }
+            ParamOperationProgress::Downloading {
+                received: 12,
+                expected: Some(42)
+            }
         ));
         assert!(matches!(
             downloading_unknown,
-            ParamOperationProgress::Downloading { received: 0, expected: None }
+            ParamOperationProgress::Downloading {
+                received: 0,
+                expected: None
+            }
         ));
         assert!(matches!(failed, ParamOperationProgress::Failed));
         assert_ne!(downloading, failed);

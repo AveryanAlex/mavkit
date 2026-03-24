@@ -95,8 +95,7 @@ mod tests {
     #[tokio::test]
     async fn mission_op_cancels_on_drop() {
         let cancel = CancellationToken::new();
-        let (_writer, progress_handle) =
-            ObservationHandle::<MissionOperationProgress>::watch();
+        let (_writer, progress_handle) = ObservationHandle::<MissionOperationProgress>::watch();
         let (_tx, rx) = oneshot::channel::<Result<(), VehicleError>>();
         let (cmd_tx, _cmd_rx) = mpsc::channel(1);
         let handle = MissionOperationHandle::new(progress_handle, rx, cancel.clone(), cmd_tx);

@@ -536,9 +536,7 @@ pub(super) async fn handle_mission_set_current(
 ) -> Result<(), VehicleError> {
     // Semantic → wire: home occupies wire seq 0 for Mission type.
     let wire_seq = seq.checked_add(1).ok_or_else(|| {
-        VehicleError::InvalidParameter(format!(
-            "mission seq {seq} overflows wire sequence range"
-        ))
+        VehicleError::InvalidParameter(format!("mission seq {seq} overflows wire sequence range"))
     })?;
 
     let target = get_target(&ctx.vehicle_target)?;
