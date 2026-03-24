@@ -175,7 +175,6 @@ fn validate_coordinate(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serde::de::DeserializeOwned;
 
     #[test]
     fn geo_to_2d_projections() {
@@ -242,13 +241,40 @@ mod tests {
 
     #[test]
     fn serde_roundtrip() {
-        fn assert_serde<T: serde::Serialize + DeserializeOwned>() {}
+        let msl = GeoPoint3dMsl {
+            latitude_deg: 47.397742,
+            longitude_deg: 8.545594,
+            altitude_msl_m: 488.0,
+        };
+        let json = serde_json::to_string(&msl).unwrap();
+        let restored: GeoPoint3dMsl = serde_json::from_str(&json).unwrap();
+        assert_eq!(msl, restored);
 
-        assert_serde::<GeoPoint2d>();
-        assert_serde::<GeoPoint3dMsl>();
-        assert_serde::<GeoPoint3dRelHome>();
-        assert_serde::<GeoPoint3dTerrain>();
-        assert_serde::<GeoPoint3d>();
+        let point2d = GeoPoint2d {
+            latitude_deg: -33.8688,
+            longitude_deg: 151.2093,
+        };
+        let json = serde_json::to_string(&point2d).unwrap();
+        let restored: GeoPoint2d = serde_json::from_str(&json).unwrap();
+        assert_eq!(point2d, restored);
+
+        let rel = GeoPoint3dRelHome {
+            latitude_deg: 0.0,
+            longitude_deg: 0.0,
+            relative_alt_m: 100.0,
+        };
+        let json = serde_json::to_string(&rel).unwrap();
+        let restored: GeoPoint3dRelHome = serde_json::from_str(&json).unwrap();
+        assert_eq!(rel, restored);
+
+        let terrain = GeoPoint3dTerrain {
+            latitude_deg: 51.5074,
+            longitude_deg: -0.1278,
+            altitude_terrain_m: 15.0,
+        };
+        let json = serde_json::to_string(&terrain).unwrap();
+        let restored: GeoPoint3dTerrain = serde_json::from_str(&json).unwrap();
+        assert_eq!(terrain, restored);
     }
 
     #[test]
