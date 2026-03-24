@@ -1195,6 +1195,13 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn set_mode_rejects_large_custom_mode() {
+        let (vehicle, _rx) = connect_mock_vehicle().await;
+        let result = vehicle.set_mode(16_777_217, false).await;
+        assert!(matches!(result, Err(VehicleError::InvalidParameter(_))));
+    }
+
+    #[tokio::test]
     async fn set_mode_by_name_resolve() {
         let (vehicle, msg_tx, sent) = connect_mock_vehicle_with_sent().await;
 

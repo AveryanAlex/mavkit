@@ -74,11 +74,12 @@ pub(super) async fn handle_set_mode(
     let target = get_target(&ctx.vehicle_target)?;
 
     // COMMAND_LONG params are f32; mode IDs above 2^24 would lose precision.
-    // ArduPilot custom_mode values are small integers, so this is safe.
-    debug_assert!(
-        custom_mode <= (1 << f32::MANTISSA_DIGITS),
-        "custom_mode {custom_mode} exceeds f32 exact-integer range"
-    );
+    if custom_mode > (1 << f32::MANTISSA_DIGITS) {
+        return Err(VehicleError::InvalidParameter(format!(
+            "custom_mode {custom_mode} exceeds f32 exact-integer range (max {})",
+            1u32 << f32::MANTISSA_DIGITS
+        )));
+    }
     send_command_long_ack(
         MavCmd::MAV_CMD_DO_SET_MODE as u16,
         [1.0, custom_mode as f32, 0.0, 0.0, 0.0, 0.0, 0.0],
