@@ -373,3 +373,86 @@ async fn sitl_param_download_twice_is_consistent() {
         panic!("{err}");
     }
 }
+
+#[tokio::test]
+#[ignore = "requires ArduPilot SITL endpoint"]
+async fn sitl_param_write_nonexistent_returns_error() {
+    let vehicle = common::setup_sitl_vehicle().await;
+
+    let result: Result<(), String> = async {
+        download_all(&vehicle).await?;
+
+        match vehicle
+            .params()
+            .write("ZZZZ_NONEXISTENT_PARAM", 42.0)
+            .await
+        {
+            Ok(confirmed) => {
+                if confirmed.success {
+                    return Err(
+                        "write to nonexistent param unexpectedly reported success".into(),
+                    );
+                }
+            }
+            Err(_) => {
+                // Also acceptable — the vehicle may reject outright.
+            }
+        }
+
+        Ok(())
+    }
+    .await;
+
+    let _ = vehicle.disconnect().await;
+    if let Err(err) = result {
+        panic!("{err}");
+    }
+}
+
+#[tokio::test]
+#[ignore = "requires ArduPilot SITL endpoint"]
+async fn sitl_param_subscribe_emits_on_download() {
+    let vehicle = common::setup_sitl_vehicle().await;
+
+    let result: Result<(), String> = async {
+        let mut sub = vehicle.params().subscribe();
+
+        let op = vehicle
+            .params()
+            .download_all()
+            .map_err(|e| e.to_string())?;
+
+        let deadline = tokio::time::sleep(Duration::from_secs(15));
+        tokio::pin!(deadline);
+
+        let mut received = false;
+        loop {
+            tokio::select! {
+                _ = &mut deadline => break,
+                item = sub.recv() => {
+                    if item.is_some() {
+                        received = true;
+                        break;
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Ensure the download completes regardless of subscription outcome.
+        let _ = op.wait().await;
+
+        if !received {
+            return Err("subscription did not emit any update during param download".into());
+        }
+
+        Ok(())
+    }
+    .await;
+
+    let _ = vehicle.disconnect().await;
+    if let Err(err) = result {
+        panic!("{err}");
+    }
+}
