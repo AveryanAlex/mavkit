@@ -74,7 +74,7 @@ class TestVehicleConfig:
         assert config.gcs_component_id == 190
         assert config.auto_request_home is True
         assert config.command_buffer_size == 32
-        assert config.connect_timeout_secs == pytest.approx(30.0)
+        assert config.connect_timeout_secs == pytest.approx(10.0)
         retry = config.retry_policy
         assert isinstance(retry, mavkit.RetryPolicy)
 
