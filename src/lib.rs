@@ -52,7 +52,7 @@ pub use modes::{
 };
 pub use rally::{RallyClearOp, RallyDownloadOp, RallyPlan, RallyState, RallyUploadOp};
 pub use raw::{CommandAck, RawHandle, RawMessage};
-pub use state::LinkState;
+pub use state::{LinkState, MavSeverity, SystemStatus};
 pub use support::SupportHandle;
 pub use vehicle::{
     AutopilotType, FenceHandle, MissionHandle, ParamsHandle, RallyHandle, RcOverride,

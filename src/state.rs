@@ -111,7 +111,7 @@ pub enum SystemStatus {
 }
 
 impl SystemStatus {
-    pub(crate) fn from_mav(status: crate::dialect::MavState) -> Self {
+    pub fn from_mav(status: crate::dialect::MavState) -> Self {
         use crate::dialect::MavState;
         match status {
             MavState::MAV_STATE_BOOT => SystemStatus::Boot,
@@ -209,7 +209,7 @@ pub enum MavSeverity {
 }
 
 impl MavSeverity {
-    pub(crate) fn from_mav(severity: crate::dialect::MavSeverity) -> Self {
+    pub fn from_mav(severity: crate::dialect::MavSeverity) -> Self {
         use crate::dialect::MavSeverity as MS;
         match severity {
             MS::MAV_SEVERITY_EMERGENCY => MavSeverity::Emergency,
