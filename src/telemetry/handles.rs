@@ -50,65 +50,76 @@ impl<T: Clone + Send + Sync + 'static> MetricSlotWriter<T> {
     }
 }
 
-#[derive(Clone)]
-pub(crate) struct TelemetryMetricHandles {
-    pub(crate) message_handles: TelemetryMessageHandles,
-    pub(crate) position_global: MetricHandle<GlobalPosition>,
-    pub(crate) position_groundspeed_mps: MetricHandle<f64>,
-    pub(crate) position_airspeed_mps: MetricHandle<f64>,
-    pub(crate) position_climb_rate_mps: MetricHandle<f64>,
-    pub(crate) position_heading_deg: MetricHandle<f64>,
-    pub(crate) position_throttle_pct: MetricHandle<f64>,
-    pub(crate) attitude_euler: MetricHandle<EulerAttitude>,
-    pub(crate) battery_remaining_pct: MetricHandle<f64>,
-    pub(crate) battery_voltage_v: MetricHandle<f64>,
-    pub(crate) battery_current_a: MetricHandle<f64>,
-    pub(crate) battery_energy_consumed_wh: MetricHandle<f64>,
-    pub(crate) battery_time_remaining_s: MetricHandle<i32>,
-    pub(crate) battery_cells: MetricHandle<CellVoltages>,
-    pub(crate) gps_quality: MetricHandle<GpsQuality>,
-    pub(crate) gps_position_msl: MetricHandle<GeoPoint3dMsl>,
-    pub(crate) navigation_waypoint: MetricHandle<WaypointProgress>,
-    pub(crate) navigation_guidance: MetricHandle<GuidanceState>,
-    pub(crate) terrain_clearance: MetricHandle<TerrainClearance>,
-    pub(crate) rc_channels_pwm_us: [MetricHandle<u16>; RC_CHANNEL_COUNT],
-    pub(crate) rc_rssi_pct: MetricHandle<u8>,
-    pub(crate) actuator_servo_pwm_us: [MetricHandle<u16>; SERVO_OUTPUT_COUNT],
-    pub(crate) armed: MetricHandle<bool>,
-    pub(crate) sensor_health: MetricHandle<SensorHealthSummary>,
-    pub(crate) home: MetricHandle<GeoPoint3dMsl>,
-    pub(crate) origin: MetricHandle<GeoPoint3dMsl>,
+/// Generates the paired `TelemetryMetricHandles` and `TelemetryMetricWriters` structs from a
+/// single canonical field list, eliminating the need to keep two parallel struct definitions in
+/// sync by hand.
+///
+/// Syntax:
+/// ```text
+/// define_metrics! {
+///     scalar { field_name: Type, ... }
+///     array  { field_name: Type; COUNT, ... }
+/// }
+/// ```
+///
+/// Scalar entries expand to `MetricHandle<Type>` / `MetricSlotWriter<Type>` fields.
+/// Array entries expand to `[MetricHandle<Type>; COUNT]` / `[MetricSlotWriter<Type>; COUNT]`.
+///
+/// Non-metric fields (`message_handles`, `message_writers`, `battery_primary_seen`) are
+/// hardcoded in the expansion because they have different types in each struct and do not
+/// follow the uniform `MetricHandle` / `MetricSlotWriter` pattern.
+macro_rules! define_metrics {
+    (
+        scalar { $( $sf:ident : $st:ty ),* $(,)? }
+        array  { $( $af:ident : $at:ty ; $ac:expr ),* $(,)? }
+    ) => {
+        #[derive(Clone)]
+        pub(crate) struct TelemetryMetricHandles {
+            pub(crate) message_handles: TelemetryMessageHandles,
+            $( pub(crate) $sf: MetricHandle<$st>, )*
+            $( pub(crate) $af: [MetricHandle<$at>; $ac], )*
+        }
+
+        #[derive(Clone)]
+        pub(crate) struct TelemetryMetricWriters {
+            pub(crate) message_writers: TelemetryMessageWriters,
+            $( pub(crate) $sf: MetricSlotWriter<$st>, )*
+            $( pub(crate) $af: [MetricSlotWriter<$at>; $ac], )*
+            battery_primary_seen: Arc<AtomicBool>,
+        }
+    };
 }
 
-#[derive(Clone)]
-pub(crate) struct TelemetryMetricWriters {
-    pub(crate) message_writers: TelemetryMessageWriters,
-    pub(crate) position_global: MetricSlotWriter<GlobalPosition>,
-    pub(crate) position_groundspeed_mps: MetricSlotWriter<f64>,
-    pub(crate) position_airspeed_mps: MetricSlotWriter<f64>,
-    pub(crate) position_climb_rate_mps: MetricSlotWriter<f64>,
-    pub(crate) position_heading_deg: MetricSlotWriter<f64>,
-    pub(crate) position_throttle_pct: MetricSlotWriter<f64>,
-    pub(crate) attitude_euler: MetricSlotWriter<EulerAttitude>,
-    pub(crate) battery_remaining_pct: MetricSlotWriter<f64>,
-    pub(crate) battery_voltage_v: MetricSlotWriter<f64>,
-    pub(crate) battery_current_a: MetricSlotWriter<f64>,
-    pub(crate) battery_energy_consumed_wh: MetricSlotWriter<f64>,
-    pub(crate) battery_time_remaining_s: MetricSlotWriter<i32>,
-    pub(crate) battery_cells: MetricSlotWriter<CellVoltages>,
-    pub(crate) gps_quality: MetricSlotWriter<GpsQuality>,
-    pub(crate) gps_position_msl: MetricSlotWriter<GeoPoint3dMsl>,
-    pub(crate) navigation_waypoint: MetricSlotWriter<WaypointProgress>,
-    pub(crate) navigation_guidance: MetricSlotWriter<GuidanceState>,
-    pub(crate) terrain_clearance: MetricSlotWriter<TerrainClearance>,
-    pub(crate) rc_channels_pwm_us: [MetricSlotWriter<u16>; RC_CHANNEL_COUNT],
-    pub(crate) rc_rssi_pct: MetricSlotWriter<u8>,
-    pub(crate) actuator_servo_pwm_us: [MetricSlotWriter<u16>; SERVO_OUTPUT_COUNT],
-    pub(crate) armed: MetricSlotWriter<bool>,
-    pub(crate) sensor_health: MetricSlotWriter<SensorHealthSummary>,
-    pub(crate) home: MetricSlotWriter<GeoPoint3dMsl>,
-    pub(crate) origin: MetricSlotWriter<GeoPoint3dMsl>,
-    battery_primary_seen: Arc<AtomicBool>,
+define_metrics! {
+    scalar {
+        position_global: GlobalPosition,
+        position_groundspeed_mps: f64,
+        position_airspeed_mps: f64,
+        position_climb_rate_mps: f64,
+        position_heading_deg: f64,
+        position_throttle_pct: f64,
+        attitude_euler: EulerAttitude,
+        battery_remaining_pct: f64,
+        battery_voltage_v: f64,
+        battery_current_a: f64,
+        battery_energy_consumed_wh: f64,
+        battery_time_remaining_s: i32,
+        battery_cells: CellVoltages,
+        gps_quality: GpsQuality,
+        gps_position_msl: GeoPoint3dMsl,
+        navigation_waypoint: WaypointProgress,
+        navigation_guidance: GuidanceState,
+        terrain_clearance: TerrainClearance,
+        rc_rssi_pct: u8,
+        armed: bool,
+        sensor_health: SensorHealthSummary,
+        home: GeoPoint3dMsl,
+        origin: GeoPoint3dMsl,
+    }
+    array {
+        rc_channels_pwm_us: u16; RC_CHANNEL_COUNT,
+        actuator_servo_pwm_us: u16; SERVO_OUTPUT_COUNT,
+    }
 }
 
 impl TelemetryMetricWriters {
