@@ -22,6 +22,9 @@ use crate::ardupilot::PyArduPilotHandle;
 use crate::config::PyVehicleConfig;
 use crate::enums::{PyAutopilotType, PyVehicleType};
 use crate::error::{duration_from_secs, to_py_err};
+use crate::geo::{
+    PyGeoPoint2d, PyGeoPoint3dMsl, PyGeoPoint3dRelHome, PyGeoPoint3dTerrain, geo_point2d_from_py,
+};
 use crate::info::PyInfoHandle;
 use crate::link::PyLinkHandle;
 use crate::macros::py_subscription;
@@ -30,7 +33,7 @@ use crate::modes::{PyCurrentModeHandle, PyModesHandle};
 use crate::params::{PyParamsHandle, PySyncState};
 use crate::raw_message::{PyRawMessage, PyRawMessageStream};
 use crate::support::{PySupportHandle, PySupportStateHandle};
-use crate::telemetry::{PyGeoPoint3dMsl, PyMetricHandle, PyTelemetryHandle};
+use crate::telemetry::{PyMetricHandle, PyTelemetryHandle};
 
 fn geo_point_msl(
     latitude_deg: f64,
@@ -67,146 +70,6 @@ fn stored_plan_operation_name(kind: mavkit::StoredPlanOperationKind) -> &'static
         mavkit::StoredPlanOperationKind::Upload => "upload",
         mavkit::StoredPlanOperationKind::Download => "download",
         mavkit::StoredPlanOperationKind::Clear => "clear",
-    }
-}
-
-#[pyclass(name = "GeoPoint2d", frozen, skip_from_py_object)]
-#[derive(Clone)]
-pub struct PyGeoPoint2d {
-    inner: mavkit::GeoPoint2d,
-}
-
-impl PyGeoPoint2d {
-    fn from_inner(inner: mavkit::GeoPoint2d) -> Self {
-        Self { inner }
-    }
-
-    fn into_inner(&self) -> mavkit::GeoPoint2d {
-        self.inner.clone()
-    }
-}
-
-fn geo_point2d_from_py(point: &Bound<'_, PyAny>) -> PyResult<mavkit::GeoPoint2d> {
-    if let Ok(point) = point.extract::<PyRef<'_, PyGeoPoint2d>>() {
-        Ok(point.into_inner())
-    } else {
-        Err(PyTypeError::new_err("expected GeoPoint2d"))
-    }
-}
-
-#[pymethods]
-impl PyGeoPoint2d {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg))]
-    fn new(latitude_deg: f64, longitude_deg: f64) -> Self {
-        Self {
-            inner: mavkit::GeoPoint2d {
-                latitude_deg,
-                longitude_deg,
-            },
-        }
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        self.inner.latitude_deg
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        self.inner.longitude_deg
-    }
-}
-
-#[pyclass(name = "GeoPoint3dRelHome", frozen, skip_from_py_object)]
-#[derive(Clone)]
-pub struct PyGeoPoint3dRelHome {
-    inner: mavkit::GeoPoint3dRelHome,
-}
-
-impl PyGeoPoint3dRelHome {
-    fn from_inner(inner: mavkit::GeoPoint3dRelHome) -> Self {
-        Self { inner }
-    }
-
-    fn into_inner(&self) -> mavkit::GeoPoint3dRelHome {
-        self.inner.clone()
-    }
-}
-
-#[pymethods]
-impl PyGeoPoint3dRelHome {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, relative_alt_m))]
-    fn new(latitude_deg: f64, longitude_deg: f64, relative_alt_m: f64) -> Self {
-        Self {
-            inner: mavkit::GeoPoint3dRelHome {
-                latitude_deg,
-                longitude_deg,
-                relative_alt_m,
-            },
-        }
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        self.inner.latitude_deg
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        self.inner.longitude_deg
-    }
-
-    #[getter]
-    fn relative_alt_m(&self) -> f64 {
-        self.inner.relative_alt_m
-    }
-}
-
-#[pyclass(name = "GeoPoint3dTerrain", frozen, skip_from_py_object)]
-#[derive(Clone)]
-pub struct PyGeoPoint3dTerrain {
-    inner: mavkit::GeoPoint3dTerrain,
-}
-
-impl PyGeoPoint3dTerrain {
-    fn from_inner(inner: mavkit::GeoPoint3dTerrain) -> Self {
-        Self { inner }
-    }
-
-    fn into_inner(&self) -> mavkit::GeoPoint3dTerrain {
-        self.inner.clone()
-    }
-}
-
-#[pymethods]
-impl PyGeoPoint3dTerrain {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_terrain_m))]
-    fn new(latitude_deg: f64, longitude_deg: f64, altitude_terrain_m: f64) -> Self {
-        Self {
-            inner: mavkit::GeoPoint3dTerrain {
-                latitude_deg,
-                longitude_deg,
-                altitude_terrain_m,
-            },
-        }
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        self.inner.latitude_deg
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        self.inner.longitude_deg
-    }
-
-    #[getter]
-    fn altitude_terrain_m(&self) -> f64 {
-        self.inner.altitude_terrain_m
     }
 }
 

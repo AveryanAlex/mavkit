@@ -2,6 +2,7 @@ mod ardupilot;
 mod config;
 mod enums;
 mod error;
+mod geo;
 mod guided;
 mod info;
 mod link;
@@ -76,7 +77,7 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<telemetry::PyWaypointProgress>()?;
     m.add_class::<telemetry::PyGuidanceState>()?;
     m.add_class::<telemetry::PyTerrainClearance>()?;
-    m.add_class::<telemetry::PyGeoPoint3dMsl>()?;
+    m.add_class::<geo::PyGeoPoint3dMsl>()?;
     m.add_class::<telemetry::PySensorHealthSummary>()?;
     m.add_class::<telemetry::PyStatusTextEvent>()?;
     m.add_class::<telemetry::PyMetricSample>()?;
@@ -126,7 +127,7 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<info::PyPersistentIdentitySubscription>()?;
 
     // Mission types
-    m.add_class::<mission::PyGeoPoint3d>()?;
+    m.add_class::<geo::PyGeoPoint3d>()?;
     m.add_class::<mission::PyRawMissionCommand>()?;
     m.add_class::<mission::PyNavWaypoint>()?;
     m.add_class::<mission::PyNavTakeoff>()?;
@@ -201,9 +202,9 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<mission::PyTransferError>()?;
     m.add_class::<mission::PyRetryPolicy>()?;
     m.add_class::<mission::PyCompareTolerance>()?;
-    m.add_class::<vehicle::PyGeoPoint2d>()?;
-    m.add_class::<vehicle::PyGeoPoint3dRelHome>()?;
-    m.add_class::<vehicle::PyGeoPoint3dTerrain>()?;
+    m.add_class::<geo::PyGeoPoint2d>()?;
+    m.add_class::<geo::PyGeoPoint3dRelHome>()?;
+    m.add_class::<geo::PyGeoPoint3dTerrain>()?;
     m.add_class::<vehicle::PyFenceInclusionPolygon>()?;
     m.add_class::<vehicle::PyFenceExclusionPolygon>()?;
     m.add_class::<vehicle::PyFenceInclusionCircle>()?;

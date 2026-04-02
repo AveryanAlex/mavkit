@@ -9,6 +9,7 @@ use serde_json::Value;
 
 use crate::enums::{PyGpsFixType, PyMavSeverity};
 use crate::error::{duration_from_secs, to_py_err};
+use crate::geo::PyGeoPoint3dMsl;
 
 static PY_INSTANT_EPOCH: OnceLock<Instant> = OnceLock::new();
 
@@ -445,62 +446,6 @@ impl PyTerrainClearance {
     #[getter]
     fn height_above_terrain_m(&self) -> f64 {
         self.height_above_terrain_m
-    }
-}
-
-#[pyclass(name = "GeoPoint3dMsl", frozen, skip_from_py_object)]
-#[derive(Clone)]
-pub struct PyGeoPoint3dMsl {
-    latitude_deg: f64,
-    longitude_deg: f64,
-    altitude_msl_m: f64,
-}
-
-impl From<mavkit::GeoPoint3dMsl> for PyGeoPoint3dMsl {
-    fn from(value: mavkit::GeoPoint3dMsl) -> Self {
-        Self {
-            latitude_deg: value.latitude_deg,
-            longitude_deg: value.longitude_deg,
-            altitude_msl_m: value.altitude_msl_m,
-        }
-    }
-}
-
-impl PyGeoPoint3dMsl {
-    pub(crate) fn into_inner(&self) -> mavkit::GeoPoint3dMsl {
-        mavkit::GeoPoint3dMsl {
-            latitude_deg: self.latitude_deg,
-            longitude_deg: self.longitude_deg,
-            altitude_msl_m: self.altitude_msl_m,
-        }
-    }
-}
-
-#[pymethods]
-impl PyGeoPoint3dMsl {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_msl_m))]
-    fn new(latitude_deg: f64, longitude_deg: f64, altitude_msl_m: f64) -> Self {
-        Self {
-            latitude_deg,
-            longitude_deg,
-            altitude_msl_m,
-        }
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        self.latitude_deg
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        self.longitude_deg
-    }
-
-    #[getter]
-    fn altitude_msl_m(&self) -> f64 {
-        self.altitude_msl_m
     }
 }
 

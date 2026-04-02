@@ -2,6 +2,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
 use crate::enums::*;
+use crate::geo::{PyGeoPoint3d, position_components};
 
 fn command_frame_from_py(frame: PyMissionFrame) -> mavkit::mission::commands::MissionFrame {
     command_frame_from_py_raw(frame, None)
@@ -85,29 +86,6 @@ fn position_from_components(
             longitude_deg,
             relative_alt_m: f64::from(altitude_m),
         }),
-    }
-}
-
-fn position_components(position: &mavkit::GeoPoint3d) -> (PyMissionFrame, f64, f64, f32) {
-    match position {
-        mavkit::GeoPoint3d::Msl(point) => (
-            PyMissionFrame::GlobalInt,
-            point.latitude_deg,
-            point.longitude_deg,
-            point.altitude_msl_m as f32,
-        ),
-        mavkit::GeoPoint3d::RelHome(point) => (
-            PyMissionFrame::GlobalRelativeAltInt,
-            point.latitude_deg,
-            point.longitude_deg,
-            point.relative_alt_m as f32,
-        ),
-        mavkit::GeoPoint3d::Terrain(point) => (
-            PyMissionFrame::GlobalTerrainAltInt,
-            point.latitude_deg,
-            point.longitude_deg,
-            point.altitude_terrain_m as f32,
-        ),
     }
 }
 
@@ -311,71 +289,6 @@ macro_rules! define_scalar_command_pyclass {
             )+
         }
     };
-}
-
-#[pyclass(name = "GeoPoint3d", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyGeoPoint3d {
-    pub(crate) inner: mavkit::GeoPoint3d,
-}
-
-#[pymethods]
-impl PyGeoPoint3d {
-    #[staticmethod]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_msl_m))]
-    fn msl(latitude_deg: f64, longitude_deg: f64, altitude_msl_m: f64) -> Self {
-        Self {
-            inner: mavkit::GeoPoint3d::Msl(mavkit::GeoPoint3dMsl {
-                latitude_deg,
-                longitude_deg,
-                altitude_msl_m,
-            }),
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, relative_alt_m))]
-    fn rel_home(latitude_deg: f64, longitude_deg: f64, relative_alt_m: f64) -> Self {
-        Self {
-            inner: mavkit::GeoPoint3d::RelHome(mavkit::GeoPoint3dRelHome {
-                latitude_deg,
-                longitude_deg,
-                relative_alt_m,
-            }),
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_terrain_m))]
-    fn terrain(latitude_deg: f64, longitude_deg: f64, altitude_terrain_m: f64) -> Self {
-        Self {
-            inner: mavkit::GeoPoint3d::Terrain(mavkit::GeoPoint3dTerrain {
-                latitude_deg,
-                longitude_deg,
-                altitude_terrain_m,
-            }),
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner).3
-    }
 }
 
 #[pyclass(name = "RawMissionCommand", frozen, from_py_object)]
