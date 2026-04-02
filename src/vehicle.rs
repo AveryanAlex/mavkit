@@ -78,6 +78,20 @@ fn quantize_meters_mm(value: f64) -> Result<i32, VehicleError> {
 }
 
 /// Root handle for a live MAVLink connection and all MAVKit domains.
+///
+/// `Vehicle` is cheaply cloneable — every clone shares the same underlying connection and event
+/// loop via an `Arc`. The event loop shuts down automatically when the last clone is dropped, or
+/// explicitly via [`Vehicle::disconnect`].
+///
+/// # Lifecycle
+/// 1. Call [`Vehicle::connect`] (or a typed variant) to open the transport and wait for the
+///    first heartbeat.
+/// 2. Use domain accessor methods (`vehicle.telemetry()`, `vehicle.mission()`, etc.) to get
+///    short-lived handles that borrow `self`. Each handle exposes operations scoped to its domain.
+/// 3. Call [`Vehicle::disconnect`] when finished, or simply drop all clones.
+///
+/// # Thread safety
+/// `Vehicle` is `Clone + Send + Sync`. Clones may be sent to other tasks freely.
 #[derive(Clone)]
 pub struct Vehicle {
     pub(crate) inner: Arc<VehicleInner>,
@@ -184,14 +198,19 @@ impl VehicleInner {
     }
 }
 
-/// Snapshot identity from the first usable heartbeat.
+/// Identity snapshot populated from the first usable heartbeat.
 ///
-/// This stays stable for a session unless the link switches to a different vehicle.
+/// Fields are stable for the lifetime of the connection — a reconnect produces a new
+/// [`Vehicle`] with a fresh `VehicleIdentity`. Obtained via [`Vehicle::identity`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VehicleIdentity {
+    /// MAVLink system ID of the connected vehicle (typically 1).
     pub system_id: u8,
+    /// MAVLink component ID of the connected vehicle (typically 1 for the autopilot).
     pub component_id: u8,
+    /// Autopilot firmware family (e.g. ArduPilot, PX4).
     pub autopilot: AutopilotType,
+    /// Vehicle class (e.g. quadrotor, fixed-wing).
     pub vehicle_type: VehicleType,
 }
 
@@ -211,6 +230,11 @@ pub enum RcOverrideChannelValue {
 }
 
 impl RcOverrideChannelValue {
+    /// Construct a PWM override value, rejecting the two sentinel values.
+    ///
+    /// Returns `Err` for `0` (reserved for [`Release`](Self::Release)) and `65535` (reserved for
+    /// [`Ignore`](Self::Ignore)). All other values in the standard RC PWM range (typically
+    /// 1000–2000 µs) are accepted.
     pub fn pwm(pwm_us: u16) -> Result<Self, VehicleError> {
         match pwm_us {
             RC_OVERRIDE_RELEASE_RAW => Err(VehicleError::InvalidParameter(
@@ -252,14 +276,22 @@ impl Default for RcOverride {
 }
 
 impl RcOverride {
+    /// Create a new `RcOverride` with all channels set to [`Ignore`](RcOverrideChannelValue::Ignore).
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Read the current value for a 1-based channel number (1–18).
+    ///
+    /// Returns `Err(InvalidParameter)` for channel numbers outside 1–18.
     pub fn channel(&self, channel: u8) -> Result<RcOverrideChannelValue, VehicleError> {
         Ok(self.channels[rc_override_channel_index(channel)?])
     }
 
+    /// Set a channel to an arbitrary [`RcOverrideChannelValue`].
+    ///
+    /// Returns `Err(InvalidParameter)` for channel numbers outside 1–18. Returns `&mut self` for
+    /// method chaining.
     pub fn set(
         &mut self,
         channel: u8,
@@ -269,14 +301,24 @@ impl RcOverride {
         Ok(self)
     }
 
+    /// Override a channel with an explicit PWM value in microseconds.
+    ///
+    /// Typical RC PWM values are 1000–2000 µs (centre ≈ 1500 µs). Returns `Err` for channel
+    /// numbers outside 1–18 or for the sentinel values 0 and 65535.
     pub fn set_pwm(&mut self, channel: u8, pwm_us: u16) -> Result<&mut Self, VehicleError> {
         self.set(channel, RcOverrideChannelValue::pwm(pwm_us)?)
     }
 
+    /// Release a channel back to the RC receiver by setting the wire value to `0`.
+    ///
+    /// Returns `Err(InvalidParameter)` for channel numbers outside 1–18.
     pub fn release(&mut self, channel: u8) -> Result<&mut Self, VehicleError> {
         self.set(channel, RcOverrideChannelValue::Release)
     }
 
+    /// Leave a channel untouched by setting the wire value to the ignore sentinel (`65535`).
+    ///
+    /// Returns `Err(InvalidParameter)` for channel numbers outside 1–18.
     pub fn ignore(&mut self, channel: u8) -> Result<&mut Self, VehicleError> {
         self.set(channel, RcOverrideChannelValue::Ignore)
     }
@@ -356,6 +398,16 @@ impl<'a> DomainHandle<'a> for ParamsHandle<'a> {
 }
 
 impl Vehicle {
+    /// Connect using a MAVLink URL with the default [`VehicleConfig`].
+    ///
+    /// Supported URL schemes depend on enabled Cargo features:
+    /// - `udpin:<bind_addr>` — listen for incoming UDP packets (`udp` feature)
+    /// - `tcpin:<addr>` — outbound TCP connection (`tcp` feature)
+    /// - `serial:<port>:<baud>` — serial port (`serial` feature)
+    ///
+    /// Blocks until the first heartbeat is received or `connect_timeout` elapses.
+    /// Returns [`VehicleError::Timeout`] on timeout, [`VehicleError::ConnectionFailed`] on
+    /// transport errors.
     pub async fn connect(address: &str) -> Result<Self, VehicleError> {
         Self::connect_with_config(address, VehicleConfig::default()).await
     }
@@ -377,18 +429,25 @@ impl Vehicle {
         Self::from_connection(Box::new(StreamConnection::new(reader, writer)), config).await
     }
 
+    /// Connect by listening on a UDP socket for an incoming MAVLink stream (`udp` feature).
     pub async fn connect_udp(bind_addr: &str) -> Result<Self, VehicleError> {
         Self::connect(&format!("udpin:{bind_addr}")).await
     }
 
+    /// Connect via an outbound TCP connection (`tcp` feature).
     pub async fn connect_tcp(addr: &str) -> Result<Self, VehicleError> {
         Self::connect(&format!("tcpin:{addr}")).await
     }
 
+    /// Connect via a serial port (`serial` feature).
     pub async fn connect_serial(port: &str, baud: u32) -> Result<Self, VehicleError> {
         Self::connect(&format!("serial:{port}:{baud}")).await
     }
 
+    /// Connect using a MAVLink URL with a custom [`VehicleConfig`].
+    ///
+    /// See [`Vehicle::connect`] for supported URL schemes. Use this when you need to adjust
+    /// timeouts, GCS IDs, or initialization policies.
     pub async fn connect_with_config(
         address: &str,
         config: VehicleConfig,
@@ -400,6 +459,11 @@ impl Vehicle {
         Self::from_connection(connection, config).await
     }
 
+    /// Attach to an already-opened [`mavlink::AsyncMavConnection`] with a custom config.
+    ///
+    /// Use this to inject custom transports (e.g. in-process mock connections for testing) without
+    /// going through the URL-based `connect` path. The connection must not have been used for any
+    /// MAVLink traffic before this call — the event loop starts fresh from the first message.
     pub async fn from_connection(
         connection: Box<dyn mavlink::AsyncMavConnection<dialect::MavMessage> + Sync + Send>,
         config: VehicleConfig,
@@ -516,6 +580,11 @@ impl Vehicle {
         H::from_inner(self.inner.as_ref())
     }
 
+    /// Return the vehicle's identity snapshot from the first heartbeat.
+    ///
+    /// This is always populated after a successful `connect` because the connect path waits for
+    /// the first heartbeat. If called on a handle constructed outside the connect path before any
+    /// heartbeat arrives, the returned fields reflect zero-value defaults.
     pub fn identity(&self) -> VehicleIdentity {
         let state: VehicleState = self.inner.stores.vehicle_state.borrow().clone();
 
@@ -527,22 +596,27 @@ impl Vehicle {
         }
     }
 
+    /// Access autopilot firmware info (version, capabilities).
     pub fn info(&self) -> InfoHandle<'_> {
         self.handle()
     }
 
+    /// Access vehicle support / capability probing.
     pub fn support(&self) -> SupportHandle<'_> {
         self.handle()
     }
 
+    /// Access link state and statistics.
     pub fn link(&self) -> LinkHandle<'_> {
         self.handle()
     }
 
+    /// Access the available flight-mode catalog reported by the vehicle.
     pub fn available_modes(&self) -> ModesHandle<'_> {
         self.handle()
     }
 
+    /// Access telemetry streams (attitude, position, battery, etc.).
     pub fn telemetry(&self) -> TelemetryHandle<'_> {
         TelemetryHandle::with_command_tx(
             &self.inner.stores.telemetry_handles,
@@ -550,26 +624,32 @@ impl Vehicle {
         )
     }
 
+    /// Access mission upload, download, and monitoring operations.
     pub fn mission(&self) -> MissionHandle<'_> {
         self.handle()
     }
 
+    /// Access geofence upload and download operations.
     pub fn fence(&self) -> FenceHandle<'_> {
         self.handle()
     }
 
+    /// Access rally-point upload and download operations.
     pub fn rally(&self) -> RallyHandle<'_> {
         self.handle()
     }
 
+    /// Access parameter fetch, upload, and typed read operations.
     pub fn params(&self) -> ParamsHandle<'_> {
         self.handle()
     }
 
+    /// Access raw MAVLink send/receive for operations not covered by the typed API.
     pub fn raw(&self) -> RawHandle<'_> {
         RawHandle::new(self)
     }
 
+    /// Access ArduPilot-specific extensions (scripting, EKF, etc.).
     pub fn ardupilot(&self) -> ArduPilotHandle<'_> {
         self.handle()
     }
@@ -727,6 +807,11 @@ impl Vehicle {
         self.inner.set_mode_by_name(name, false).await
     }
 
+    /// Set the vehicle's home position to a specific global location.
+    ///
+    /// The position is validated and quantized to the MAVLink wire format (degE7 / mm) before
+    /// sending. Returns [`VehicleError::InvalidParameter`] if the coordinates are out of range or
+    /// non-finite.
     pub async fn set_home(&self, position: GeoPoint3dMsl) -> Result<(), VehicleError> {
         let lat_e7 = try_latitude_e7(position.latitude_deg)?;
         let lon_e7 = try_longitude_e7(position.longitude_deg)?;
@@ -748,6 +833,10 @@ impl Vehicle {
         .map(|_| ())
     }
 
+    /// Set the vehicle's home position to its current GPS location.
+    ///
+    /// Equivalent to sending `MAV_CMD_DO_SET_HOME` with `param1=1`. The deprecated suppression is
+    /// needed because the MAVLink crate marked this variant but the wire protocol still requires it.
     // MAVLink crate deprecated this type/variant, but the wire protocol still requires it.
     #[allow(deprecated)]
     pub async fn set_home_current(&self) -> Result<(), VehicleError> {
@@ -759,6 +848,11 @@ impl Vehicle {
         .await
     }
 
+    /// Set the GPS global origin used by the vehicle's local EKF frame.
+    ///
+    /// Sends `SET_GPS_GLOBAL_ORIGIN` and waits for the vehicle to echo back the matching
+    /// `GPS_GLOBAL_ORIGIN` message as confirmation. Returns [`VehicleError::Timeout`] if the echo
+    /// does not arrive within `command_completion_timeout`.
     pub async fn set_origin(&self, origin: GeoPoint3dMsl) -> Result<(), VehicleError> {
         let normalized = WireNormalizedGeo::try_from(&origin)?;
         let origin_handle = self.telemetry().origin();
@@ -777,6 +871,11 @@ impl Vehicle {
             .await
     }
 
+    /// Gracefully shut down the event loop and wait for the link to reach `Disconnected`.
+    ///
+    /// Safe to call from any clone. If the vehicle is already disconnected or in an error state
+    /// this is a no-op that returns `Ok(())`. After this returns, all other operations on any
+    /// remaining clones will return [`VehicleError::Disconnected`].
     pub async fn disconnect(&self) -> Result<(), VehicleError> {
         let mut link_state = self.inner.stores.link_state.clone();
 
