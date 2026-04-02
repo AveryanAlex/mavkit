@@ -2,6 +2,7 @@ use super::types::{MissionFrame as MissionItemFrame, MissionItem};
 use crate::geo::{
     GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain, quantize_degrees_e7,
 };
+use mavkit_macros::mavkit_command;
 use serde::{Deserialize, Serialize};
 
 #[allow(non_camel_case_types)]
@@ -692,12 +693,17 @@ fn alt_change_action_from_param(value: f32) -> AltChangeAction {
 fn empty_unit_from_wire(_frame: MissionFrame, _params: [f32; 4], _x: i32, _y: i32, _z: f32) {}
 
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_WAYPOINT, category = Nav)]
 pub struct NavWaypoint {
+    #[position]
     pub position: GeoPoint3d,
+    #[param(1)]
     pub hold_time_s: f32,
+    #[param(2)]
     pub acceptance_radius_m: f32,
+    #[param(3)]
     pub pass_radius_m: f32,
+    #[param(4)]
     pub yaw_deg: f32,
 }
 
@@ -713,38 +719,12 @@ impl NavWaypoint {
     }
 }
 
-fn nav_waypoint_to_wire(command: NavWaypoint) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(
-        command.position,
-        [
-            command.hold_time_s,
-            command.acceptance_radius_m,
-            command.pass_radius_m,
-            command.yaw_deg,
-        ],
-    )
-}
-
-fn nav_waypoint_from_wire(
-    frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> NavWaypoint {
-    NavWaypoint {
-        position: position_from_wire(frame, x, y, z),
-        hold_time_s: params[0],
-        acceptance_radius_m: params[1],
-        pass_radius_m: params[2],
-        yaw_deg: params[3],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_SPLINE_WAYPOINT, category = Nav)]
 pub struct NavSplineWaypoint {
+    #[position]
     pub position: GeoPoint3d,
+    #[param(1)]
     pub hold_time_s: f32,
 }
 
@@ -754,25 +734,6 @@ impl NavSplineWaypoint {
             position: position.into(),
             hold_time_s: 0.0,
         }
-    }
-}
-
-fn nav_spline_waypoint_to_wire(
-    command: NavSplineWaypoint,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [command.hold_time_s, 0.0, 0.0, 0.0])
-}
-
-fn nav_spline_waypoint_from_wire(
-    frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> NavSplineWaypoint {
-    NavSplineWaypoint {
-        position: position_from_wire(frame, x, y, z),
-        hold_time_s: params[0],
     }
 }
 
@@ -821,9 +782,11 @@ fn nav_arc_waypoint_from_wire(
 }
 
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_TAKEOFF, category = Nav)]
 pub struct NavTakeoff {
+    #[position]
     pub position: GeoPoint3d,
+    #[param(1)]
     pub pitch_deg: f32,
 }
 
@@ -836,27 +799,12 @@ impl NavTakeoff {
     }
 }
 
-fn nav_takeoff_to_wire(command: NavTakeoff) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [command.pitch_deg, 0.0, 0.0, 0.0])
-}
-
-fn nav_takeoff_from_wire(
-    frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> NavTakeoff {
-    NavTakeoff {
-        position: position_from_wire(frame, x, y, z),
-        pitch_deg: params[0],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_LAND, category = Nav)]
 pub struct NavLand {
+    #[position]
     pub position: GeoPoint3d,
+    #[param(1)]
     pub abort_alt_m: f32,
 }
 
@@ -866,17 +814,6 @@ impl NavLand {
             position: position.into(),
             abort_alt_m: 0.0,
         }
-    }
-}
-
-fn nav_land_to_wire(command: NavLand) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [command.abort_alt_m, 0.0, 0.0, 0.0])
-}
-
-fn nav_land_from_wire(frame: MissionFrame, params: [f32; 4], x: i32, y: i32, z: f32) -> NavLand {
-    NavLand {
-        position: position_from_wire(frame, x, y, z),
-        abort_alt_m: params[0],
     }
 }
 
@@ -1079,9 +1016,11 @@ fn nav_loiter_to_alt_from_wire(
 }
 
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_CONTINUE_AND_CHANGE_ALT, category = Nav)]
 pub struct NavContinueAndChangeAlt {
+    #[position]
     pub position: GeoPoint3d,
+    #[param(1, via = alt_change_action_to_param, from = alt_change_action_from_param)]
     pub action: AltChangeAction,
 }
 
@@ -1094,127 +1033,41 @@ impl NavContinueAndChangeAlt {
     }
 }
 
-fn nav_continue_and_change_alt_to_wire(
-    command: NavContinueAndChangeAlt,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(
-        command.position,
-        [alt_change_action_to_param(command.action), 0.0, 0.0, 0.0],
-    )
-}
-
-fn nav_continue_and_change_alt_from_wire(
-    frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> NavContinueAndChangeAlt {
-    NavContinueAndChangeAlt {
-        position: position_from_wire(frame, x, y, z),
-        action: alt_change_action_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_DELAY, category = Nav)]
 pub struct NavDelay {
+    #[param(1)]
     pub seconds: f32,
+    #[param(2)]
     pub hour_utc: f32,
+    #[param(3)]
     pub min_utc: f32,
+    #[param(4)]
     pub sec_utc: f32,
 }
 
-fn nav_delay_to_wire(command: NavDelay) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            command.seconds,
-            command.hour_utc,
-            command.min_utc,
-            command.sec_utc,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn nav_delay_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> NavDelay {
-    NavDelay {
-        seconds: params[0],
-        hour_utc: params[1],
-        min_utc: params[2],
-        sec_utc: params[3],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_GUIDED_ENABLE, category = Nav)]
 pub struct NavGuidedEnable {
+    #[param(1)]
     pub enabled: bool,
 }
 
-fn nav_guided_enable_to_wire(command: NavGuidedEnable) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([bool_to_param(command.enabled), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn nav_guided_enable_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> NavGuidedEnable {
-    NavGuidedEnable {
-        enabled: bool_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_ALTITUDE_WAIT, category = Nav)]
 pub struct NavAltitudeWait {
+    #[param(1)]
     pub altitude_m: f32,
+    #[param(2)]
     pub descent_rate_mps: f32,
+    #[param(3)]
     pub wiggle_time_s: f32,
 }
 
-fn nav_altitude_wait_to_wire(command: NavAltitudeWait) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            command.altitude_m,
-            command.descent_rate_mps,
-            command.wiggle_time_s,
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn nav_altitude_wait_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> NavAltitudeWait {
-    NavAltitudeWait {
-        altitude_m: params[0],
-        descent_rate_mps: params[1],
-        wiggle_time_s: params[2],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_VTOL_TAKEOFF, category = Nav)]
 pub struct NavVtolTakeoff {
+    #[position]
     pub position: GeoPoint3d,
 }
 
@@ -1226,26 +1079,12 @@ impl NavVtolTakeoff {
     }
 }
 
-fn nav_vtol_takeoff_to_wire(command: NavVtolTakeoff) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [0.0, 0.0, 0.0, 0.0])
-}
-
-fn nav_vtol_takeoff_from_wire(
-    frame: MissionFrame,
-    _params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> NavVtolTakeoff {
-    NavVtolTakeoff {
-        position: position_from_wire(frame, x, y, z),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_VTOL_LAND, category = Nav)]
 pub struct NavVtolLand {
+    #[position]
     pub position: GeoPoint3d,
+    #[param(1)]
     pub options: u8,
 }
 
@@ -1258,30 +1097,12 @@ impl NavVtolLand {
     }
 }
 
-fn nav_vtol_land_to_wire(command: NavVtolLand) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(
-        command.position,
-        [f32::from(command.options), 0.0, 0.0, 0.0],
-    )
-}
-
-fn nav_vtol_land_from_wire(
-    frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> NavVtolLand {
-    NavVtolLand {
-        position: position_from_wire(frame, x, y, z),
-        options: params[0] as u8,
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_PAYLOAD_PLACE, category = Nav)]
 pub struct NavPayloadPlace {
+    #[position]
     pub position: GeoPoint3d,
+    #[param(1)]
     pub max_descent_m: f32,
 }
 
@@ -1294,57 +1115,15 @@ impl NavPayloadPlace {
     }
 }
 
-fn nav_payload_place_to_wire(command: NavPayloadPlace) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [command.max_descent_m, 0.0, 0.0, 0.0])
-}
-
-fn nav_payload_place_from_wire(
-    frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> NavPayloadPlace {
-    NavPayloadPlace {
-        position: position_from_wire(frame, x, y, z),
-        max_descent_m: params[0],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_NAV_SET_YAW_SPEED, category = Nav)]
 pub struct NavSetYawSpeed {
+    #[param(1)]
     pub angle_deg: f32,
+    #[param(2)]
     pub speed_mps: f32,
+    #[param(3)]
     pub relative: bool,
-}
-
-fn nav_set_yaw_speed_to_wire(command: NavSetYawSpeed) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            command.angle_deg,
-            command.speed_mps,
-            bool_to_param(command.relative),
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn nav_set_yaw_speed_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> NavSetYawSpeed {
-    NavSetYawSpeed {
-        angle_deg: params[0],
-        speed_mps: params[1],
-        relative: bool_from_param(params[2]),
-    }
 }
 
 /// Typed mission command API item used by plan serialization and validation.
@@ -1433,167 +1212,77 @@ fn nav_attitude_time_from_wire(
 }
 
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_JUMP, category = Do)]
+#[derive(Copy)]
 pub struct DoJump {
+    #[param(1)]
     pub target_index: u16,
+    #[param(2)]
     pub repeat_count: u16,
 }
 
-fn do_jump_to_wire(command: DoJump) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.target_index),
-            f32::from(command.repeat_count),
-            0.0,
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_jump_from_wire(_frame: MissionFrame, params: [f32; 4], _x: i32, _y: i32, _z: f32) -> DoJump {
-    DoJump {
-        target_index: u16_from_param(params[0]),
-        repeat_count: u16_from_param(params[1]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_JUMP_TAG, category = Do)]
+#[derive(Copy)]
 pub struct DoJumpTag {
+    #[param(1)]
     pub tag: u16,
+    #[param(2)]
     pub repeat_count: u16,
 }
 
-fn do_jump_tag_to_wire(command: DoJumpTag) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.tag),
-            f32::from(command.repeat_count),
-            0.0,
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_jump_tag_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoJumpTag {
-    DoJumpTag {
-        tag: u16_from_param(params[0]),
-        repeat_count: u16_from_param(params[1]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_JUMP_TAG, category = Do)]
+#[derive(Copy)]
 pub struct DoTag {
+    #[param(1)]
     pub tag: u16,
 }
 
-fn do_tag_to_wire(command: DoTag) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([f32::from(command.tag), 0.0, 0.0, 0.0], 0, 0, 0.0)
+/// Wire encodes `pause` as the inverse: 1.0 means "continue" (not paused).
+fn inverted_bool_to_param(value: bool) -> f32 {
+    bool_to_param(!value)
 }
 
-fn do_tag_from_wire(_frame: MissionFrame, params: [f32; 4], _x: i32, _y: i32, _z: f32) -> DoTag {
-    DoTag {
-        tag: u16_from_param(params[0]),
-    }
+/// Wire decodes `pause` as the inverse: >0.5 means "continue" (not paused).
+fn inverted_bool_from_param(value: f32) -> bool {
+    !bool_from_param(value)
 }
 
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_PAUSE_CONTINUE, category = Do)]
+#[derive(Copy)]
 pub struct DoPauseContinue {
+    #[param(1, via = inverted_bool_to_param, from = inverted_bool_from_param)]
     pub pause: bool,
 }
 
-fn do_pause_continue_to_wire(command: DoPauseContinue) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([bool_to_param(!command.pause), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_pause_continue_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoPauseContinue {
-    DoPauseContinue {
-        pause: !bool_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_CHANGE_SPEED, category = Do)]
+#[derive(Copy)]
 pub struct DoChangeSpeed {
+    #[param(1, via = speed_type_to_param, from = speed_type_from_param)]
     pub speed_type: SpeedType,
+    #[param(2)]
     pub speed_mps: f32,
+    #[param(3)]
     pub throttle_pct: f32,
 }
 
-fn do_change_speed_to_wire(command: DoChangeSpeed) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            speed_type_to_param(command.speed_type),
-            command.speed_mps,
-            command.throttle_pct,
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_change_speed_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoChangeSpeed {
-    DoChangeSpeed {
-        speed_type: speed_type_from_param(params[0]),
-        speed_mps: params[1],
-        throttle_pct: params[2],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SET_REVERSE, category = Do)]
+#[derive(Copy)]
 pub struct DoSetReverse {
+    #[param(1)]
     pub reverse: bool,
 }
 
-fn do_set_reverse_to_wire(command: DoSetReverse) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([bool_to_param(command.reverse), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_set_reverse_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSetReverse {
-    DoSetReverse {
-        reverse: bool_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SET_HOME, category = Do)]
 pub struct DoSetHome {
+    #[position]
     pub position: GeoPoint3d,
+    #[param(1)]
     pub use_current: bool,
 }
 
@@ -1606,29 +1295,10 @@ impl DoSetHome {
     }
 }
 
-fn do_set_home_to_wire(command: DoSetHome) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(
-        command.position,
-        [bool_to_param(command.use_current), 0.0, 0.0, 0.0],
-    )
-}
-
-fn do_set_home_from_wire(
-    frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> DoSetHome {
-    DoSetHome {
-        position: position_from_wire(frame, x, y, z),
-        use_current: bool_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_LAND_START, category = Do)]
 pub struct DoLandStart {
+    #[position]
     pub position: GeoPoint3d,
 }
 
@@ -1640,25 +1310,10 @@ impl DoLandStart {
     }
 }
 
-fn do_land_start_to_wire(command: DoLandStart) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [0.0, 0.0, 0.0, 0.0])
-}
-
-fn do_land_start_from_wire(
-    frame: MissionFrame,
-    _params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> DoLandStart {
-    DoLandStart {
-        position: position_from_wire(frame, x, y, z),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_RETURN_PATH_START, category = Do)]
 pub struct DoReturnPathStart {
+    #[position]
     pub position: GeoPoint3d,
 }
 
@@ -1670,27 +1325,10 @@ impl DoReturnPathStart {
     }
 }
 
-fn do_return_path_start_to_wire(
-    command: DoReturnPathStart,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [0.0, 0.0, 0.0, 0.0])
-}
-
-fn do_return_path_start_from_wire(
-    frame: MissionFrame,
-    _params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> DoReturnPathStart {
-    DoReturnPathStart {
-        position: position_from_wire(frame, x, y, z),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_GO_AROUND, category = Do)]
 pub struct DoGoAround {
+    #[position]
     pub position: GeoPoint3d,
 }
 
@@ -1702,25 +1340,10 @@ impl DoGoAround {
     }
 }
 
-fn do_go_around_to_wire(command: DoGoAround) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [0.0, 0.0, 0.0, 0.0])
-}
-
-fn do_go_around_from_wire(
-    frame: MissionFrame,
-    _params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> DoGoAround {
-    DoGoAround {
-        position: position_from_wire(frame, x, y, z),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SET_ROI_LOCATION, category = Do)]
 pub struct DoSetRoiLocation {
+    #[position]
     pub position: GeoPoint3d,
 }
 
@@ -1729,24 +1352,6 @@ impl DoSetRoiLocation {
         Self {
             position: position.into(),
         }
-    }
-}
-
-fn do_set_roi_location_to_wire(
-    command: DoSetRoiLocation,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [0.0, 0.0, 0.0, 0.0])
-}
-
-fn do_set_roi_location_from_wire(
-    frame: MissionFrame,
-    _params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> DoSetRoiLocation {
-    DoSetRoiLocation {
-        position: position_from_wire(frame, x, y, z),
     }
 }
 
@@ -1759,9 +1364,11 @@ fn do_set_roi_none_from_wire(frame: MissionFrame, params: [f32; 4], x: i32, y: i
 }
 
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SET_ROI, category = Do)]
 pub struct DoSetRoi {
+    #[param(1)]
     pub mode: u8,
+    #[position]
     pub position: GeoPoint3d,
 }
 
@@ -1774,1027 +1381,360 @@ impl DoSetRoi {
     }
 }
 
-fn do_set_roi_to_wire(command: DoSetRoi) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    position_command_to_wire(command.position, [f32::from(command.mode), 0.0, 0.0, 0.0])
-}
-
-fn do_set_roi_from_wire(frame: MissionFrame, params: [f32; 4], x: i32, y: i32, z: f32) -> DoSetRoi {
-    DoSetRoi {
-        mode: u8_from_param(params[0]),
-        position: position_from_wire(frame, x, y, z),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_MOUNT_CONTROL, category = Do)]
+#[derive(Copy)]
 pub struct DoMountControl {
+    #[param(1)]
     pub pitch_deg: f32,
+    #[param(2)]
     pub roll_deg: f32,
+    #[param(3)]
     pub yaw_deg: f32,
-}
-
-fn do_mount_control_to_wire(command: DoMountControl) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [command.pitch_deg, command.roll_deg, command.yaw_deg, 0.0],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_mount_control_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoMountControl {
-    DoMountControl {
-        pitch_deg: params[0],
-        roll_deg: params[1],
-        yaw_deg: params[2],
-    }
 }
 
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW, category = Do)]
+#[derive(Copy)]
 pub struct DoGimbalManagerPitchYaw {
+    #[param(1)]
     pub pitch_deg: f32,
+    #[param(2)]
     pub yaw_deg: f32,
+    #[param(3)]
     pub pitch_rate_dps: f32,
+    #[param(4)]
     pub yaw_rate_dps: f32,
+    #[wire_x]
     pub flags: u32,
+    #[wire_z]
     pub gimbal_id: u8,
 }
 
-fn do_gimbal_manager_pitch_yaw_to_wire(
-    command: DoGimbalManagerPitchYaw,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            command.pitch_deg,
-            command.yaw_deg,
-            command.pitch_rate_dps,
-            command.yaw_rate_dps,
-        ],
-        command.flags as i32,
-        0,
-        f32::from(command.gimbal_id),
-    )
-}
-
-fn do_gimbal_manager_pitch_yaw_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    _y: i32,
-    z: f32,
-) -> DoGimbalManagerPitchYaw {
-    DoGimbalManagerPitchYaw {
-        pitch_deg: params[0],
-        yaw_deg: params[1],
-        pitch_rate_dps: params[2],
-        yaw_rate_dps: params[3],
-        flags: x as u32,
-        gimbal_id: z.round() as u8,
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SET_CAM_TRIGG_DIST, category = Do)]
+#[derive(Copy)]
 pub struct DoCamTriggerDistance {
+    #[param(1)]
     pub meters: f32,
+    #[param(3)]
     pub trigger_now: bool,
 }
 
-fn do_cam_trigger_distance_to_wire(
-    command: DoCamTriggerDistance,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [command.meters, 0.0, bool_to_param(command.trigger_now), 0.0],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_cam_trigger_distance_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoCamTriggerDistance {
-    DoCamTriggerDistance {
-        meters: params[0],
-        trigger_now: bool_from_param(params[2]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_IMAGE_START_CAPTURE, category = Do)]
+#[derive(Copy)]
 pub struct DoImageStartCapture {
+    #[param(1)]
     pub instance: u8,
+    #[param(2)]
     pub interval_s: f32,
+    #[param(3)]
     pub total_images: u32,
+    #[param(4)]
     pub start_number: u32,
 }
 
-fn do_image_start_capture_to_wire(
-    command: DoImageStartCapture,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.instance),
-            command.interval_s,
-            command.total_images as f32,
-            command.start_number as f32,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_image_start_capture_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoImageStartCapture {
-    DoImageStartCapture {
-        instance: u8_from_param(params[0]),
-        interval_s: params[1],
-        total_images: u32_from_param(params[2]),
-        start_number: u32_from_param(params[3]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_IMAGE_STOP_CAPTURE, category = Do)]
+#[derive(Copy)]
 pub struct DoImageStopCapture {
+    #[param(1)]
     pub instance: u8,
 }
 
-fn do_image_stop_capture_to_wire(
-    command: DoImageStopCapture,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([f32::from(command.instance), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_image_stop_capture_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoImageStopCapture {
-    DoImageStopCapture {
-        instance: u8_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_VIDEO_START_CAPTURE, category = Do)]
+#[derive(Copy)]
 pub struct DoVideoStartCapture {
+    #[param(1)]
     pub stream_id: u8,
 }
 
-fn do_video_start_capture_to_wire(
-    command: DoVideoStartCapture,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([f32::from(command.stream_id), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_video_start_capture_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoVideoStartCapture {
-    DoVideoStartCapture {
-        stream_id: u8_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_VIDEO_STOP_CAPTURE, category = Do)]
+#[derive(Copy)]
 pub struct DoVideoStopCapture {
+    #[param(1)]
     pub stream_id: u8,
 }
 
-fn do_video_stop_capture_to_wire(
-    command: DoVideoStopCapture,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([f32::from(command.stream_id), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_video_stop_capture_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoVideoStopCapture {
-    DoVideoStopCapture {
-        stream_id: u8_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_SET_CAMERA_ZOOM, category = Do)]
+#[derive(Copy)]
 pub struct DoSetCameraZoom {
+    #[param(1)]
     pub zoom_type: u8,
+    #[param(2)]
     pub zoom_value: f32,
 }
 
-fn do_set_camera_zoom_to_wire(command: DoSetCameraZoom) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [f32::from(command.zoom_type), command.zoom_value, 0.0, 0.0],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_set_camera_zoom_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSetCameraZoom {
-    DoSetCameraZoom {
-        zoom_type: u8_from_param(params[0]),
-        zoom_value: params[1],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_SET_CAMERA_FOCUS, category = Do)]
+#[derive(Copy)]
 pub struct DoSetCameraFocus {
+    #[param(1)]
     pub focus_type: u8,
+    #[param(2)]
     pub focus_value: f32,
 }
 
-fn do_set_camera_focus_to_wire(
-    command: DoSetCameraFocus,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [f32::from(command.focus_type), command.focus_value, 0.0, 0.0],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_set_camera_focus_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSetCameraFocus {
-    DoSetCameraFocus {
-        focus_type: u8_from_param(params[0]),
-        focus_value: params[1],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_SET_CAMERA_SOURCE, category = Do)]
+#[derive(Copy)]
 pub struct DoSetCameraSource {
+    #[param(1)]
     pub instance: u8,
+    #[param(2)]
     pub primary: u8,
+    #[param(3)]
     pub secondary: u8,
 }
 
-fn do_set_camera_source_to_wire(
-    command: DoSetCameraSource,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.instance),
-            f32::from(command.primary),
-            f32::from(command.secondary),
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_set_camera_source_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSetCameraSource {
-    DoSetCameraSource {
-        instance: u8_from_param(params[0]),
-        primary: u8_from_param(params[1]),
-        secondary: u8_from_param(params[2]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_DIGICAM_CONFIGURE, category = Do)]
+#[derive(Copy)]
 pub struct DoDigicamConfigure {
+    #[param(1)]
     pub shooting_mode: u8,
+    #[param(2)]
     pub shutter_speed: u16,
+    #[param(3)]
     pub aperture: f32,
+    #[param(4)]
     pub iso: u16,
+    #[wire_x]
     pub exposure_type: u8,
+    #[wire_y]
     pub cmd_id: u8,
+    #[wire_z]
     pub cutoff_time: f32,
 }
 
-fn do_digicam_configure_to_wire(
-    command: DoDigicamConfigure,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.shooting_mode),
-            f32::from(command.shutter_speed),
-            command.aperture,
-            f32::from(command.iso),
-        ],
-        i32::from(command.exposure_type),
-        i32::from(command.cmd_id),
-        command.cutoff_time,
-    )
-}
-
-fn do_digicam_configure_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    z: f32,
-) -> DoDigicamConfigure {
-    DoDigicamConfigure {
-        shooting_mode: u8_from_param(params[0]),
-        shutter_speed: u16_from_param(params[1]),
-        aperture: params[2],
-        iso: u16_from_param(params[3]),
-        exposure_type: x as u8,
-        cmd_id: y as u8,
-        cutoff_time: z,
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_DIGICAM_CONTROL, category = Do)]
+#[derive(Copy)]
 pub struct DoDigicamControl {
+    #[param(1)]
     pub session: u8,
+    #[param(2)]
     pub zoom_pos: u8,
+    #[param(3)]
     pub zoom_step: i8,
+    #[param(4)]
     pub focus_lock: u8,
+    #[wire_x]
     pub shooting_cmd: u8,
+    #[wire_y]
     pub cmd_id: u8,
 }
 
-fn do_digicam_control_to_wire(
-    command: DoDigicamControl,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.session),
-            f32::from(command.zoom_pos),
-            f32::from(command.zoom_step),
-            f32::from(command.focus_lock),
-        ],
-        i32::from(command.shooting_cmd),
-        i32::from(command.cmd_id),
-        0.0,
-    )
-}
-
-fn do_digicam_control_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    x: i32,
-    y: i32,
-    _z: f32,
-) -> DoDigicamControl {
-    DoDigicamControl {
-        session: u8_from_param(params[0]),
-        zoom_pos: u8_from_param(params[1]),
-        zoom_step: i8_from_param(params[2]),
-        focus_lock: u8_from_param(params[3]),
-        shooting_cmd: x as u8,
-        cmd_id: y as u8,
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SET_SERVO, category = Do)]
+#[derive(Copy)]
 pub struct DoSetServo {
+    #[param(1)]
     pub channel: u16,
+    #[param(2)]
     pub pwm: u16,
 }
 
-fn do_set_servo_to_wire(command: DoSetServo) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [f32::from(command.channel), f32::from(command.pwm), 0.0, 0.0],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_set_servo_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSetServo {
-    DoSetServo {
-        channel: u16_from_param(params[0]),
-        pwm: u16_from_param(params[1]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SET_RELAY, category = Do)]
+#[derive(Copy)]
 pub struct DoSetRelay {
+    #[param(1)]
     pub number: u8,
+    #[param(2)]
     pub state: bool,
 }
 
-fn do_set_relay_to_wire(command: DoSetRelay) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.number),
-            bool_to_param(command.state),
-            0.0,
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_set_relay_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSetRelay {
-    DoSetRelay {
-        number: u8_from_param(params[0]),
-        state: bool_from_param(params[1]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_REPEAT_SERVO, category = Do)]
+#[derive(Copy)]
 pub struct DoRepeatServo {
+    #[param(1)]
     pub channel: u16,
+    #[param(2)]
     pub pwm: u16,
+    #[param(3)]
     pub count: u16,
+    #[param(4)]
     pub cycle_time_s: f32,
 }
 
-fn do_repeat_servo_to_wire(command: DoRepeatServo) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.channel),
-            f32::from(command.pwm),
-            f32::from(command.count),
-            command.cycle_time_s,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_repeat_servo_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoRepeatServo {
-    DoRepeatServo {
-        channel: u16_from_param(params[0]),
-        pwm: u16_from_param(params[1]),
-        count: u16_from_param(params[2]),
-        cycle_time_s: params[3],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_REPEAT_RELAY, category = Do)]
+#[derive(Copy)]
 pub struct DoRepeatRelay {
+    #[param(1)]
     pub number: u8,
+    #[param(2)]
     pub count: u16,
+    #[param(3)]
     pub cycle_time_s: f32,
 }
 
-fn do_repeat_relay_to_wire(command: DoRepeatRelay) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.number),
-            f32::from(command.count),
-            command.cycle_time_s,
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_repeat_relay_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoRepeatRelay {
-    DoRepeatRelay {
-        number: u8_from_param(params[0]),
-        count: u16_from_param(params[1]),
-        cycle_time_s: params[2],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_FENCE_ENABLE, category = Do)]
+#[derive(Copy)]
 pub struct DoFenceEnable {
+    #[param(1, via = fence_action_to_param, from = fence_action_from_param)]
     pub action: FenceAction,
 }
 
-fn do_fence_enable_to_wire(command: DoFenceEnable) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [fence_action_to_param(command.action), 0.0, 0.0, 0.0],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_fence_enable_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoFenceEnable {
-    DoFenceEnable {
-        action: fence_action_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_PARACHUTE, category = Do)]
+#[derive(Copy)]
 pub struct DoParachute {
+    #[param(1, via = parachute_action_to_param, from = parachute_action_from_param)]
     pub action: ParachuteAction,
 }
 
-fn do_parachute_to_wire(command: DoParachute) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [parachute_action_to_param(command.action), 0.0, 0.0, 0.0],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_parachute_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoParachute {
-    DoParachute {
-        action: parachute_action_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_GRIPPER, category = Do)]
+#[derive(Copy)]
 pub struct DoGripper {
+    #[param(1)]
     pub number: u8,
+    #[param(2, via = gripper_action_to_param, from = gripper_action_from_param)]
     pub action: GripperAction,
 }
 
-fn do_gripper_to_wire(command: DoGripper) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.number),
-            gripper_action_to_param(command.action),
-            0.0,
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_gripper_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoGripper {
-    DoGripper {
-        number: u8_from_param(params[0]),
-        action: gripper_action_from_param(params[1]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SPRAYER, category = Do)]
+#[derive(Copy)]
 pub struct DoSprayer {
+    #[param(1)]
     pub enabled: bool,
 }
 
-fn do_sprayer_to_wire(command: DoSprayer) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([bool_to_param(command.enabled), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_sprayer_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSprayer {
-    DoSprayer {
-        enabled: bool_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_WINCH, category = Do)]
+#[derive(Copy)]
 pub struct DoWinch {
+    #[param(1)]
     pub number: u8,
+    #[param(2, via = winch_action_to_param, from = winch_action_from_param)]
     pub action: WinchAction,
+    #[param(3)]
     pub release_length_m: f32,
+    #[param(4)]
     pub release_rate_mps: f32,
 }
 
-fn do_winch_to_wire(command: DoWinch) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.number),
-            winch_action_to_param(command.action),
-            command.release_length_m,
-            command.release_rate_mps,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_winch_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoWinch {
-    DoWinch {
-        number: u8_from_param(params[0]),
-        action: winch_action_from_param(params[1]),
-        release_length_m: params[2],
-        release_rate_mps: params[3],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_ENGINE_CONTROL, category = Do)]
+#[derive(Copy)]
 pub struct DoEngineControl {
+    #[param(1)]
     pub start: bool,
+    #[param(2)]
     pub cold_start: bool,
+    #[param(3)]
     pub height_delay_m: f32,
+    #[param(4, via = engine_allow_disarmed_to_param, from = engine_allow_disarmed_from_param)]
     pub allow_disarmed: bool,
 }
 
-fn do_engine_control_to_wire(command: DoEngineControl) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            bool_to_param(command.start),
-            bool_to_param(command.cold_start),
-            command.height_delay_m,
-            engine_allow_disarmed_to_param(command.allow_disarmed),
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_engine_control_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoEngineControl {
-    DoEngineControl {
-        start: bool_from_param(params[0]),
-        cold_start: bool_from_param(params[1]),
-        height_delay_m: params[2],
-        allow_disarmed: engine_allow_disarmed_from_param(params[3]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_INVERTED_FLIGHT, category = Do)]
+#[derive(Copy)]
 pub struct DoInvertedFlight {
+    #[param(1)]
     pub inverted: bool,
 }
 
-fn do_inverted_flight_to_wire(
-    command: DoInvertedFlight,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([bool_to_param(command.inverted), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_inverted_flight_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoInvertedFlight {
-    DoInvertedFlight {
-        inverted: bool_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_AUTOTUNE_ENABLE, category = Do)]
+#[derive(Copy)]
 pub struct DoAutotuneEnable {
+    #[param(1)]
     pub enabled: bool,
 }
 
-fn do_autotune_enable_to_wire(
-    command: DoAutotuneEnable,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([bool_to_param(command.enabled), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_autotune_enable_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoAutotuneEnable {
-    DoAutotuneEnable {
-        enabled: bool_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_VTOL_TRANSITION, category = Do)]
+#[derive(Copy)]
 pub struct DoVtolTransition {
+    #[param(1)]
     pub target_state: u8,
 }
 
-fn do_vtol_transition_to_wire(
-    command: DoVtolTransition,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([f32::from(command.target_state), 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_vtol_transition_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoVtolTransition {
-    DoVtolTransition {
-        target_state: u8_from_param(params[0]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_GUIDED_LIMITS, category = Do)]
+#[derive(Copy)]
 pub struct DoGuidedLimits {
+    #[param(1)]
     pub max_time_s: f32,
+    #[param(2)]
     pub min_alt_m: f32,
+    #[param(3)]
     pub max_alt_m: f32,
+    #[param(4)]
     pub max_horiz_m: f32,
 }
 
-fn do_guided_limits_to_wire(command: DoGuidedLimits) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            command.max_time_s,
-            command.min_alt_m,
-            command.max_alt_m,
-            command.max_horiz_m,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_guided_limits_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoGuidedLimits {
-    DoGuidedLimits {
-        max_time_s: params[0],
-        min_alt_m: params[1],
-        max_alt_m: params[2],
-        max_horiz_m: params[3],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SET_RESUME_REPEAT_DIST, category = Do)]
+#[derive(Copy)]
 pub struct DoSetResumeRepeatDist {
+    #[param(1)]
     pub distance_m: f32,
 }
 
-fn do_set_resume_repeat_dist_to_wire(
-    command: DoSetResumeRepeatDist,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([command.distance_m, 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn do_set_resume_repeat_dist_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSetResumeRepeatDist {
-    DoSetResumeRepeatDist {
-        distance_m: params[0],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_AUX_FUNCTION, category = Do)]
+#[derive(Copy)]
 pub struct DoAuxFunction {
+    #[param(1)]
     pub function: u16,
+    #[param(2)]
     pub switch_pos: u8,
 }
 
-fn do_aux_function_to_wire(command: DoAuxFunction) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            f32::from(command.function),
-            f32::from(command.switch_pos),
-            0.0,
-            0.0,
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_aux_function_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoAuxFunction {
-    DoAuxFunction {
-        function: u16_from_param(params[0]),
-        switch_pos: u8_from_param(params[1]),
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_DO_SEND_SCRIPT_MESSAGE, category = Do)]
+#[derive(Copy)]
 pub struct DoSendScriptMessage {
+    #[param(1)]
     pub id: u16,
+    #[param(2)]
     pub p1: f32,
+    #[param(3)]
     pub p2: f32,
+    #[param(4)]
     pub p3: f32,
 }
 
-fn do_send_script_message_to_wire(
-    command: DoSendScriptMessage,
-) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [f32::from(command.id), command.p1, command.p2, command.p3],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn do_send_script_message_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> DoSendScriptMessage {
-    DoSendScriptMessage {
-        id: u16_from_param(params[0]),
-        p1: params[1],
-        p2: params[2],
-        p3: params[3],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_CONDITION_DELAY, category = Condition)]
+#[derive(Copy)]
 pub struct CondDelay {
+    #[param(1)]
     pub delay_s: f32,
 }
 
-fn condition_delay_to_wire(command: CondDelay) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([command.delay_s, 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn condition_delay_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> CondDelay {
-    CondDelay { delay_s: params[0] }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_CONDITION_DISTANCE, category = Condition)]
+#[derive(Copy)]
 pub struct CondDistance {
+    #[param(1)]
     pub distance_m: f32,
 }
 
-fn condition_distance_to_wire(command: CondDistance) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire([command.distance_m, 0.0, 0.0, 0.0], 0, 0, 0.0)
-}
-
-fn condition_distance_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> CondDistance {
-    CondDistance {
-        distance_m: params[0],
-    }
-}
-
 /// Typed mission command API item used by plan serialization and validation.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
+#[mavkit_command(id = MAV_CMD_CONDITION_YAW, category = Condition)]
+#[derive(Copy)]
 pub struct CondYaw {
+    #[param(1)]
     pub angle_deg: f32,
+    #[param(2)]
     pub turn_rate_dps: f32,
+    #[param(3, via = yaw_direction_to_param, from = yaw_direction_from_param)]
     pub direction: YawDirection,
+    #[param(4)]
     pub relative: bool,
-}
-
-fn condition_yaw_to_wire(command: CondYaw) -> (MissionFrame, [f32; 4], i32, i32, f32) {
-    mission_command_to_wire(
-        [
-            command.angle_deg,
-            command.turn_rate_dps,
-            yaw_direction_to_param(command.direction),
-            bool_to_param(command.relative),
-        ],
-        0,
-        0,
-        0.0,
-    )
-}
-
-fn condition_yaw_from_wire(
-    _frame: MissionFrame,
-    params: [f32; 4],
-    _x: i32,
-    _y: i32,
-    _z: f32,
-) -> CondYaw {
-    CondYaw {
-        angle_deg: params[0],
-        turn_rate_dps: params[1],
-        direction: yaw_direction_from_param(params[2]),
-        relative: bool_from_param(params[3]),
-    }
 }
 
 mission_commands! {
@@ -3123,18 +2063,18 @@ mission_commands! {
     Condition {
         Delay(CondDelay) {
             command: MAV_CMD_CONDITION_DELAY,
-            to_wire: condition_delay_to_wire,
-            from_wire: condition_delay_from_wire,
+            to_wire: cond_delay_to_wire,
+            from_wire: cond_delay_from_wire,
         },
         Distance(CondDistance) {
             command: MAV_CMD_CONDITION_DISTANCE,
-            to_wire: condition_distance_to_wire,
-            from_wire: condition_distance_from_wire,
+            to_wire: cond_distance_to_wire,
+            from_wire: cond_distance_from_wire,
         },
         Yaw(CondYaw) {
             command: MAV_CMD_CONDITION_YAW,
-            to_wire: condition_yaw_to_wire,
-            from_wire: condition_yaw_from_wire,
+            to_wire: cond_yaw_to_wire,
+            from_wire: cond_yaw_from_wire,
         }
     }
 }
