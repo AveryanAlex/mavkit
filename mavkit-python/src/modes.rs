@@ -4,7 +4,7 @@ use pyo3::exceptions::PyStopAsyncIteration;
 use pyo3::prelude::*;
 
 use crate::error::{duration_from_secs, to_py_err};
-use crate::macros::py_subscription;
+use crate::macros::define_observation_wrapper;
 use crate::support::PySupportStateHandle;
 use crate::vehicle::vehicle_label;
 
@@ -172,6 +172,9 @@ impl PyCurrentMode {
     }
 }
 
+// PyModeCatalogHandle and PyModeCatalogSubscription cannot use define_observation_wrapper!
+// because the inner type is Vec<ModeDescriptor>, which requires element-by-element conversion
+// in every method (latest, wait, wait_timeout) and in recv.  A scalar From<T> is not enough.
 #[pyclass(name = "ModeCatalogSubscription", frozen, skip_from_py_object)]
 pub struct PyModeCatalogSubscription {
     inner: Arc<tokio::sync::Mutex<mavkit::ObservationSubscription<Vec<mavkit::ModeDescriptor>>>>,
@@ -257,59 +260,15 @@ impl PyModeCatalogHandle {
     }
 }
 
-py_subscription!(
+define_observation_wrapper!(
+    PyCurrentModeHandle,
     PyCurrentModeSubscription,
     mavkit::CurrentMode,
     PyCurrentMode,
+    "CurrentModeHandle",
     "CurrentModeSubscription",
     "current-mode subscription closed"
 );
-
-#[pyclass(name = "CurrentModeHandle", frozen, skip_from_py_object)]
-#[derive(Clone)]
-pub struct PyCurrentModeHandle {
-    inner: mavkit::ObservationHandle<mavkit::CurrentMode>,
-}
-
-impl PyCurrentModeHandle {
-    fn new(inner: mavkit::ObservationHandle<mavkit::CurrentMode>) -> Self {
-        Self { inner }
-    }
-
-    pub(crate) fn from_observation(inner: mavkit::ObservationHandle<mavkit::CurrentMode>) -> Self {
-        Self::new(inner)
-    }
-}
-
-#[pymethods]
-impl PyCurrentModeHandle {
-    fn latest(&self) -> Option<PyCurrentMode> {
-        self.inner.latest().map(Into::into)
-    }
-
-    fn wait<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let inner = self.inner.clone();
-        pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            let value = inner.wait().await.map_err(to_py_err)?;
-            Ok(PyCurrentMode::from(value))
-        })
-    }
-
-    fn wait_timeout<'py>(&self, py: Python<'py>, timeout_secs: f64) -> PyResult<Bound<'py, PyAny>> {
-        let inner = self.inner.clone();
-        let timeout = duration_from_secs(timeout_secs)?;
-        pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            let value = inner.wait_timeout(timeout).await.map_err(to_py_err)?;
-            Ok(PyCurrentMode::from(value))
-        })
-    }
-
-    fn subscribe(&self) -> PyCurrentModeSubscription {
-        PyCurrentModeSubscription {
-            inner: Arc::new(tokio::sync::Mutex::new(self.inner.subscribe())),
-        }
-    }
-}
 
 #[pyclass(name = "ModesHandle", frozen, skip_from_py_object)]
 #[derive(Clone)]

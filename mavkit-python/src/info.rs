@@ -1,10 +1,7 @@
-use std::sync::Arc;
-
 use pyo3::prelude::*;
 use pyo3::types::PyList;
 
-use crate::error::{duration_from_secs, to_py_err};
-use crate::macros::py_subscription;
+use crate::macros::define_observation_wrapper;
 use crate::vehicle::vehicle_label;
 
 #[pyclass(name = "FirmwareInfo", frozen, skip_from_py_object)]
@@ -320,72 +317,6 @@ impl PyPersistentIdentity {
             self.state, self.canonical_id, self.aliases
         )
     }
-}
-
-macro_rules! define_observation_wrapper {
-    (
-        $handle_name:ident,
-        $subscription_name:ident,
-        $rust_ty:ty,
-        $py_ty:ty,
-        $py_name:literal,
-        $subscription_py_name:literal,
-        $closed_message:literal
-    ) => {
-        py_subscription!(
-            $subscription_name,
-            $rust_ty,
-            $py_ty,
-            $subscription_py_name,
-            $closed_message
-        );
-
-        #[pyclass(name = $py_name, frozen, skip_from_py_object)]
-        #[derive(Clone)]
-        pub struct $handle_name {
-            inner: mavkit::ObservationHandle<$rust_ty>,
-        }
-
-        impl $handle_name {
-            fn new(inner: mavkit::ObservationHandle<$rust_ty>) -> Self {
-                Self { inner }
-            }
-        }
-
-        #[pymethods]
-        impl $handle_name {
-            fn latest(&self) -> Option<$py_ty> {
-                self.inner.latest().map(Into::into)
-            }
-
-            fn wait<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-                let inner = self.inner.clone();
-                pyo3_async_runtimes::tokio::future_into_py(py, async move {
-                    let value = inner.wait().await.map_err(to_py_err)?;
-                    Ok(<$py_ty>::from(value))
-                })
-            }
-
-            fn wait_timeout<'py>(
-                &self,
-                py: Python<'py>,
-                timeout_secs: f64,
-            ) -> PyResult<Bound<'py, PyAny>> {
-                let inner = self.inner.clone();
-                let timeout = duration_from_secs(timeout_secs)?;
-                pyo3_async_runtimes::tokio::future_into_py(py, async move {
-                    let value = inner.wait_timeout(timeout).await.map_err(to_py_err)?;
-                    Ok(<$py_ty>::from(value))
-                })
-            }
-
-            fn subscribe(&self) -> $subscription_name {
-                $subscription_name {
-                    inner: Arc::new(tokio::sync::Mutex::new(self.inner.subscribe())),
-                }
-            }
-        }
-    };
 }
 
 define_observation_wrapper!(

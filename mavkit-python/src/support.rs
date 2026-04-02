@@ -1,9 +1,6 @@
-use std::sync::Arc;
-
 use pyo3::prelude::*;
 
-use crate::error::{duration_from_secs, to_py_err};
-use crate::macros::py_subscription;
+use crate::macros::define_observation_wrapper;
 use crate::vehicle::vehicle_label;
 
 #[pyclass(name = "SupportState", eq, frozen, from_py_object)]
@@ -24,55 +21,15 @@ impl From<mavkit::SupportState> for PySupportState {
     }
 }
 
-py_subscription!(
+define_observation_wrapper!(
+    PySupportStateHandle,
     PySupportStateSubscription,
     mavkit::SupportState,
     PySupportState,
+    "SupportStateHandle",
     "SupportStateSubscription",
     "support-state subscription closed"
 );
-
-#[pyclass(name = "SupportStateHandle", frozen, skip_from_py_object)]
-#[derive(Clone)]
-pub struct PySupportStateHandle {
-    inner: mavkit::ObservationHandle<mavkit::SupportState>,
-}
-
-impl PySupportStateHandle {
-    pub(crate) fn new(inner: mavkit::ObservationHandle<mavkit::SupportState>) -> Self {
-        Self { inner }
-    }
-}
-
-#[pymethods]
-impl PySupportStateHandle {
-    fn latest(&self) -> Option<PySupportState> {
-        self.inner.latest().map(Into::into)
-    }
-
-    fn wait<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
-        let inner = self.inner.clone();
-        pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            let value = inner.wait().await.map_err(to_py_err)?;
-            Ok(PySupportState::from(value))
-        })
-    }
-
-    fn wait_timeout<'py>(&self, py: Python<'py>, timeout_secs: f64) -> PyResult<Bound<'py, PyAny>> {
-        let inner = self.inner.clone();
-        let timeout = duration_from_secs(timeout_secs)?;
-        pyo3_async_runtimes::tokio::future_into_py(py, async move {
-            let value = inner.wait_timeout(timeout).await.map_err(to_py_err)?;
-            Ok(PySupportState::from(value))
-        })
-    }
-
-    fn subscribe(&self) -> PySupportStateSubscription {
-        PySupportStateSubscription {
-            inner: Arc::new(tokio::sync::Mutex::new(self.inner.subscribe())),
-        }
-    }
-}
 
 #[pyclass(name = "SupportHandle", frozen, skip_from_py_object)]
 #[derive(Clone)]
