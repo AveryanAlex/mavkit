@@ -154,41 +154,64 @@ impl MessageCommandHub {
     }
 }
 
-#[derive(Clone)]
-pub(crate) struct TelemetryMessageHandles {
-    pub(crate) commands: MessageCommandHub,
-    pub(crate) vfr_hud: MessageHandle<dialect::VFR_HUD_DATA>,
-    pub(crate) global_position_int: MessageHandle<dialect::GLOBAL_POSITION_INT_DATA>,
-    pub(crate) local_position_ned: MessageHandle<dialect::LOCAL_POSITION_NED_DATA>,
-    pub(crate) gps_raw_int: MessageHandle<dialect::GPS_RAW_INT_DATA>,
-    pub(crate) attitude: MessageHandle<dialect::ATTITUDE_DATA>,
-    pub(crate) sys_status: MessageHandle<dialect::SYS_STATUS_DATA>,
-    pub(crate) battery_status: IndexedMessageFamily<u8, dialect::BATTERY_STATUS_DATA>,
-    pub(crate) nav_controller_output: MessageHandle<dialect::NAV_CONTROLLER_OUTPUT_DATA>,
-    pub(crate) terrain_report: MessageHandle<dialect::TERRAIN_REPORT_DATA>,
-    pub(crate) rc_channels: MessageHandle<dialect::RC_CHANNELS_DATA>,
-    pub(crate) servo_output_raw: IndexedMessageFamily<u8, dialect::SERVO_OUTPUT_RAW_DATA>,
-    pub(crate) home_position: MessageHandle<dialect::HOME_POSITION_DATA>,
-    pub(crate) gps_global_origin: MessageHandle<dialect::GPS_GLOBAL_ORIGIN_DATA>,
-    pub(crate) status_text: MessageHandle<StatusTextEvent>,
+/// Generates the paired `TelemetryMessageHandles` and `TelemetryMessageWriters` structs from a
+/// single canonical field list, eliminating the need to keep two parallel struct definitions in
+/// sync by hand.
+///
+/// Syntax:
+/// ```text
+/// define_messages! {
+///     slot    { field_name: Type, ... }
+///     indexed { field_name: Key, Type, ... }
+/// }
+/// ```
+///
+/// `slot` entries expand to `MessageHandle<Type>` on handles and `MessageSlotWriter<Type>` on
+/// writers. `indexed` entries expand to `IndexedMessageFamily<Key, Type>` on **both** structs
+/// (shared instance, not split into handle/writer).
+///
+/// Special fields (`commands`, `status_text`) are hardcoded in the expansion because they have
+/// asymmetric types between the two structs.
+macro_rules! define_messages {
+    (
+        slot    { $( $sf:ident : $st:ty ),* $(,)? }
+        indexed { $( $if:ident : $ik:ty , $it:ty ),* $(,)? }
+    ) => {
+        #[derive(Clone)]
+        pub(crate) struct TelemetryMessageHandles {
+            pub(crate) commands: MessageCommandHub,
+            $( pub(crate) $sf: MessageHandle<$st>, )*
+            $( pub(crate) $if: IndexedMessageFamily<$ik, $it>, )*
+            pub(crate) status_text: MessageHandle<StatusTextEvent>,
+        }
+
+        #[derive(Clone)]
+        pub(crate) struct TelemetryMessageWriters {
+            $( pub(crate) $sf: MessageSlotWriter<$st>, )*
+            $( pub(crate) $if: IndexedMessageFamily<$ik, $it>, )*
+            pub(crate) status_text: super::status_text::StatusTextWriter,
+        }
+    };
 }
 
-#[derive(Clone)]
-pub(crate) struct TelemetryMessageWriters {
-    pub(crate) vfr_hud: MessageSlotWriter<dialect::VFR_HUD_DATA>,
-    pub(crate) global_position_int: MessageSlotWriter<dialect::GLOBAL_POSITION_INT_DATA>,
-    pub(crate) local_position_ned: MessageSlotWriter<dialect::LOCAL_POSITION_NED_DATA>,
-    pub(crate) gps_raw_int: MessageSlotWriter<dialect::GPS_RAW_INT_DATA>,
-    pub(crate) attitude: MessageSlotWriter<dialect::ATTITUDE_DATA>,
-    pub(crate) sys_status: MessageSlotWriter<dialect::SYS_STATUS_DATA>,
-    pub(crate) battery_status: IndexedMessageFamily<u8, dialect::BATTERY_STATUS_DATA>,
-    pub(crate) nav_controller_output: MessageSlotWriter<dialect::NAV_CONTROLLER_OUTPUT_DATA>,
-    pub(crate) terrain_report: MessageSlotWriter<dialect::TERRAIN_REPORT_DATA>,
-    pub(crate) rc_channels: MessageSlotWriter<dialect::RC_CHANNELS_DATA>,
-    pub(crate) servo_output_raw: IndexedMessageFamily<u8, dialect::SERVO_OUTPUT_RAW_DATA>,
-    pub(crate) home_position: MessageSlotWriter<dialect::HOME_POSITION_DATA>,
-    pub(crate) gps_global_origin: MessageSlotWriter<dialect::GPS_GLOBAL_ORIGIN_DATA>,
-    pub(crate) status_text: super::status_text::StatusTextWriter,
+define_messages! {
+    slot {
+        vfr_hud: dialect::VFR_HUD_DATA,
+        global_position_int: dialect::GLOBAL_POSITION_INT_DATA,
+        local_position_ned: dialect::LOCAL_POSITION_NED_DATA,
+        gps_raw_int: dialect::GPS_RAW_INT_DATA,
+        attitude: dialect::ATTITUDE_DATA,
+        sys_status: dialect::SYS_STATUS_DATA,
+        nav_controller_output: dialect::NAV_CONTROLLER_OUTPUT_DATA,
+        terrain_report: dialect::TERRAIN_REPORT_DATA,
+        rc_channels: dialect::RC_CHANNELS_DATA,
+        home_position: dialect::HOME_POSITION_DATA,
+        gps_global_origin: dialect::GPS_GLOBAL_ORIGIN_DATA,
+    }
+    indexed {
+        battery_status: u8, dialect::BATTERY_STATUS_DATA,
+        servo_output_raw: u8, dialect::SERVO_OUTPUT_RAW_DATA,
+    }
 }
 
 pub(crate) fn create_telemetry_message_backing_stores()
