@@ -887,538 +887,290 @@ impl PyMetricHandle {
     }
 }
 
-enum MessageSampleValue {
-    VfrHud(mavkit::MessageSample<dialect::VFR_HUD_DATA>),
-    GlobalPositionInt(mavkit::MessageSample<dialect::GLOBAL_POSITION_INT_DATA>),
-    LocalPositionNed(mavkit::MessageSample<dialect::LOCAL_POSITION_NED_DATA>),
-    GpsRawInt(mavkit::MessageSample<dialect::GPS_RAW_INT_DATA>),
-    Attitude(mavkit::MessageSample<dialect::ATTITUDE_DATA>),
-    SysStatus(mavkit::MessageSample<dialect::SYS_STATUS_DATA>),
-    BatteryStatus(mavkit::MessageSample<dialect::BATTERY_STATUS_DATA>),
-    NavControllerOutput(mavkit::MessageSample<dialect::NAV_CONTROLLER_OUTPUT_DATA>),
-    TerrainReport(mavkit::MessageSample<dialect::TERRAIN_REPORT_DATA>),
-    RcChannels(mavkit::MessageSample<dialect::RC_CHANNELS_DATA>),
-    ServoOutputRaw(mavkit::MessageSample<dialect::SERVO_OUTPUT_RAW_DATA>),
-    HomePosition(mavkit::MessageSample<dialect::HOME_POSITION_DATA>),
-    GpsGlobalOrigin(mavkit::MessageSample<dialect::GPS_GLOBAL_ORIGIN_DATA>),
-    StatusText(mavkit::MessageSample<mavkit::StatusTextEvent>),
+macro_rules! message_sample_py_value {
+    ($py:expr, serialize, $value:expr) => {
+        serialize_to_py!($py, $value)?
+    };
+    ($py:expr, status_text, $value:expr) => {
+        Py::new($py, PyStatusTextEvent::from($value))?.into_any()
+    };
 }
 
-impl MessageSampleValue {
-    fn into_py(self, py: Python<'_>) -> PyResult<PyMessageSample> {
-        match self {
-            Self::VfrHud(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::GlobalPositionInt(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::LocalPositionNed(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::GpsRawInt(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::Attitude(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::SysStatus(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::BatteryStatus(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::NavControllerOutput(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::TerrainReport(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::RcChannels(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::ServoOutputRaw(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::HomePosition(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::GpsGlobalOrigin(sample) => Ok(PyMessageSample::new(
-                serialize_to_py!(py, sample.value)?,
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
-            Self::StatusText(sample) => Ok(PyMessageSample::new(
-                Py::new(py, PyStatusTextEvent::from(sample.value))?.into_any(),
-                vehicle_timestamp_to_py(py, sample.vehicle_time)?,
-                monotonic_seconds(sample.received_at),
-            )),
+/// Rows are:
+/// - periodic: enum variant, `PyPeriodicMessageHandle` constructor name, sample type.
+/// - event: enum variant, `PyEventMessageHandle` constructor name, sample type.
+/// - push: enum variant, `PyMessageHandle` constructor name, sample type, conversion mode.
+///
+/// "push" here means streamed message handles that support latest/wait/subscribe but not
+/// request/set_rate. Keep this registry in sync with the public accessors on
+/// `PyTelemetryMessagesHandle` below.
+macro_rules! define_message_wrapper_stack {
+    (
+        periodic: {
+            $($p_variant:ident, $p_fn_name:ident, $p_sample_ty:ty;)+
         }
-    }
-}
-
-#[derive(Clone)]
-enum PeriodicMessageHandleKind {
-    VfrHud(mavkit::PeriodicMessageHandle<dialect::VFR_HUD_DATA>),
-    GlobalPositionInt(mavkit::PeriodicMessageHandle<dialect::GLOBAL_POSITION_INT_DATA>),
-    LocalPositionNed(mavkit::PeriodicMessageHandle<dialect::LOCAL_POSITION_NED_DATA>),
-    GpsRawInt(mavkit::PeriodicMessageHandle<dialect::GPS_RAW_INT_DATA>),
-    Attitude(mavkit::PeriodicMessageHandle<dialect::ATTITUDE_DATA>),
-    SysStatus(mavkit::PeriodicMessageHandle<dialect::SYS_STATUS_DATA>),
-    BatteryStatus(mavkit::PeriodicMessageHandle<dialect::BATTERY_STATUS_DATA>),
-    NavControllerOutput(mavkit::PeriodicMessageHandle<dialect::NAV_CONTROLLER_OUTPUT_DATA>),
-    TerrainReport(mavkit::PeriodicMessageHandle<dialect::TERRAIN_REPORT_DATA>),
-    RcChannels(mavkit::PeriodicMessageHandle<dialect::RC_CHANNELS_DATA>),
-    ServoOutputRaw(mavkit::PeriodicMessageHandle<dialect::SERVO_OUTPUT_RAW_DATA>),
-}
-
-impl PeriodicMessageHandleKind {
-    fn latest_value(&self) -> Option<MessageSampleValue> {
-        match self {
-            Self::VfrHud(handle) => handle.latest().map(MessageSampleValue::VfrHud),
-            Self::GlobalPositionInt(handle) => {
-                handle.latest().map(MessageSampleValue::GlobalPositionInt)
-            }
-            Self::LocalPositionNed(handle) => {
-                handle.latest().map(MessageSampleValue::LocalPositionNed)
-            }
-            Self::GpsRawInt(handle) => handle.latest().map(MessageSampleValue::GpsRawInt),
-            Self::Attitude(handle) => handle.latest().map(MessageSampleValue::Attitude),
-            Self::SysStatus(handle) => handle.latest().map(MessageSampleValue::SysStatus),
-            Self::BatteryStatus(handle) => handle.latest().map(MessageSampleValue::BatteryStatus),
-            Self::NavControllerOutput(handle) => {
-                handle.latest().map(MessageSampleValue::NavControllerOutput)
-            }
-            Self::TerrainReport(handle) => handle.latest().map(MessageSampleValue::TerrainReport),
-            Self::RcChannels(handle) => handle.latest().map(MessageSampleValue::RcChannels),
-            Self::ServoOutputRaw(handle) => handle.latest().map(MessageSampleValue::ServoOutputRaw),
+        event: {
+            $($e_variant:ident, $e_fn_name:ident, $e_sample_ty:ty;)+
         }
-    }
+        push: {
+            $($u_variant:ident, $u_fn_name:ident, $u_sample_ty:ty, $u_py_conv_kind:ident;)+
+        }
+    ) => {
+        enum MessageSampleValue {
+            $($p_variant(mavkit::MessageSample<$p_sample_ty>),)+
+            $($e_variant(mavkit::MessageSample<$e_sample_ty>),)+
+            $($u_variant(mavkit::MessageSample<$u_sample_ty>),)+
+        }
 
-    async fn wait_value(self) -> Result<MessageSampleValue, mavkit::VehicleError> {
-        match self {
-            Self::VfrHud(handle) => handle.wait().await.map(MessageSampleValue::VfrHud),
-            Self::GlobalPositionInt(handle) => handle
-                .wait()
-                .await
-                .map(MessageSampleValue::GlobalPositionInt),
-            Self::LocalPositionNed(handle) => handle
-                .wait()
-                .await
-                .map(MessageSampleValue::LocalPositionNed),
-            Self::GpsRawInt(handle) => handle.wait().await.map(MessageSampleValue::GpsRawInt),
-            Self::Attitude(handle) => handle.wait().await.map(MessageSampleValue::Attitude),
-            Self::SysStatus(handle) => handle.wait().await.map(MessageSampleValue::SysStatus),
-            Self::BatteryStatus(handle) => {
-                handle.wait().await.map(MessageSampleValue::BatteryStatus)
-            }
-            Self::NavControllerOutput(handle) => handle
-                .wait()
-                .await
-                .map(MessageSampleValue::NavControllerOutput),
-            Self::TerrainReport(handle) => {
-                handle.wait().await.map(MessageSampleValue::TerrainReport)
-            }
-            Self::RcChannels(handle) => handle.wait().await.map(MessageSampleValue::RcChannels),
-            Self::ServoOutputRaw(handle) => {
-                handle.wait().await.map(MessageSampleValue::ServoOutputRaw)
+        impl MessageSampleValue {
+            fn into_py(self, py: Python<'_>) -> PyResult<PyMessageSample> {
+                match self {
+                    $(Self::$p_variant(sample) => Ok(PyMessageSample::new(
+                        message_sample_py_value!(py, serialize, sample.value),
+                        vehicle_timestamp_to_py(py, sample.vehicle_time)?,
+                        monotonic_seconds(sample.received_at),
+                    )),)+
+                    $(Self::$e_variant(sample) => Ok(PyMessageSample::new(
+                        message_sample_py_value!(py, serialize, sample.value),
+                        vehicle_timestamp_to_py(py, sample.vehicle_time)?,
+                        monotonic_seconds(sample.received_at),
+                    )),)+
+                    $(Self::$u_variant(sample) => Ok(PyMessageSample::new(
+                        message_sample_py_value!(py, $u_py_conv_kind, sample.value),
+                        vehicle_timestamp_to_py(py, sample.vehicle_time)?,
+                        monotonic_seconds(sample.received_at),
+                    )),)+
+                }
             }
         }
-    }
 
-    async fn wait_timeout_value(
-        self,
-        timeout: Duration,
-    ) -> Result<MessageSampleValue, mavkit::VehicleError> {
-        match self {
-            Self::VfrHud(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::VfrHud),
-            Self::GlobalPositionInt(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::GlobalPositionInt),
-            Self::LocalPositionNed(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::LocalPositionNed),
-            Self::GpsRawInt(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::GpsRawInt),
-            Self::Attitude(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::Attitude),
-            Self::SysStatus(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::SysStatus),
-            Self::BatteryStatus(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::BatteryStatus),
-            Self::NavControllerOutput(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::NavControllerOutput),
-            Self::TerrainReport(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::TerrainReport),
-            Self::RcChannels(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::RcChannels),
-            Self::ServoOutputRaw(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::ServoOutputRaw),
+        #[derive(Clone)]
+        enum PeriodicMessageHandleKind {
+            $($p_variant(mavkit::PeriodicMessageHandle<$p_sample_ty>),)+
         }
-    }
 
-    async fn request_value(
-        self,
-        timeout: Duration,
-    ) -> Result<MessageSampleValue, mavkit::VehicleError> {
-        match self {
-            Self::VfrHud(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::VfrHud),
-            Self::GlobalPositionInt(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::GlobalPositionInt),
-            Self::LocalPositionNed(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::LocalPositionNed),
-            Self::GpsRawInt(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::GpsRawInt),
-            Self::Attitude(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::Attitude),
-            Self::SysStatus(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::SysStatus),
-            Self::BatteryStatus(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::BatteryStatus),
-            Self::NavControllerOutput(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::NavControllerOutput),
-            Self::TerrainReport(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::TerrainReport),
-            Self::RcChannels(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::RcChannels),
-            Self::ServoOutputRaw(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::ServoOutputRaw),
-        }
-    }
+        impl PeriodicMessageHandleKind {
+            fn latest_value(&self) -> Option<MessageSampleValue> {
+                match self {
+                    $(Self::$p_variant(handle) => handle.latest().map(MessageSampleValue::$p_variant),)+
+                }
+            }
 
-    async fn set_rate(self, hz: f32) -> Result<(), mavkit::VehicleError> {
-        match self {
-            Self::VfrHud(handle) => handle.set_rate(hz).await,
-            Self::GlobalPositionInt(handle) => handle.set_rate(hz).await,
-            Self::LocalPositionNed(handle) => handle.set_rate(hz).await,
-            Self::GpsRawInt(handle) => handle.set_rate(hz).await,
-            Self::Attitude(handle) => handle.set_rate(hz).await,
-            Self::SysStatus(handle) => handle.set_rate(hz).await,
-            Self::BatteryStatus(handle) => handle.set_rate(hz).await,
-            Self::NavControllerOutput(handle) => handle.set_rate(hz).await,
-            Self::TerrainReport(handle) => handle.set_rate(hz).await,
-            Self::RcChannels(handle) => handle.set_rate(hz).await,
-            Self::ServoOutputRaw(handle) => handle.set_rate(hz).await,
-        }
-    }
+            async fn wait_value(self) -> Result<MessageSampleValue, mavkit::VehicleError> {
+                match self {
+                    $(Self::$p_variant(handle) => handle.wait().await.map(MessageSampleValue::$p_variant),)+
+                }
+            }
 
-    fn subscribe_value(&self) -> MessageSubscriptionKind {
-        match self {
-            Self::VfrHud(handle) => MessageSubscriptionKind::VfrHud(handle.subscribe()),
-            Self::GlobalPositionInt(handle) => {
-                MessageSubscriptionKind::GlobalPositionInt(handle.subscribe())
+            async fn wait_timeout_value(
+                self,
+                timeout: Duration,
+            ) -> Result<MessageSampleValue, mavkit::VehicleError> {
+                match self {
+                    $(Self::$p_variant(handle) => handle
+                        .wait_timeout(timeout)
+                        .await
+                        .map(MessageSampleValue::$p_variant),)+
+                }
             }
-            Self::LocalPositionNed(handle) => {
-                MessageSubscriptionKind::LocalPositionNed(handle.subscribe())
+
+            async fn request_value(
+                self,
+                timeout: Duration,
+            ) -> Result<MessageSampleValue, mavkit::VehicleError> {
+                match self {
+                    $(Self::$p_variant(handle) => handle
+                        .request(timeout)
+                        .await
+                        .map(MessageSampleValue::$p_variant),)+
+                }
             }
-            Self::GpsRawInt(handle) => MessageSubscriptionKind::GpsRawInt(handle.subscribe()),
-            Self::Attitude(handle) => MessageSubscriptionKind::Attitude(handle.subscribe()),
-            Self::SysStatus(handle) => MessageSubscriptionKind::SysStatus(handle.subscribe()),
-            Self::BatteryStatus(handle) => {
-                MessageSubscriptionKind::BatteryStatus(handle.subscribe())
+
+            async fn set_rate(self, hz: f32) -> Result<(), mavkit::VehicleError> {
+                match self {
+                    $(Self::$p_variant(handle) => handle.set_rate(hz).await,)+
+                }
             }
-            Self::NavControllerOutput(handle) => {
-                MessageSubscriptionKind::NavControllerOutput(handle.subscribe())
+
+            fn subscribe_value(&self) -> MessageSubscriptionKind {
+                match self {
+                    $(Self::$p_variant(handle) => MessageSubscriptionKind::$p_variant(handle.subscribe()),)+
+                }
             }
-            Self::TerrainReport(handle) => {
-                MessageSubscriptionKind::TerrainReport(handle.subscribe())
-            }
-            Self::RcChannels(handle) => MessageSubscriptionKind::RcChannels(handle.subscribe()),
-            Self::ServoOutputRaw(handle) => {
-                MessageSubscriptionKind::ServoOutputRaw(handle.subscribe())
+
+            fn support_name(&self) -> Option<&'static str> {
+                match self {
+                    $(Self::$p_variant(handle) => support_state_name(handle.support().latest()),)+
+                }
             }
         }
-    }
 
-    fn support_name(&self) -> Option<&'static str> {
-        match self {
-            Self::VfrHud(handle) => support_state_name(handle.support().latest()),
-            Self::GlobalPositionInt(handle) => support_state_name(handle.support().latest()),
-            Self::LocalPositionNed(handle) => support_state_name(handle.support().latest()),
-            Self::GpsRawInt(handle) => support_state_name(handle.support().latest()),
-            Self::Attitude(handle) => support_state_name(handle.support().latest()),
-            Self::SysStatus(handle) => support_state_name(handle.support().latest()),
-            Self::BatteryStatus(handle) => support_state_name(handle.support().latest()),
-            Self::NavControllerOutput(handle) => support_state_name(handle.support().latest()),
-            Self::TerrainReport(handle) => support_state_name(handle.support().latest()),
-            Self::RcChannels(handle) => support_state_name(handle.support().latest()),
-            Self::ServoOutputRaw(handle) => support_state_name(handle.support().latest()),
+        #[derive(Clone)]
+        enum EventMessageHandleKind {
+            $($e_variant(mavkit::EventMessageHandle<$e_sample_ty>),)+
+        }
+
+        impl EventMessageHandleKind {
+            fn latest_value(&self) -> Option<MessageSampleValue> {
+                match self {
+                    $(Self::$e_variant(handle) => handle.latest().map(MessageSampleValue::$e_variant),)+
+                }
+            }
+
+            async fn wait_value(self) -> Result<MessageSampleValue, mavkit::VehicleError> {
+                match self {
+                    $(Self::$e_variant(handle) => handle.wait().await.map(MessageSampleValue::$e_variant),)+
+                }
+            }
+
+            async fn wait_timeout_value(
+                self,
+                timeout: Duration,
+            ) -> Result<MessageSampleValue, mavkit::VehicleError> {
+                match self {
+                    $(Self::$e_variant(handle) => handle
+                        .wait_timeout(timeout)
+                        .await
+                        .map(MessageSampleValue::$e_variant),)+
+                }
+            }
+
+            async fn request_value(
+                self,
+                timeout: Duration,
+            ) -> Result<MessageSampleValue, mavkit::VehicleError> {
+                match self {
+                    $(Self::$e_variant(handle) => handle
+                        .request(timeout)
+                        .await
+                        .map(MessageSampleValue::$e_variant),)+
+                }
+            }
+
+            fn subscribe_value(&self) -> MessageSubscriptionKind {
+                match self {
+                    $(Self::$e_variant(handle) => MessageSubscriptionKind::$e_variant(handle.subscribe()),)+
+                }
+            }
+
+            fn support_name(&self) -> Option<&'static str> {
+                match self {
+                    $(Self::$e_variant(handle) => support_state_name(handle.support().latest()),)+
+                }
+            }
+        }
+
+        #[derive(Clone)]
+        enum PushMessageHandleKind {
+            $($u_variant(mavkit::MessageHandle<$u_sample_ty>),)+
+        }
+
+        impl PushMessageHandleKind {
+            fn latest_value(&self) -> Option<MessageSampleValue> {
+                match self {
+                    $(Self::$u_variant(handle) => handle.latest().map(MessageSampleValue::$u_variant),)+
+                }
+            }
+
+            async fn wait_value(self) -> Result<MessageSampleValue, mavkit::VehicleError> {
+                match self {
+                    $(Self::$u_variant(handle) => handle.wait().await.map(MessageSampleValue::$u_variant),)+
+                }
+            }
+
+            async fn wait_timeout_value(
+                self,
+                timeout: Duration,
+            ) -> Result<MessageSampleValue, mavkit::VehicleError> {
+                match self {
+                    $(Self::$u_variant(handle) => handle
+                        .wait_timeout(timeout)
+                        .await
+                        .map(MessageSampleValue::$u_variant),)+
+                }
+            }
+
+            fn subscribe_value(&self) -> MessageSubscriptionKind {
+                match self {
+                    $(Self::$u_variant(handle) => MessageSubscriptionKind::$u_variant(handle.subscribe()),)+
+                }
+            }
+
+            fn support_name(&self) -> Option<&'static str> {
+                match self {
+                    $(Self::$u_variant(handle) => support_state_name(handle.support().latest()),)+
+                }
+            }
+        }
+
+        enum MessageSubscriptionKind {
+            $($p_variant(mavkit::ObservationSubscription<mavkit::MessageSample<$p_sample_ty>>),)+
+            $($e_variant(mavkit::ObservationSubscription<mavkit::MessageSample<$e_sample_ty>>),)+
+            $($u_variant(mavkit::ObservationSubscription<mavkit::MessageSample<$u_sample_ty>>),)+
+        }
+
+        impl MessageSubscriptionKind {
+            async fn recv_value(&mut self) -> Option<MessageSampleValue> {
+                match self {
+                    $(Self::$p_variant(subscription) => {
+                        subscription.recv().await.map(MessageSampleValue::$p_variant)
+                    },)+
+                    $(Self::$e_variant(subscription) => {
+                        subscription.recv().await.map(MessageSampleValue::$e_variant)
+                    },)+
+                    $(Self::$u_variant(subscription) => {
+                        subscription.recv().await.map(MessageSampleValue::$u_variant)
+                    },)+
+                }
+            }
+        }
+
+        impl PyPeriodicMessageHandle {
+            $(fn $p_fn_name(inner: mavkit::PeriodicMessageHandle<$p_sample_ty>) -> Self {
+                Self {
+                    inner: PeriodicMessageHandleKind::$p_variant(inner),
+                }
+            })+
+        }
+
+        impl PyEventMessageHandle {
+            $(fn $e_fn_name(inner: mavkit::EventMessageHandle<$e_sample_ty>) -> Self {
+                Self {
+                    inner: EventMessageHandleKind::$e_variant(inner),
+                }
+            })+
+        }
+
+        impl PyMessageHandle {
+            $(fn $u_fn_name(inner: mavkit::MessageHandle<$u_sample_ty>) -> Self {
+                Self {
+                    inner: PushMessageHandleKind::$u_variant(inner),
+                }
+            })+
         }
     }
 }
 
-#[derive(Clone)]
-enum EventMessageHandleKind {
-    HomePosition(mavkit::EventMessageHandle<dialect::HOME_POSITION_DATA>),
-    GpsGlobalOrigin(mavkit::EventMessageHandle<dialect::GPS_GLOBAL_ORIGIN_DATA>),
-}
-
-impl EventMessageHandleKind {
-    fn latest_value(&self) -> Option<MessageSampleValue> {
-        match self {
-            Self::HomePosition(handle) => handle.latest().map(MessageSampleValue::HomePosition),
-            Self::GpsGlobalOrigin(handle) => {
-                handle.latest().map(MessageSampleValue::GpsGlobalOrigin)
-            }
-        }
+define_message_wrapper_stack! {
+    periodic: {
+        VfrHud, vfr_hud, dialect::VFR_HUD_DATA;
+        GlobalPositionInt, global_position_int, dialect::GLOBAL_POSITION_INT_DATA;
+        LocalPositionNed, local_position_ned, dialect::LOCAL_POSITION_NED_DATA;
+        GpsRawInt, gps_raw_int, dialect::GPS_RAW_INT_DATA;
+        Attitude, attitude, dialect::ATTITUDE_DATA;
+        SysStatus, sys_status, dialect::SYS_STATUS_DATA;
+        BatteryStatus, battery_status, dialect::BATTERY_STATUS_DATA;
+        NavControllerOutput, nav_controller_output, dialect::NAV_CONTROLLER_OUTPUT_DATA;
+        TerrainReport, terrain_report, dialect::TERRAIN_REPORT_DATA;
+        RcChannels, rc_channels, dialect::RC_CHANNELS_DATA;
+        ServoOutputRaw, servo_output_raw, dialect::SERVO_OUTPUT_RAW_DATA;
     }
-
-    async fn wait_value(self) -> Result<MessageSampleValue, mavkit::VehicleError> {
-        match self {
-            Self::HomePosition(handle) => handle.wait().await.map(MessageSampleValue::HomePosition),
-            Self::GpsGlobalOrigin(handle) => {
-                handle.wait().await.map(MessageSampleValue::GpsGlobalOrigin)
-            }
-        }
+    event: {
+        HomePosition, home_position, dialect::HOME_POSITION_DATA;
+        GpsGlobalOrigin, gps_global_origin, dialect::GPS_GLOBAL_ORIGIN_DATA;
     }
-
-    async fn wait_timeout_value(
-        self,
-        timeout: Duration,
-    ) -> Result<MessageSampleValue, mavkit::VehicleError> {
-        match self {
-            Self::HomePosition(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::HomePosition),
-            Self::GpsGlobalOrigin(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::GpsGlobalOrigin),
-        }
-    }
-
-    async fn request_value(
-        self,
-        timeout: Duration,
-    ) -> Result<MessageSampleValue, mavkit::VehicleError> {
-        match self {
-            Self::HomePosition(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::HomePosition),
-            Self::GpsGlobalOrigin(handle) => handle
-                .request(timeout)
-                .await
-                .map(MessageSampleValue::GpsGlobalOrigin),
-        }
-    }
-
-    fn subscribe_value(&self) -> MessageSubscriptionKind {
-        match self {
-            Self::HomePosition(handle) => MessageSubscriptionKind::HomePosition(handle.subscribe()),
-            Self::GpsGlobalOrigin(handle) => {
-                MessageSubscriptionKind::GpsGlobalOrigin(handle.subscribe())
-            }
-        }
-    }
-
-    fn support_name(&self) -> Option<&'static str> {
-        match self {
-            Self::HomePosition(handle) => support_state_name(handle.support().latest()),
-            Self::GpsGlobalOrigin(handle) => support_state_name(handle.support().latest()),
-        }
-    }
-}
-
-#[derive(Clone)]
-enum PushMessageHandleKind {
-    StatusText(mavkit::MessageHandle<mavkit::StatusTextEvent>),
-}
-
-impl PushMessageHandleKind {
-    fn latest_value(&self) -> Option<MessageSampleValue> {
-        match self {
-            Self::StatusText(handle) => handle.latest().map(MessageSampleValue::StatusText),
-        }
-    }
-
-    async fn wait_value(self) -> Result<MessageSampleValue, mavkit::VehicleError> {
-        match self {
-            Self::StatusText(handle) => handle.wait().await.map(MessageSampleValue::StatusText),
-        }
-    }
-
-    async fn wait_timeout_value(
-        self,
-        timeout: Duration,
-    ) -> Result<MessageSampleValue, mavkit::VehicleError> {
-        match self {
-            Self::StatusText(handle) => handle
-                .wait_timeout(timeout)
-                .await
-                .map(MessageSampleValue::StatusText),
-        }
-    }
-
-    fn subscribe_value(&self) -> MessageSubscriptionKind {
-        match self {
-            Self::StatusText(handle) => MessageSubscriptionKind::StatusText(handle.subscribe()),
-        }
-    }
-
-    fn support_name(&self) -> Option<&'static str> {
-        match self {
-            Self::StatusText(handle) => support_state_name(handle.support().latest()),
-        }
-    }
-}
-
-enum MessageSubscriptionKind {
-    VfrHud(mavkit::ObservationSubscription<mavkit::MessageSample<dialect::VFR_HUD_DATA>>),
-    GlobalPositionInt(
-        mavkit::ObservationSubscription<mavkit::MessageSample<dialect::GLOBAL_POSITION_INT_DATA>>,
-    ),
-    LocalPositionNed(
-        mavkit::ObservationSubscription<mavkit::MessageSample<dialect::LOCAL_POSITION_NED_DATA>>,
-    ),
-    GpsRawInt(mavkit::ObservationSubscription<mavkit::MessageSample<dialect::GPS_RAW_INT_DATA>>),
-    Attitude(mavkit::ObservationSubscription<mavkit::MessageSample<dialect::ATTITUDE_DATA>>),
-    SysStatus(mavkit::ObservationSubscription<mavkit::MessageSample<dialect::SYS_STATUS_DATA>>),
-    BatteryStatus(
-        mavkit::ObservationSubscription<mavkit::MessageSample<dialect::BATTERY_STATUS_DATA>>,
-    ),
-    NavControllerOutput(
-        mavkit::ObservationSubscription<mavkit::MessageSample<dialect::NAV_CONTROLLER_OUTPUT_DATA>>,
-    ),
-    TerrainReport(
-        mavkit::ObservationSubscription<mavkit::MessageSample<dialect::TERRAIN_REPORT_DATA>>,
-    ),
-    RcChannels(mavkit::ObservationSubscription<mavkit::MessageSample<dialect::RC_CHANNELS_DATA>>),
-    ServoOutputRaw(
-        mavkit::ObservationSubscription<mavkit::MessageSample<dialect::SERVO_OUTPUT_RAW_DATA>>,
-    ),
-    HomePosition(
-        mavkit::ObservationSubscription<mavkit::MessageSample<dialect::HOME_POSITION_DATA>>,
-    ),
-    GpsGlobalOrigin(
-        mavkit::ObservationSubscription<mavkit::MessageSample<dialect::GPS_GLOBAL_ORIGIN_DATA>>,
-    ),
-    StatusText(mavkit::ObservationSubscription<mavkit::MessageSample<mavkit::StatusTextEvent>>),
-}
-
-impl MessageSubscriptionKind {
-    async fn recv_value(&mut self) -> Option<MessageSampleValue> {
-        match self {
-            Self::VfrHud(subscription) => subscription.recv().await.map(MessageSampleValue::VfrHud),
-            Self::GlobalPositionInt(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::GlobalPositionInt),
-            Self::LocalPositionNed(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::LocalPositionNed),
-            Self::GpsRawInt(subscription) => {
-                subscription.recv().await.map(MessageSampleValue::GpsRawInt)
-            }
-            Self::Attitude(subscription) => {
-                subscription.recv().await.map(MessageSampleValue::Attitude)
-            }
-            Self::SysStatus(subscription) => {
-                subscription.recv().await.map(MessageSampleValue::SysStatus)
-            }
-            Self::BatteryStatus(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::BatteryStatus),
-            Self::NavControllerOutput(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::NavControllerOutput),
-            Self::TerrainReport(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::TerrainReport),
-            Self::RcChannels(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::RcChannels),
-            Self::ServoOutputRaw(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::ServoOutputRaw),
-            Self::HomePosition(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::HomePosition),
-            Self::GpsGlobalOrigin(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::GpsGlobalOrigin),
-            Self::StatusText(subscription) => subscription
-                .recv()
-                .await
-                .map(MessageSampleValue::StatusText),
-        }
+    push: {
+        StatusText, status_text, mavkit::StatusTextEvent, status_text;
     }
 }
 
@@ -1949,112 +1701,70 @@ impl PyTelemetryActuatorsNamespace {
 #[pymethods]
 impl PyTelemetryMessagesHandle {
     fn vfr_hud(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::VfrHud(self.inner.telemetry().messages().vfr_hud()),
-        }
+        PyPeriodicMessageHandle::vfr_hud(self.inner.telemetry().messages().vfr_hud())
     }
 
     fn global_position_int(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::GlobalPositionInt(
-                self.inner.telemetry().messages().global_position_int(),
-            ),
-        }
+        PyPeriodicMessageHandle::global_position_int(
+            self.inner.telemetry().messages().global_position_int(),
+        )
     }
 
     fn local_position_ned(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::LocalPositionNed(
-                self.inner.telemetry().messages().local_position_ned(),
-            ),
-        }
+        PyPeriodicMessageHandle::local_position_ned(
+            self.inner.telemetry().messages().local_position_ned(),
+        )
     }
 
     fn gps_raw_int(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::GpsRawInt(
-                self.inner.telemetry().messages().gps_raw_int(),
-            ),
-        }
+        PyPeriodicMessageHandle::gps_raw_int(self.inner.telemetry().messages().gps_raw_int())
     }
 
     fn attitude(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::Attitude(
-                self.inner.telemetry().messages().attitude(),
-            ),
-        }
+        PyPeriodicMessageHandle::attitude(self.inner.telemetry().messages().attitude())
     }
 
     fn sys_status(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::SysStatus(
-                self.inner.telemetry().messages().sys_status(),
-            ),
-        }
+        PyPeriodicMessageHandle::sys_status(self.inner.telemetry().messages().sys_status())
     }
 
     fn battery_status(&self, instance: u8) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::BatteryStatus(
-                self.inner.telemetry().messages().battery_status(instance),
-            ),
-        }
+        PyPeriodicMessageHandle::battery_status(
+            self.inner.telemetry().messages().battery_status(instance),
+        )
     }
 
     fn nav_controller_output(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::NavControllerOutput(
-                self.inner.telemetry().messages().nav_controller_output(),
-            ),
-        }
+        PyPeriodicMessageHandle::nav_controller_output(
+            self.inner.telemetry().messages().nav_controller_output(),
+        )
     }
 
     fn terrain_report(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::TerrainReport(
-                self.inner.telemetry().messages().terrain_report(),
-            ),
-        }
+        PyPeriodicMessageHandle::terrain_report(self.inner.telemetry().messages().terrain_report())
     }
 
     fn rc_channels(&self) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::RcChannels(
-                self.inner.telemetry().messages().rc_channels(),
-            ),
-        }
+        PyPeriodicMessageHandle::rc_channels(self.inner.telemetry().messages().rc_channels())
     }
 
     fn servo_output_raw(&self, port: u8) -> PyPeriodicMessageHandle {
-        PyPeriodicMessageHandle {
-            inner: PeriodicMessageHandleKind::ServoOutputRaw(
-                self.inner.telemetry().messages().servo_output_raw(port),
-            ),
-        }
+        PyPeriodicMessageHandle::servo_output_raw(
+            self.inner.telemetry().messages().servo_output_raw(port),
+        )
     }
 
     fn home_position(&self) -> PyEventMessageHandle {
-        PyEventMessageHandle {
-            inner: EventMessageHandleKind::HomePosition(
-                self.inner.telemetry().messages().home_position(),
-            ),
-        }
+        PyEventMessageHandle::home_position(self.inner.telemetry().messages().home_position())
     }
 
     fn gps_global_origin(&self) -> PyEventMessageHandle {
-        PyEventMessageHandle {
-            inner: EventMessageHandleKind::GpsGlobalOrigin(
-                self.inner.telemetry().messages().gps_global_origin(),
-            ),
-        }
+        PyEventMessageHandle::gps_global_origin(
+            self.inner.telemetry().messages().gps_global_origin(),
+        )
     }
 
     fn status_text(&self) -> PyMessageHandle {
-        PyMessageHandle {
-            inner: PushMessageHandleKind::StatusText(
-                self.inner.telemetry().messages().status_text(),
-            ),
-        }
+        PyMessageHandle::status_text(self.inner.telemetry().messages().status_text())
     }
 }
