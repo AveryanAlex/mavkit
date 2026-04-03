@@ -355,222 +355,160 @@ impl PyRawMissionCommand {
     }
 }
 
-#[pyclass(name = "NavWaypoint", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyNavWaypoint {
-    pub(crate) inner: mavkit::mission::commands::NavWaypoint,
+/// Generates simple infallible position-backed Python mission wrappers.
+///
+/// Keep this limited to wrappers whose only custom state is a `position` field plus direct
+/// scalar passthrough fields. Wrappers with validation, enum/string conversion, or other
+/// non-trivial Python behavior should stay hand-written.
+macro_rules! py_position_wrapper {
+    (
+        $py_name:ident,
+        $py_class_name:literal,
+        $inner_ty:path,
+        new_signature = ($($new_sig:tt)*),
+        new_attrs = { $(#[$new_attr:meta])* },
+        fields = { $($field:ident : $field_ty:ty),* $(,)? },
+        from_point_signature = ($($from_point_sig:tt)*)
+    ) => {
+        #[pyclass(name = $py_class_name, frozen, from_py_object)]
+        #[derive(Clone)]
+        pub struct $py_name {
+            pub(crate) inner: $inner_ty,
+        }
+
+        #[pymethods]
+        impl $py_name {
+            #[new]
+            #[pyo3(signature = ($($new_sig)*))]
+            $(#[$new_attr])*
+            fn new(
+                latitude_deg: f64,
+                longitude_deg: f64,
+                altitude_m: f32,
+                frame: PyMissionFrame,
+                $($field: $field_ty),*
+            ) -> Self {
+                type Inner = $inner_ty;
+                Self {
+                    inner: Inner {
+                        position: position_from_components(
+                            frame,
+                            latitude_deg,
+                            longitude_deg,
+                            altitude_m,
+                        ),
+                        $($field),*
+                    },
+                }
+            }
+
+            #[staticmethod]
+            #[pyo3(signature = ($($from_point_sig)*))]
+            fn from_point(position: &PyGeoPoint3d $(, $field: $field_ty)*) -> Self {
+                type Inner = $inner_ty;
+                Self {
+                    inner: Inner {
+                        position: position.inner.clone(),
+                        $($field),*
+                    },
+                }
+            }
+
+            #[getter]
+            fn frame(&self) -> PyMissionFrame {
+                position_components(&self.inner.position).0
+            }
+
+            #[getter]
+            fn latitude_deg(&self) -> f64 {
+                position_components(&self.inner.position).1
+            }
+
+            #[getter]
+            fn longitude_deg(&self) -> f64 {
+                position_components(&self.inner.position).2
+            }
+
+            #[getter]
+            fn altitude_m(&self) -> f32 {
+                position_components(&self.inner.position).3
+            }
+
+            $(
+                #[getter]
+                fn $field(&self) -> $field_ty {
+                    self.inner.$field
+                }
+            )*
+        }
+    };
 }
 
-#[pymethods]
-impl PyNavWaypoint {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt, hold_time_s=0.0, acceptance_radius_m=0.0, pass_radius_m=0.0, yaw_deg=0.0))]
-    #[allow(clippy::too_many_arguments)]
-    fn new(
-        latitude_deg: f64,
-        longitude_deg: f64,
-        altitude_m: f32,
-        frame: PyMissionFrame,
+py_position_wrapper!(
+    PyNavWaypoint,
+    "NavWaypoint",
+    mavkit::mission::commands::NavWaypoint,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt,
+        hold_time_s=0.0,
+        acceptance_radius_m=0.0,
+        pass_radius_m=0.0,
+        yaw_deg=0.0
+    ),
+    new_attrs = { #[allow(clippy::too_many_arguments)] },
+    fields = {
         hold_time_s: f32,
         acceptance_radius_m: f32,
         pass_radius_m: f32,
         yaw_deg: f32,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavWaypoint {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-                hold_time_s,
-                acceptance_radius_m,
-                pass_radius_m,
-                yaw_deg,
-            },
-        }
-    }
+    },
+    from_point_signature = (
+        *,
+        position,
+        hold_time_s=0.0,
+        acceptance_radius_m=0.0,
+        pass_radius_m=0.0,
+        yaw_deg=0.0
+    )
+);
 
-    #[staticmethod]
-    #[pyo3(signature = (*, position, hold_time_s=0.0, acceptance_radius_m=0.0, pass_radius_m=0.0, yaw_deg=0.0))]
-    fn from_point(
-        position: &PyGeoPoint3d,
-        hold_time_s: f32,
-        acceptance_radius_m: f32,
-        pass_radius_m: f32,
-        yaw_deg: f32,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavWaypoint {
-                position: position.inner.clone(),
-                hold_time_s,
-                acceptance_radius_m,
-                pass_radius_m,
-                yaw_deg,
-            },
-        }
-    }
+py_position_wrapper!(
+    PyNavTakeoff,
+    "NavTakeoff",
+    mavkit::mission::commands::NavTakeoff,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt,
+        pitch_deg=0.0
+    ),
+    new_attrs = {},
+    fields = { pitch_deg: f32 },
+    from_point_signature = (*, position, pitch_deg=0.0)
+);
 
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-
-    #[getter]
-    fn hold_time_s(&self) -> f32 {
-        self.inner.hold_time_s
-    }
-
-    #[getter]
-    fn acceptance_radius_m(&self) -> f32 {
-        self.inner.acceptance_radius_m
-    }
-
-    #[getter]
-    fn pass_radius_m(&self) -> f32 {
-        self.inner.pass_radius_m
-    }
-
-    #[getter]
-    fn yaw_deg(&self) -> f32 {
-        self.inner.yaw_deg
-    }
-}
-
-#[pyclass(name = "NavTakeoff", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyNavTakeoff {
-    pub(crate) inner: mavkit::mission::commands::NavTakeoff,
-}
-
-#[pymethods]
-impl PyNavTakeoff {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt, pitch_deg=0.0))]
-    fn new(
-        latitude_deg: f64,
-        longitude_deg: f64,
-        altitude_m: f32,
-        frame: PyMissionFrame,
-        pitch_deg: f32,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavTakeoff {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-                pitch_deg,
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position, pitch_deg=0.0))]
-    fn from_point(position: &PyGeoPoint3d, pitch_deg: f32) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavTakeoff {
-                position: position.inner.clone(),
-                pitch_deg,
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-
-    #[getter]
-    fn pitch_deg(&self) -> f32 {
-        self.inner.pitch_deg
-    }
-}
-
-#[pyclass(name = "NavLand", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyNavLand {
-    pub(crate) inner: mavkit::mission::commands::NavLand,
-}
-
-#[pymethods]
-impl PyNavLand {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt, abort_alt_m=0.0))]
-    fn new(
-        latitude_deg: f64,
-        longitude_deg: f64,
-        altitude_m: f32,
-        frame: PyMissionFrame,
-        abort_alt_m: f32,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavLand {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-                abort_alt_m,
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position, abort_alt_m=0.0))]
-    fn from_point(position: &PyGeoPoint3d, abort_alt_m: f32) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavLand {
-                position: position.inner.clone(),
-                abort_alt_m,
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-
-    #[getter]
-    fn abort_alt_m(&self) -> f32 {
-        self.inner.abort_alt_m
-    }
-}
+py_position_wrapper!(
+    PyNavLand,
+    "NavLand",
+    mavkit::mission::commands::NavLand,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt,
+        abort_alt_m=0.0
+    ),
+    new_attrs = {},
+    fields = { abort_alt_m: f32 },
+    from_point_signature = (*, position, abort_alt_m=0.0)
+);
 
 #[pyclass(name = "NavLoiterTime", frozen, from_py_object)]
 #[derive(Clone)]
@@ -672,67 +610,22 @@ impl PyNavReturnToLaunch {
     }
 }
 
-#[pyclass(name = "NavSplineWaypoint", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyNavSplineWaypoint {
-    pub(crate) inner: mavkit::mission::commands::NavSplineWaypoint,
-}
-
-#[pymethods]
-impl PyNavSplineWaypoint {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt, hold_time_s=0.0))]
-    fn new(
-        latitude_deg: f64,
-        longitude_deg: f64,
-        altitude_m: f32,
-        frame: PyMissionFrame,
-        hold_time_s: f32,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavSplineWaypoint {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-                hold_time_s,
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position, hold_time_s=0.0))]
-    fn from_point(position: &PyGeoPoint3d, hold_time_s: f32) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavSplineWaypoint {
-                position: position.inner.clone(),
-                hold_time_s,
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-
-    #[getter]
-    fn hold_time_s(&self) -> f32 {
-        self.inner.hold_time_s
-    }
-}
+py_position_wrapper!(
+    PyNavSplineWaypoint,
+    "NavSplineWaypoint",
+    mavkit::mission::commands::NavSplineWaypoint,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt,
+        hold_time_s=0.0
+    ),
+    new_attrs = {},
+    fields = { hold_time_s: f32 },
+    from_point_signature = (*, position, hold_time_s=0.0)
+);
 
 #[pyclass(name = "NavArcWaypoint", frozen, from_py_object)]
 #[derive(Clone)]
@@ -1125,178 +1018,55 @@ py_frozen_wrapper!(PyNavAltitudeWait wraps mavkit::mission::commands::NavAltitud
     wiggle_time_s: f32,
 });
 
-#[pyclass(name = "NavVtolTakeoff", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyNavVtolTakeoff {
-    pub(crate) inner: mavkit::mission::commands::NavVtolTakeoff,
-}
+py_position_wrapper!(
+    PyNavVtolTakeoff,
+    "NavVtolTakeoff",
+    mavkit::mission::commands::NavVtolTakeoff,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt
+    ),
+    new_attrs = {},
+    fields = {},
+    from_point_signature = (*, position)
+);
 
-#[pymethods]
-impl PyNavVtolTakeoff {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt))]
-    fn new(latitude_deg: f64, longitude_deg: f64, altitude_m: f32, frame: PyMissionFrame) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavVtolTakeoff {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-            },
-        }
-    }
+py_position_wrapper!(
+    PyNavVtolLand,
+    "NavVtolLand",
+    mavkit::mission::commands::NavVtolLand,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt,
+        options=0
+    ),
+    new_attrs = {},
+    fields = { options: u8 },
+    from_point_signature = (*, position, options=0)
+);
 
-    #[staticmethod]
-    #[pyo3(signature = (*, position))]
-    fn from_point(position: &PyGeoPoint3d) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavVtolTakeoff {
-                position: position.inner.clone(),
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-}
-
-#[pyclass(name = "NavVtolLand", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyNavVtolLand {
-    pub(crate) inner: mavkit::mission::commands::NavVtolLand,
-}
-
-#[pymethods]
-impl PyNavVtolLand {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt, options=0))]
-    fn new(
-        latitude_deg: f64,
-        longitude_deg: f64,
-        altitude_m: f32,
-        frame: PyMissionFrame,
-        options: u8,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavVtolLand {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-                options,
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position, options=0))]
-    fn from_point(position: &PyGeoPoint3d, options: u8) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavVtolLand {
-                position: position.inner.clone(),
-                options,
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-
-    #[getter]
-    fn options(&self) -> u8 {
-        self.inner.options
-    }
-}
-
-#[pyclass(name = "NavPayloadPlace", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyNavPayloadPlace {
-    pub(crate) inner: mavkit::mission::commands::NavPayloadPlace,
-}
-
-#[pymethods]
-impl PyNavPayloadPlace {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt, max_descent_m=0.0))]
-    fn new(
-        latitude_deg: f64,
-        longitude_deg: f64,
-        altitude_m: f32,
-        frame: PyMissionFrame,
-        max_descent_m: f32,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavPayloadPlace {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-                max_descent_m,
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position, max_descent_m=0.0))]
-    fn from_point(position: &PyGeoPoint3d, max_descent_m: f32) -> Self {
-        Self {
-            inner: mavkit::mission::commands::NavPayloadPlace {
-                position: position.inner.clone(),
-                max_descent_m,
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-
-    #[getter]
-    fn max_descent_m(&self) -> f32 {
-        self.inner.max_descent_m
-    }
-}
+py_position_wrapper!(
+    PyNavPayloadPlace,
+    "NavPayloadPlace",
+    mavkit::mission::commands::NavPayloadPlace,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt,
+        max_descent_m=0.0
+    ),
+    new_attrs = {},
+    fields = { max_descent_m: f32 },
+    from_point_signature = (*, position, max_descent_m=0.0)
+);
 
 py_frozen_wrapper!(PyNavSetYawSpeed wraps mavkit::mission::commands::NavSetYawSpeed as "NavSetYawSpeed" {
     angle_deg: f32,
@@ -1357,67 +1127,22 @@ impl PyDoChangeSpeed {
     }
 }
 
-#[pyclass(name = "DoSetHome", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyDoSetHome {
-    pub(crate) inner: mavkit::mission::commands::DoSetHome,
-}
-
-#[pymethods]
-impl PyDoSetHome {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt, use_current=false))]
-    fn new(
-        latitude_deg: f64,
-        longitude_deg: f64,
-        altitude_m: f32,
-        frame: PyMissionFrame,
-        use_current: bool,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoSetHome {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-                use_current,
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position, use_current=false))]
-    fn from_point(position: &PyGeoPoint3d, use_current: bool) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoSetHome {
-                position: position.inner.clone(),
-                use_current,
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-
-    #[getter]
-    fn use_current(&self) -> bool {
-        self.inner.use_current
-    }
-}
+py_position_wrapper!(
+    PyDoSetHome,
+    "DoSetHome",
+    mavkit::mission::commands::DoSetHome,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt,
+        use_current=false
+    ),
+    new_attrs = {},
+    fields = { use_current: bool },
+    from_point_signature = (*, position, use_current=false)
+);
 
 py_frozen_wrapper!(PyDoSetRelay wraps mavkit::mission::commands::DoSetRelay as "DoSetRelay" {
     number: u8,
@@ -1458,263 +1183,86 @@ py_frozen_wrapper!(PyDoSetReverse wraps mavkit::mission::commands::DoSetReverse 
     reverse: bool,
 });
 
-#[pyclass(name = "DoLandStart", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyDoLandStart {
-    pub(crate) inner: mavkit::mission::commands::DoLandStart,
-}
+py_position_wrapper!(
+    PyDoLandStart,
+    "DoLandStart",
+    mavkit::mission::commands::DoLandStart,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt
+    ),
+    new_attrs = {},
+    fields = {},
+    from_point_signature = (*, position)
+);
 
-#[pymethods]
-impl PyDoLandStart {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt))]
-    fn new(latitude_deg: f64, longitude_deg: f64, altitude_m: f32, frame: PyMissionFrame) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoLandStart {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-            },
-        }
-    }
+py_position_wrapper!(
+    PyDoReturnPathStart,
+    "DoReturnPathStart",
+    mavkit::mission::commands::DoReturnPathStart,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt
+    ),
+    new_attrs = {},
+    fields = {},
+    from_point_signature = (*, position)
+);
 
-    #[staticmethod]
-    #[pyo3(signature = (*, position))]
-    fn from_point(position: &PyGeoPoint3d) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoLandStart {
-                position: position.inner.clone(),
-            },
-        }
-    }
+py_position_wrapper!(
+    PyDoGoAround,
+    "DoGoAround",
+    mavkit::mission::commands::DoGoAround,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt
+    ),
+    new_attrs = {},
+    fields = {},
+    from_point_signature = (*, position)
+);
 
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
+py_position_wrapper!(
+    PyDoSetRoiLocation,
+    "DoSetRoiLocation",
+    mavkit::mission::commands::DoSetRoiLocation,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt
+    ),
+    new_attrs = {},
+    fields = {},
+    from_point_signature = (*, position)
+);
 
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-}
-
-#[pyclass(name = "DoReturnPathStart", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyDoReturnPathStart {
-    pub(crate) inner: mavkit::mission::commands::DoReturnPathStart,
-}
-
-#[pymethods]
-impl PyDoReturnPathStart {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt))]
-    fn new(latitude_deg: f64, longitude_deg: f64, altitude_m: f32, frame: PyMissionFrame) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoReturnPathStart {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position))]
-    fn from_point(position: &PyGeoPoint3d) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoReturnPathStart {
-                position: position.inner.clone(),
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-}
-
-#[pyclass(name = "DoGoAround", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyDoGoAround {
-    pub(crate) inner: mavkit::mission::commands::DoGoAround,
-}
-
-#[pymethods]
-impl PyDoGoAround {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt))]
-    fn new(latitude_deg: f64, longitude_deg: f64, altitude_m: f32, frame: PyMissionFrame) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoGoAround {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position))]
-    fn from_point(position: &PyGeoPoint3d) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoGoAround {
-                position: position.inner.clone(),
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-}
-
-#[pyclass(name = "DoSetRoiLocation", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyDoSetRoiLocation {
-    pub(crate) inner: mavkit::mission::commands::DoSetRoiLocation,
-}
-
-#[pymethods]
-impl PyDoSetRoiLocation {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt))]
-    fn new(latitude_deg: f64, longitude_deg: f64, altitude_m: f32, frame: PyMissionFrame) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoSetRoiLocation {
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position))]
-    fn from_point(position: &PyGeoPoint3d) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoSetRoiLocation {
-                position: position.inner.clone(),
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-}
-
-#[pyclass(name = "DoSetRoi", frozen, from_py_object)]
-#[derive(Clone)]
-pub struct PyDoSetRoi {
-    pub(crate) inner: mavkit::mission::commands::DoSetRoi,
-}
-
-#[pymethods]
-impl PyDoSetRoi {
-    #[new]
-    #[pyo3(signature = (*, latitude_deg, longitude_deg, altitude_m, frame=PyMissionFrame::GlobalRelativeAltInt, mode=0))]
-    fn new(
-        latitude_deg: f64,
-        longitude_deg: f64,
-        altitude_m: f32,
-        frame: PyMissionFrame,
-        mode: u8,
-    ) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoSetRoi {
-                mode,
-                position: position_from_components(frame, latitude_deg, longitude_deg, altitude_m),
-            },
-        }
-    }
-
-    #[staticmethod]
-    #[pyo3(signature = (*, position, mode=0))]
-    fn from_point(position: &PyGeoPoint3d, mode: u8) -> Self {
-        Self {
-            inner: mavkit::mission::commands::DoSetRoi {
-                mode,
-                position: position.inner.clone(),
-            },
-        }
-    }
-
-    #[getter]
-    fn frame(&self) -> PyMissionFrame {
-        position_components(&self.inner.position).0
-    }
-
-    #[getter]
-    fn latitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).1
-    }
-
-    #[getter]
-    fn longitude_deg(&self) -> f64 {
-        position_components(&self.inner.position).2
-    }
-
-    #[getter]
-    fn altitude_m(&self) -> f32 {
-        position_components(&self.inner.position).3
-    }
-
-    #[getter]
-    fn mode(&self) -> u8 {
-        self.inner.mode
-    }
-}
+py_position_wrapper!(
+    PyDoSetRoi,
+    "DoSetRoi",
+    mavkit::mission::commands::DoSetRoi,
+    new_signature = (
+        *,
+        latitude_deg,
+        longitude_deg,
+        altitude_m,
+        frame=PyMissionFrame::GlobalRelativeAltInt,
+        mode=0
+    ),
+    new_attrs = {},
+    fields = { mode: u8 },
+    from_point_signature = (*, position, mode=0)
+);
 
 py_frozen_wrapper!(PyDoMountControl wraps mavkit::mission::commands::DoMountControl as "DoMountControl" {
     pitch_deg: f32,
