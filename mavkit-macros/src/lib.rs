@@ -139,11 +139,11 @@ fn mavkit_command_impl(input: DeriveInput) -> syn::Result<TokenStream2> {
     Ok(quote! {
         #struct_output
 
-        fn #to_wire_fn(command: #struct_name) -> (MissionFrame, [f32; 4], i32, i32, f32) {
+        pub(crate) fn #to_wire_fn(command: #struct_name) -> (MissionFrame, [f32; 4], i32, i32, f32) {
             #to_wire_body
         }
 
-        fn #from_wire_fn(
+        pub(crate) fn #from_wire_fn(
             frame: MissionFrame,
             params: [f32; 4],
             x: i32,
@@ -167,11 +167,11 @@ fn generate_unit_command(input: DeriveInput) -> TokenStream2 {
     quote! {
         #struct_output
 
-        fn #to_wire_fn(_command: #struct_name) -> (MissionFrame, [f32; 4], i32, i32, f32) {
+        pub(crate) fn #to_wire_fn(_command: #struct_name) -> (MissionFrame, [f32; 4], i32, i32, f32) {
             unit_command_to_wire()
         }
 
-        fn #from_wire_fn(
+        pub(crate) fn #from_wire_fn(
             _frame: MissionFrame,
             _params: [f32; 4],
             _x: i32,
