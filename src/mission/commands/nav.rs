@@ -56,6 +56,22 @@ pub(super) fn alt_change_action_from_param(value: f32) -> AltChangeAction {
     }
 }
 
+/// Implements a defaulted `from_point` constructor for simple position-backed commands.
+macro_rules! impl_position_from_point {
+    ($type:ident { $($field:ident : $value:expr),* $(,)? }) => {
+        impl $type {
+            pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
+                Self {
+                    position: position.into(),
+                    $(
+                        $field: $value,
+                    )*
+                }
+            }
+        }
+    };
+}
+
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 16, category = Nav)]
 pub struct NavWaypoint {
@@ -71,17 +87,12 @@ pub struct NavWaypoint {
     pub yaw_deg: f32,
 }
 
-impl NavWaypoint {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-            hold_time_s: 0.0,
-            acceptance_radius_m: 0.0,
-            pass_radius_m: 0.0,
-            yaw_deg: 0.0,
-        }
-    }
-}
+impl_position_from_point!(NavWaypoint {
+    hold_time_s: 0.0,
+    acceptance_radius_m: 0.0,
+    pass_radius_m: 0.0,
+    yaw_deg: 0.0,
+});
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 82, category = Nav)]
@@ -92,14 +103,7 @@ pub struct NavSplineWaypoint {
     pub hold_time_s: f32,
 }
 
-impl NavSplineWaypoint {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-            hold_time_s: 0.0,
-        }
-    }
-}
+impl_position_from_point!(NavSplineWaypoint { hold_time_s: 0.0 });
 
 /// Typed mission command API item used by plan serialization and validation.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -150,14 +154,7 @@ pub struct NavTakeoff {
     pub pitch_deg: f32,
 }
 
-impl NavTakeoff {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-            pitch_deg: 0.0,
-        }
-    }
-}
+impl_position_from_point!(NavTakeoff { pitch_deg: 0.0 });
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 21, category = Nav)]
@@ -168,14 +165,7 @@ pub struct NavLand {
     pub abort_alt_m: f32,
 }
 
-impl NavLand {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-            abort_alt_m: 0.0,
-        }
-    }
-}
+impl_position_from_point!(NavLand { abort_alt_m: 0.0 });
 
 pub(super) fn return_to_launch_to_wire() -> (MissionFrame, [f32; 4], i32, i32, f32) {
     unit_command_to_wire()
@@ -367,14 +357,9 @@ pub struct NavContinueAndChangeAlt {
     pub action: AltChangeAction,
 }
 
-impl NavContinueAndChangeAlt {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-            action: AltChangeAction::Neutral,
-        }
-    }
-}
+impl_position_from_point!(NavContinueAndChangeAlt {
+    action: AltChangeAction::Neutral,
+});
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 93, category = Nav)]
@@ -414,13 +399,7 @@ pub struct NavVtolTakeoff {
     pub position: GeoPoint3d,
 }
 
-impl NavVtolTakeoff {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-        }
-    }
-}
+impl_position_from_point!(NavVtolTakeoff {});
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 85, category = Nav)]
@@ -431,14 +410,7 @@ pub struct NavVtolLand {
     pub options: u8,
 }
 
-impl NavVtolLand {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-            options: 0,
-        }
-    }
-}
+impl_position_from_point!(NavVtolLand { options: 0 });
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 94, category = Nav)]
@@ -449,14 +421,7 @@ pub struct NavPayloadPlace {
     pub max_descent_m: f32,
 }
 
-impl NavPayloadPlace {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-            max_descent_m: 0.0,
-        }
-    }
-}
+impl_position_from_point!(NavPayloadPlace { max_descent_m: 0.0 });
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 213, category = Nav)]
