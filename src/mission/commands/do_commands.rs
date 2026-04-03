@@ -145,6 +145,22 @@ pub(super) fn inverted_bool_from_param(value: f32) -> bool {
     !bool_from_param(value)
 }
 
+/// Implements a defaulted `from_point` constructor for simple position-backed commands.
+macro_rules! impl_position_from_point {
+    ($type:ident { $($field:ident : $value:expr),* $(,)? }) => {
+        impl $type {
+            pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
+                Self {
+                    position: position.into(),
+                    $(
+                        $field: $value,
+                    )*
+                }
+            }
+        }
+    };
+}
+
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 177, category = Do)]
 #[derive(Copy)]
@@ -210,14 +226,7 @@ pub struct DoSetHome {
     pub use_current: bool,
 }
 
-impl DoSetHome {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-            use_current: false,
-        }
-    }
-}
+impl_position_from_point!(DoSetHome { use_current: false });
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 189, category = Do)]
@@ -226,13 +235,7 @@ pub struct DoLandStart {
     pub position: GeoPoint3d,
 }
 
-impl DoLandStart {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-        }
-    }
-}
+impl_position_from_point!(DoLandStart {});
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 188, category = Do)]
@@ -241,13 +244,7 @@ pub struct DoReturnPathStart {
     pub position: GeoPoint3d,
 }
 
-impl DoReturnPathStart {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-        }
-    }
-}
+impl_position_from_point!(DoReturnPathStart {});
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 191, category = Do)]
@@ -256,13 +253,7 @@ pub struct DoGoAround {
     pub position: GeoPoint3d,
 }
 
-impl DoGoAround {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-        }
-    }
-}
+impl_position_from_point!(DoGoAround {});
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 195, category = Do)]
@@ -271,13 +262,7 @@ pub struct DoSetRoiLocation {
     pub position: GeoPoint3d,
 }
 
-impl DoSetRoiLocation {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            position: position.into(),
-        }
-    }
-}
+impl_position_from_point!(DoSetRoiLocation {});
 
 pub(super) fn do_set_roi_none_to_wire() -> (MissionFrame, [f32; 4], i32, i32, f32) {
     unit_command_to_wire()
@@ -302,14 +287,7 @@ pub struct DoSetRoi {
     pub position: GeoPoint3d,
 }
 
-impl DoSetRoi {
-    pub fn from_point(position: impl Into<GeoPoint3d>) -> Self {
-        Self {
-            mode: 0,
-            position: position.into(),
-        }
-    }
-}
+impl_position_from_point!(DoSetRoi { mode: 0 });
 
 /// Typed mission command API item used by plan serialization and validation.
 #[mavkit_command(id = 205, category = Do)]
