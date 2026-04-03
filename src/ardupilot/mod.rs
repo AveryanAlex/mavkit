@@ -1,10 +1,12 @@
 mod calibration;
 pub mod copter;
 pub mod guided;
+mod mag_cal;
 pub mod plane;
 pub mod rover;
 pub mod sub;
 pub mod types;
+mod vehicle_family;
 
 pub use copter::ArduCopterHandle;
 pub use guided::{
@@ -20,13 +22,12 @@ use crate::command::Command;
 use crate::dialect;
 use crate::error::VehicleError;
 use crate::mission::send_domain_command;
-use crate::observation::{ObservationHandle, ObservationWriter};
+use crate::observation::ObservationHandle;
 use crate::state::{StateChannels, VehicleType};
 use crate::vehicle::VehicleInner;
 use calibration::{
     MAV_CMD_DO_ACCEPT_MAG_CAL_ID, MAV_CMD_DO_CANCEL_MAG_CAL_ID, MAV_CMD_DO_START_MAG_CAL_ID,
 };
-use std::collections::BTreeMap;
 use std::sync::Arc;
 use tokio_util::sync::CancellationToken;
 
@@ -41,93 +42,30 @@ pub(crate) struct ArduPilotDomain {
 }
 
 struct ArduPilotDomainInner {
-    mag_cal_progress_writer: ObservationWriter<Vec<MagCalProgress>>,
-    mag_cal_progress: ObservationHandle<Vec<MagCalProgress>>,
-    mag_cal_report_writer: ObservationWriter<Vec<MagCalReport>>,
-    mag_cal_report: ObservationHandle<Vec<MagCalReport>>,
+    mag_cal: mag_cal::MagCalObservations,
     guided_lease: guided::GuidedLeaseScope,
 }
 
 impl ArduPilotDomain {
     pub(crate) fn new() -> Self {
-        let (mag_cal_progress_writer, mag_cal_progress) = ObservationHandle::watch();
-        let (mag_cal_report_writer, mag_cal_report) = ObservationHandle::watch();
-        let _ = mag_cal_progress_writer.publish(Vec::new());
-        let _ = mag_cal_report_writer.publish(Vec::new());
-
         Self {
             inner: Arc::new(ArduPilotDomainInner {
-                mag_cal_progress_writer,
-                mag_cal_progress,
-                mag_cal_report_writer,
-                mag_cal_report,
+                mag_cal: mag_cal::MagCalObservations::new(),
                 guided_lease: guided::GuidedLeaseScope::new(),
             }),
         }
     }
 
     pub(crate) fn start(&self, stores: &StateChannels, cancel: CancellationToken) {
-        let mut progress_rx = stores.mag_cal_progress.clone();
-        let progress_writer = self.inner.mag_cal_progress_writer.clone();
-        let progress_cancel = cancel.clone();
-        tokio::spawn(async move {
-            let mut by_compass = BTreeMap::<u8, MagCalProgress>::new();
-            if let Some(progress) = progress_rx.borrow().clone() {
-                by_compass.insert(progress.compass_id, progress);
-                let _ = progress_writer.publish(by_compass.values().cloned().collect());
-            }
-
-            loop {
-                tokio::select! {
-                    _ = progress_cancel.cancelled() => break,
-                    changed = progress_rx.changed() => {
-                        if changed.is_err() {
-                            break;
-                        }
-
-                        if let Some(progress) = progress_rx.borrow_and_update().clone() {
-                            by_compass.insert(progress.compass_id, progress);
-                            let _ = progress_writer.publish(by_compass.values().cloned().collect());
-                        }
-                    }
-                }
-            }
-        });
-
-        let mut report_rx = stores.mag_cal_report.clone();
-        let report_writer = self.inner.mag_cal_report_writer.clone();
-        let report_cancel = cancel.clone();
-        tokio::spawn(async move {
-            let mut by_compass = BTreeMap::<u8, MagCalReport>::new();
-            if let Some(report) = report_rx.borrow().clone() {
-                by_compass.insert(report.compass_id, report);
-                let _ = report_writer.publish(by_compass.values().cloned().collect());
-            }
-
-            loop {
-                tokio::select! {
-                    _ = report_cancel.cancelled() => break,
-                    changed = report_rx.changed() => {
-                        if changed.is_err() {
-                            break;
-                        }
-
-                        if let Some(report) = report_rx.borrow_and_update().clone() {
-                            by_compass.insert(report.compass_id, report);
-                            let _ = report_writer.publish(by_compass.values().cloned().collect());
-                        }
-                    }
-                }
-            }
-        });
+        self.inner.mag_cal.start(stores, cancel);
     }
 
     pub(crate) fn mag_cal_progress(&self) -> ObservationHandle<Vec<MagCalProgress>> {
-        self.inner.mag_cal_progress.clone()
+        self.inner.mag_cal.progress()
     }
 
     pub(crate) fn mag_cal_report(&self) -> ObservationHandle<Vec<MagCalReport>> {
-        self.inner.mag_cal_report.clone()
+        self.inner.mag_cal.report()
     }
 
     pub(crate) fn begin_guided_lease(&self) -> Result<u64, VehicleError> {
@@ -155,33 +93,34 @@ impl<'a> ArduPilotHandle<'a> {
 
     pub fn copter(&self) -> Option<ArduCopterHandle<'a>> {
         matches!(
-            self.vehicle_type(),
-            VehicleType::Quadrotor
-                | VehicleType::Hexarotor
-                | VehicleType::Octorotor
-                | VehicleType::Tricopter
-                | VehicleType::Coaxial
-                | VehicleType::Helicopter
+            vehicle_family::classify(self.vehicle_type()),
+            Some(vehicle_family::VehicleFamily::Copter)
         )
         .then_some(ArduCopterHandle::new(self.inner))
     }
 
     pub fn plane(&self) -> Option<ArduPlaneHandle<'a>> {
         matches!(
-            self.vehicle_type(),
-            VehicleType::FixedWing | VehicleType::Vtol
+            vehicle_family::classify(self.vehicle_type()),
+            Some(vehicle_family::VehicleFamily::Plane(_))
         )
         .then_some(ArduPlaneHandle::new(self.inner))
     }
 
     pub fn rover(&self) -> Option<ArduRoverHandle<'a>> {
-        matches!(self.vehicle_type(), VehicleType::GroundRover)
-            .then_some(ArduRoverHandle::new(self.inner))
+        matches!(
+            vehicle_family::classify(self.vehicle_type()),
+            Some(vehicle_family::VehicleFamily::Rover)
+        )
+        .then_some(ArduRoverHandle::new(self.inner))
     }
 
     pub fn sub(&self) -> Option<ArduSubHandle<'a>> {
-        matches!(self.vehicle_type(), VehicleType::Submarine)
-            .then_some(ArduSubHandle::new(self.inner))
+        matches!(
+            vehicle_family::classify(self.vehicle_type()),
+            Some(vehicle_family::VehicleFamily::Sub)
+        )
+        .then_some(ArduSubHandle::new(self.inner))
     }
 
     pub async fn guided(&self) -> Result<ArduGuidedSession, VehicleError> {
@@ -388,26 +327,11 @@ impl<'a> ArduPilotHandle<'a> {
     }
 
     fn guided_kind(&self) -> Option<ArduGuidedKind> {
-        match self.vehicle_type() {
-            VehicleType::Quadrotor
-            | VehicleType::Hexarotor
-            | VehicleType::Octorotor
-            | VehicleType::Tricopter
-            | VehicleType::Coaxial
-            | VehicleType::Helicopter => Some(ArduGuidedKind::Copter),
-            VehicleType::FixedWing | VehicleType::Vtol => Some(ArduGuidedKind::Plane),
-            VehicleType::GroundRover => Some(ArduGuidedKind::Rover),
-            VehicleType::Submarine => Some(ArduGuidedKind::Sub),
-            VehicleType::Unknown | VehicleType::Generic => None,
-        }
+        vehicle_family::guided_kind(self.vehicle_type())
     }
 
     fn guided_plane_kind(&self) -> Option<ArduPlaneKind> {
-        match self.vehicle_type() {
-            VehicleType::FixedWing => Some(ArduPlaneKind::FixedWing),
-            VehicleType::Vtol => Some(ArduPlaneKind::Vtol),
-            _ => None,
-        }
+        vehicle_family::plane_kind(self.vehicle_type())
     }
 }
 
