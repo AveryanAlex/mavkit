@@ -12,6 +12,7 @@ pub mod link;
 pub mod mission;
 pub mod modes;
 pub mod observation;
+pub(crate) mod operation;
 pub mod params;
 pub mod rally;
 pub mod raw;

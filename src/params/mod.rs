@@ -8,16 +8,14 @@ pub use types::{Param, ParamState, ParamStore, ParamType, ParamWriteResult};
 
 use crate::command::Command;
 use crate::error::VehicleError;
-use crate::mission::{
-    MissionProtocolScope, OperationReservation, send_domain_command, spawn_watch_progress_bridge,
-};
+use crate::mission::{MissionProtocolScope, OperationReservation, send_domain_command};
 use crate::observation::{ObservationHandle, ObservationSubscription, ObservationWriter};
+use crate::operation::run_with_progress_bridge;
 use crate::types::{ParamOperationKind, ParamOperationProgress, SyncState};
 use crate::vehicle::VehicleInner;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::oneshot;
-use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
 pub(crate) struct ParamsDomain {
@@ -214,21 +212,14 @@ impl<'a> ParamsHandle<'a> {
         let cancel = reservation.cancel;
 
         tokio::spawn(async move {
-            let progress_stop = CancellationToken::new();
-            let progress_task = spawn_watch_progress_bridge(
+            let command_result = run_with_progress_bridge(
                 param_progress_rx,
                 progress_writer.clone(),
-                progress_stop.clone(),
+                cancel,
                 std::convert::identity,
-            );
-
-            let command_result = tokio::select! {
-                _ = cancel.cancelled() => Err(VehicleError::Cancelled),
-                result = send_domain_command(command_tx, |reply| Command::ParamDownloadAll { reply }) => result,
-            };
-
-            progress_stop.cancel();
-            let _ = progress_task.await;
+                send_domain_command(command_tx, |reply| Command::ParamDownloadAll { reply }),
+            )
+            .await;
 
             let result = match command_result {
                 Ok(store) => {
@@ -310,24 +301,17 @@ impl<'a> ParamsHandle<'a> {
         let cancel = reservation.cancel;
 
         tokio::spawn(async move {
-            let progress_stop = CancellationToken::new();
-            let progress_task = spawn_watch_progress_bridge(
+            let command_result = run_with_progress_bridge(
                 param_progress_rx,
                 progress_writer.clone(),
-                progress_stop.clone(),
+                cancel,
                 std::convert::identity,
-            );
-
-            let command_result = tokio::select! {
-                _ = cancel.cancelled() => Err(VehicleError::Cancelled),
-                result = send_domain_command(command_tx, |reply| Command::ParamWriteBatch {
+                send_domain_command(command_tx, |reply| Command::ParamWriteBatch {
                     params: batch,
                     reply,
-                }) => result,
-            };
-
-            progress_stop.cancel();
-            let _ = progress_task.await;
+                }),
+            )
+            .await;
 
             let result = match command_result {
                 Ok(results) => {

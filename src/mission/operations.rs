@@ -2,8 +2,9 @@ use std::time::Duration;
 
 use crate::error::VehicleError;
 use crate::observation::{ObservationHandle, ObservationSubscription};
+use crate::operation::OperationHandle;
 use crate::types::MissionOperationProgress;
-use tokio::sync::{Mutex, oneshot};
+use tokio::sync::oneshot;
 use tokio_util::sync::CancellationToken;
 
 /// Handle for an in-flight mission-domain operation.
@@ -13,9 +14,7 @@ use tokio_util::sync::CancellationToken;
 /// in the event-loop command. The handler selects on that token alongside the
 /// vehicle-wide cancel, so it exits promptly.
 pub struct MissionOperationHandle<T: Send + 'static> {
-    progress: ObservationHandle<MissionOperationProgress>,
-    result_rx: Mutex<Option<oneshot::Receiver<Result<T, VehicleError>>>>,
-    cancel: CancellationToken,
+    core: OperationHandle<T, MissionOperationProgress>,
 }
 
 impl<T: Send + 'static> MissionOperationHandle<T> {
@@ -25,59 +24,34 @@ impl<T: Send + 'static> MissionOperationHandle<T> {
         cancel: CancellationToken,
     ) -> Self {
         Self {
-            progress,
-            result_rx: Mutex::new(Some(result_rx)),
-            cancel,
+            core: OperationHandle::new(progress, result_rx, cancel),
         }
     }
 
     pub fn cancel_token(&self) -> CancellationToken {
-        self.cancel.clone()
+        self.core.cancel_token()
     }
 
     pub fn latest(&self) -> Option<MissionOperationProgress> {
-        self.progress.latest()
+        self.core.latest()
     }
 
     pub fn subscribe(&self) -> ObservationSubscription<MissionOperationProgress> {
-        self.progress.subscribe()
+        self.core.subscribe()
     }
 
     pub async fn wait(&self) -> Result<T, VehicleError> {
-        let receiver = {
-            let mut guard = self.result_rx.lock().await;
-            guard.take().ok_or_else(|| {
-                VehicleError::Unsupported("operation result already consumed".to_string())
-            })?
-        };
-
-        receiver.await.map_err(|_| VehicleError::Disconnected)?
+        self.core.wait().await
     }
 
     /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if the
     /// operation does not complete within `timeout`.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<T, VehicleError> {
-        let receiver = {
-            let mut guard = self.result_rx.lock().await;
-            guard.take().ok_or_else(|| {
-                VehicleError::Unsupported("operation result already consumed".to_string())
-            })?
-        };
-
-        tokio::time::timeout(timeout, receiver)
-            .await
-            .map_err(|_| VehicleError::Timeout("operation wait".into()))?
-            .map_err(|_| VehicleError::Disconnected)?
+        self.core.wait_timeout(timeout, "operation wait").await
     }
 
     pub fn cancel(&self) {
-        self.cancel.cancel();
-    }
-}
-
-impl<T: Send + 'static> Drop for MissionOperationHandle<T> {
-    fn drop(&mut self) {
-        self.cancel.cancel();
+        self.core.cancel();
     }
 }
 

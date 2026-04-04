@@ -25,6 +25,7 @@ pub use wire::{mission_items_for_upload, mission_plan_from_download};
 use crate::command::Command;
 use crate::error::VehicleError;
 use crate::observation::{ObservationHandle, ObservationSubscription, ObservationWriter};
+use crate::operation::run_with_progress_bridge;
 use crate::state::StateChannels;
 use crate::stored_plan::StoredPlanDomain;
 use crate::types::{MissionOperationKind, MissionOperationProgress};
@@ -208,48 +209,6 @@ fn map_transfer_progress(progress: TransferProgress) -> MissionOperationProgress
     }
 }
 
-pub(crate) fn spawn_transfer_progress_bridge(
-    mission_progress_rx: tokio::sync::watch::Receiver<Option<TransferProgress>>,
-    progress_writer: ObservationWriter<MissionOperationProgress>,
-    stop: CancellationToken,
-) -> tokio::task::JoinHandle<()> {
-    spawn_watch_progress_bridge(
-        mission_progress_rx,
-        progress_writer,
-        stop,
-        map_transfer_progress,
-    )
-}
-
-pub(crate) fn spawn_watch_progress_bridge<S, P>(
-    mut progress_rx: tokio::sync::watch::Receiver<Option<S>>,
-    progress_writer: ObservationWriter<P>,
-    stop: CancellationToken,
-    map: impl Fn(S) -> P + Send + 'static,
-) -> tokio::task::JoinHandle<()>
-where
-    S: Clone + Send + Sync + 'static,
-    P: Clone + Send + Sync + 'static,
-{
-    tokio::spawn(async move {
-        let _ = progress_rx.borrow_and_update();
-
-        loop {
-            tokio::select! {
-                _ = stop.cancelled() => break,
-                changed = progress_rx.changed() => {
-                    if changed.is_err() {
-                        break;
-                    }
-                    if let Some(progress) = progress_rx.borrow_and_update().clone() {
-                        let _ = progress_writer.publish(map(progress));
-                    }
-                }
-            }
-        }
-    })
-}
-
 pub(crate) async fn send_domain_command<T>(
     command_tx: mpsc::Sender<Command>,
     make: impl FnOnce(oneshot::Sender<Result<T, VehicleError>>) -> Command,
@@ -302,20 +261,14 @@ where
     let cancel = reservation.cancel;
 
     tokio::spawn(async move {
-        let progress_stop = CancellationToken::new();
-        let progress_task = spawn_transfer_progress_bridge(
+        let command_result = run_with_progress_bridge(
             mission_progress_rx,
             progress_writer.clone(),
-            progress_stop.clone(),
-        );
-
-        let command_result = tokio::select! {
-            _ = cancel.cancelled() => Err(VehicleError::Cancelled),
-            result = send_domain_command(command_tx, |reply| make_command(reply, cancel.clone())) => result,
-        };
-
-        progress_stop.cancel();
-        let _ = progress_task.await;
+            cancel.clone(),
+            map_transfer_progress,
+            send_domain_command(command_tx, |reply| make_command(reply, cancel.clone())),
+        )
+        .await;
 
         let result = on_result(command_result, &progress_writer);
 
