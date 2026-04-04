@@ -87,6 +87,29 @@ macro_rules! define_metrics {
             $( pub(crate) $af: [MetricSlotWriter<$at>; $ac], )*
             battery_primary_seen: Arc<AtomicBool>,
         }
+
+        pub(crate) fn create_telemetry_backing_stores(
+        ) -> (TelemetryMetricWriters, TelemetryMetricHandles) {
+            let (message_writers, message_handles) = create_telemetry_message_backing_stores();
+            $( let $sf = metric_backing_store::<$st>(); )*
+            $( let $af = array::from_fn(|_| metric_backing_store::<$at>()); )*
+
+            let battery_primary_seen = Arc::new(AtomicBool::new(false));
+
+            (
+                TelemetryMetricWriters {
+                    message_writers,
+                    $( $sf: $sf.writer.clone(), )*
+                    $( $af: $af.clone().map(|store| store.writer), )*
+                    battery_primary_seen,
+                },
+                TelemetryMetricHandles {
+                    message_handles,
+                    $( $sf: $sf.handle, )*
+                    $( $af: $af.map(|store| store.handle), )*
+                },
+            )
+        }
     };
 }
 
@@ -209,109 +232,15 @@ fn metric_slot<T: Clone + Send + Sync + 'static>() -> (MetricSlotWriter<T>, Metr
     )
 }
 
-pub(crate) fn create_telemetry_backing_stores() -> (TelemetryMetricWriters, TelemetryMetricHandles)
-{
-    let (message_writers, message_handles) = create_telemetry_message_backing_stores();
-    let (position_global_w, position_global_h) = metric_slot();
-    let (position_groundspeed_mps_w, position_groundspeed_mps_h) = metric_slot();
-    let (position_airspeed_mps_w, position_airspeed_mps_h) = metric_slot();
-    let (position_climb_rate_mps_w, position_climb_rate_mps_h) = metric_slot();
-    let (position_heading_deg_w, position_heading_deg_h) = metric_slot();
-    let (position_throttle_pct_w, position_throttle_pct_h) = metric_slot();
+#[derive(Clone)]
+struct MetricBackingStore<T: Clone + Send + Sync + 'static> {
+    writer: MetricSlotWriter<T>,
+    handle: MetricHandle<T>,
+}
 
-    let (attitude_euler_w, attitude_euler_h) = metric_slot();
-
-    let (battery_remaining_pct_w, battery_remaining_pct_h) = metric_slot();
-    let (battery_voltage_v_w, battery_voltage_v_h) = metric_slot();
-    let (battery_current_a_w, battery_current_a_h) = metric_slot();
-    let (battery_energy_consumed_wh_w, battery_energy_consumed_wh_h) = metric_slot();
-    let (battery_time_remaining_s_w, battery_time_remaining_s_h) = metric_slot();
-    let (battery_cells_w, battery_cells_h) = metric_slot();
-
-    let (gps_quality_w, gps_quality_h) = metric_slot();
-    let (gps_position_msl_w, gps_position_msl_h) = metric_slot();
-
-    let (navigation_waypoint_w, navigation_waypoint_h) = metric_slot();
-    let (navigation_guidance_w, navigation_guidance_h) = metric_slot();
-
-    let (terrain_clearance_w, terrain_clearance_h) = metric_slot();
-
-    let rc_channels = array::from_fn(|_| metric_slot::<u16>());
-    let rc_channels_pwm_us_w = rc_channels.clone().map(|(writer, _)| writer);
-    let rc_channels_pwm_us_h = rc_channels.map(|(_, handle)| handle);
-
-    let (rc_rssi_pct_w, rc_rssi_pct_h) = metric_slot();
-
-    let servo_outputs = array::from_fn(|_| metric_slot::<u16>());
-    let actuator_servo_pwm_us_w = servo_outputs.clone().map(|(writer, _)| writer);
-    let actuator_servo_pwm_us_h = servo_outputs.map(|(_, handle)| handle);
-
-    let (armed_w, armed_h) = metric_slot();
-    let (sensor_health_w, sensor_health_h) = metric_slot();
-    let (home_w, home_h) = metric_slot();
-    let (origin_w, origin_h) = metric_slot();
-
-    let battery_primary_seen = Arc::new(AtomicBool::new(false));
-
-    (
-        TelemetryMetricWriters {
-            message_writers,
-            position_global: position_global_w,
-            position_groundspeed_mps: position_groundspeed_mps_w,
-            position_airspeed_mps: position_airspeed_mps_w,
-            position_climb_rate_mps: position_climb_rate_mps_w,
-            position_heading_deg: position_heading_deg_w,
-            position_throttle_pct: position_throttle_pct_w,
-            attitude_euler: attitude_euler_w,
-            battery_remaining_pct: battery_remaining_pct_w,
-            battery_voltage_v: battery_voltage_v_w,
-            battery_current_a: battery_current_a_w,
-            battery_energy_consumed_wh: battery_energy_consumed_wh_w,
-            battery_time_remaining_s: battery_time_remaining_s_w,
-            battery_cells: battery_cells_w,
-            gps_quality: gps_quality_w,
-            gps_position_msl: gps_position_msl_w,
-            navigation_waypoint: navigation_waypoint_w,
-            navigation_guidance: navigation_guidance_w,
-            terrain_clearance: terrain_clearance_w,
-            rc_channels_pwm_us: rc_channels_pwm_us_w,
-            rc_rssi_pct: rc_rssi_pct_w,
-            actuator_servo_pwm_us: actuator_servo_pwm_us_w,
-            armed: armed_w,
-            sensor_health: sensor_health_w,
-            home: home_w,
-            origin: origin_w,
-            battery_primary_seen,
-        },
-        TelemetryMetricHandles {
-            message_handles,
-            position_global: position_global_h,
-            position_groundspeed_mps: position_groundspeed_mps_h,
-            position_airspeed_mps: position_airspeed_mps_h,
-            position_climb_rate_mps: position_climb_rate_mps_h,
-            position_heading_deg: position_heading_deg_h,
-            position_throttle_pct: position_throttle_pct_h,
-            attitude_euler: attitude_euler_h,
-            battery_remaining_pct: battery_remaining_pct_h,
-            battery_voltage_v: battery_voltage_v_h,
-            battery_current_a: battery_current_a_h,
-            battery_energy_consumed_wh: battery_energy_consumed_wh_h,
-            battery_time_remaining_s: battery_time_remaining_s_h,
-            battery_cells: battery_cells_h,
-            gps_quality: gps_quality_h,
-            gps_position_msl: gps_position_msl_h,
-            navigation_waypoint: navigation_waypoint_h,
-            navigation_guidance: navigation_guidance_h,
-            terrain_clearance: terrain_clearance_h,
-            rc_channels_pwm_us: rc_channels_pwm_us_h,
-            rc_rssi_pct: rc_rssi_pct_h,
-            actuator_servo_pwm_us: actuator_servo_pwm_us_h,
-            armed: armed_h,
-            sensor_health: sensor_health_h,
-            home: home_h,
-            origin: origin_h,
-        },
-    )
+fn metric_backing_store<T: Clone + Send + Sync + 'static>() -> MetricBackingStore<T> {
+    let (writer, handle) = metric_slot();
+    MetricBackingStore { writer, handle }
 }
 
 /// Root telemetry accessor exposing grouped namespaces and direct metrics.
