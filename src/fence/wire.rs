@@ -1,16 +1,14 @@
-use std::time::Duration;
-
 use crate::error::VehicleError;
 use crate::geo::{GeoPoint2d, try_latitude_e7, try_longitude_e7};
 use crate::mission::commands::MissionFrame as WireMissionFrame;
-use crate::mission::operations::MissionOperationHandle;
 use crate::mission::{
     MissionCommand, MissionItem, MissionType, RawMissionCommand, WireMissionPlan,
 };
-use crate::observation::{ObservationHandle, ObservationSubscription};
-use crate::stored_plan::{StoredPlanAccess, StoredPlanDomain, StoredPlanHandle, StoredPlanState};
-use crate::types::{StoredPlanOperationKind, SupportState, SyncState};
-use crate::vehicle::VehicleInner;
+
+use super::plan::{
+    FenceExclusionCircle, FenceExclusionPolygon, FenceInclusionCircle, FenceInclusionPolygon,
+    FencePlan, FenceRegion,
+};
 
 const MAV_CMD_NAV_FENCE_RETURN_POINT: u16 = 5000;
 const MAV_CMD_NAV_FENCE_POLYGON_VERTEX_INCLUSION: u16 = 5001;
@@ -18,227 +16,9 @@ const MAV_CMD_NAV_FENCE_POLYGON_VERTEX_EXCLUSION: u16 = 5002;
 const MAV_CMD_NAV_FENCE_CIRCLE_INCLUSION: u16 = 5003;
 const MAV_CMD_NAV_FENCE_CIRCLE_EXCLUSION: u16 = 5004;
 
-/// Full geofence plan with optional return point and region list.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct FencePlan {
-    pub return_point: Option<GeoPoint2d>,
-    pub regions: Vec<FenceRegion>,
-}
-
-/// Polygon region that marks space where operation is allowed.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct FenceInclusionPolygon {
-    pub vertices: Vec<GeoPoint2d>,
-    pub inclusion_group: u8,
-}
-
-/// Polygon region that marks space where operation is forbidden.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct FenceExclusionPolygon {
-    pub vertices: Vec<GeoPoint2d>,
-}
-
-/// Circular inclusion region.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct FenceInclusionCircle {
-    pub center: GeoPoint2d,
-    pub radius_m: f32,
-    pub inclusion_group: u8,
-}
-
-/// Circular exclusion region.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct FenceExclusionCircle {
-    pub center: GeoPoint2d,
-    pub radius_m: f32,
-}
-
-/// Geofence region union used in upload and download plans.
-#[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum FenceRegion {
-    InclusionPolygon(FenceInclusionPolygon),
-    ExclusionPolygon(FenceExclusionPolygon),
-    InclusionCircle(FenceInclusionCircle),
-    ExclusionCircle(FenceExclusionCircle),
-}
-
-impl From<FenceInclusionPolygon> for FenceRegion {
-    fn from(value: FenceInclusionPolygon) -> Self {
-        Self::InclusionPolygon(value)
-    }
-}
-
-impl From<FenceExclusionPolygon> for FenceRegion {
-    fn from(value: FenceExclusionPolygon) -> Self {
-        Self::ExclusionPolygon(value)
-    }
-}
-
-impl From<FenceInclusionCircle> for FenceRegion {
-    fn from(value: FenceInclusionCircle) -> Self {
-        Self::InclusionCircle(value)
-    }
-}
-
-impl From<FenceExclusionCircle> for FenceRegion {
-    fn from(value: FenceExclusionCircle) -> Self {
-        Self::ExclusionCircle(value)
-    }
-}
-
-/// Cached fence-domain state plus sync and active-operation markers.
-#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct FenceState {
-    pub plan: Option<FencePlan>,
-    pub sync: SyncState,
-    pub active_op: Option<StoredPlanOperationKind>,
-}
-
-/// Handle for a fence upload operation.
-pub type FenceUploadOp = MissionOperationHandle<()>;
-/// Handle for a fence download operation.
-pub type FenceDownloadOp = MissionOperationHandle<FencePlan>;
-/// Handle for a fence clear operation.
-pub type FenceClearOp = MissionOperationHandle<()>;
-
-/// Shared fence-domain state stored on `VehicleInner`.
-pub(crate) type FenceDomain = StoredPlanDomain<FenceState>;
-
-impl StoredPlanState for FenceState {
-    type Plan = FencePlan;
-    type OperationKind = StoredPlanOperationKind;
-
-    fn set_active_op(&mut self, kind: Option<Self::OperationKind>) {
-        self.active_op = kind;
-    }
-
-    fn set_plan(&mut self, plan: Self::Plan) {
-        self.plan = Some(plan);
-    }
-
-    fn set_sync(&mut self, sync: SyncState) {
-        self.sync = sync;
-    }
-
-    fn cleared_plan() -> Self::Plan {
-        FencePlan {
-            return_point: None,
-            regions: Vec::new(),
-        }
-    }
-}
-
-impl StoredPlanAccess for FenceState {
-    const DOMAIN_NAME: &'static str = "fence";
-    const MISSION_TYPE: MissionType = MissionType::Fence;
-
-    fn domain(inner: &VehicleInner) -> &StoredPlanDomain<Self> {
-        &inner.fence
-    }
-
-    fn support(inner: &VehicleInner) -> ObservationHandle<SupportState> {
-        let vehicle_state = inner.stores.vehicle_state.borrow().clone();
-        inner.support.seed_from_vehicle_state(&vehicle_state);
-        inner.support.mission_fence()
-    }
-
-    fn plan_to_wire(plan: &FencePlan) -> Result<WireMissionPlan, VehicleError> {
-        mission_plan_from_fence_plan(plan)
-    }
-
-    fn plan_from_wire(plan: WireMissionPlan) -> Result<FencePlan, VehicleError> {
-        fence_plan_from_mission_plan(plan)
-    }
-}
-
-/// Accessor for geofence state and transfer operations.
-///
-/// Obtained from [`Vehicle::fence`](crate::Vehicle::fence). Fence items pass through the
-/// MAVLink mission protocol unchanged — no home insertion or extraction is performed (unlike the
-/// mission domain).
-///
-/// # Conflict model
-///
-/// Fence transfers share the same [`MissionProtocolScope`](crate::mission::MissionProtocolScope)
-/// as the mission and rally domains.  Starting a fence transfer while any other domain transfer
-/// is active returns [`VehicleError::OperationConflict`] immediately.
-pub struct FenceHandle<'a> {
-    handle: StoredPlanHandle<'a, FenceState>,
-}
-
-impl<'a> FenceHandle<'a> {
-    pub(crate) fn new(inner: &'a VehicleInner) -> Self {
-        Self {
-            handle: StoredPlanHandle::new(inner),
-        }
-    }
-
-    /// Returns a capability-support observation for the fence domain.
-    ///
-    /// The initial value is seeded from the current vehicle identity so callers get a non-stale
-    /// result even before the event loop has pushed an update.
-    pub fn support(&self) -> ObservationHandle<SupportState> {
-        self.handle.support()
-    }
-
-    /// Returns the most recently observed fence state, or `None` if no update has arrived yet.
-    pub fn latest(&self) -> Option<FenceState> {
-        self.handle.latest()
-    }
-
-    /// Waits for the next fence state update and returns it.
-    ///
-    /// Returns the default state if the vehicle disconnects before an update arrives.
-    pub async fn wait(&self) -> FenceState {
-        self.handle.wait().await
-    }
-
-    /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if no
-    /// state update arrives within `timeout`.
-    pub async fn wait_timeout(&self, timeout: Duration) -> Result<FenceState, VehicleError> {
-        self.handle.wait_timeout(timeout).await
-    }
-
-    /// Subscribes to an async stream of fence state updates.
-    pub fn subscribe(&self) -> ObservationSubscription<FenceState> {
-        self.handle.subscribe()
-    }
-
-    /// Begins uploading a fence plan to the vehicle.
-    ///
-    /// The plan is serialised to MAVLink mission items using the fence-specific wire encoding
-    /// (polygon vertex counts, circle radii, inclusion groups). Returns a [`FenceUploadOp`] handle.
-    /// On success, the local cache is updated; on failure or cancellation it is marked as
-    /// [`SyncState::PossiblyStale`](crate::types::SyncState::PossiblyStale).
-    ///
-    /// Returns [`VehicleError::OperationConflict`] immediately if any transfer is already active.
-    pub fn upload(&self, plan: FencePlan) -> Result<FenceUploadOp, VehicleError> {
-        self.handle.upload(plan)
-    }
-
-    /// Begins downloading the vehicle's active geofence plan.
-    ///
-    /// Returns a [`FenceDownloadOp`] handle. On success, the wire items are decoded back into a
-    /// typed [`FencePlan`] and the local cache is updated.
-    ///
-    /// Returns [`VehicleError::OperationConflict`] immediately if any transfer is already active.
-    pub fn download(&self) -> Result<FenceDownloadOp, VehicleError> {
-        self.handle.download()
-    }
-
-    /// Clears the vehicle's geofence storage.
-    ///
-    /// Returns a [`FenceClearOp`] handle. On success, the local cache is set to an empty
-    /// [`FencePlan`] and marked current.
-    ///
-    /// Returns [`VehicleError::OperationConflict`] immediately if any transfer is already active.
-    pub fn clear(&self) -> Result<FenceClearOp, VehicleError> {
-        self.handle.clear()
-    }
-}
-
-fn mission_plan_from_fence_plan(plan: &FencePlan) -> Result<WireMissionPlan, VehicleError> {
+pub(super) fn mission_plan_from_fence_plan(
+    plan: &FencePlan,
+) -> Result<WireMissionPlan, VehicleError> {
     let mut items = Vec::new();
 
     if let Some(return_point) = &plan.return_point {
@@ -305,7 +85,9 @@ fn mission_plan_from_fence_plan(plan: &FencePlan) -> Result<WireMissionPlan, Veh
     })
 }
 
-fn fence_plan_from_mission_plan(plan: WireMissionPlan) -> Result<FencePlan, VehicleError> {
+pub(super) fn fence_plan_from_mission_plan(
+    plan: WireMissionPlan,
+) -> Result<FencePlan, VehicleError> {
     if plan.mission_type != MissionType::Fence {
         return Err(VehicleError::InvalidParameter(
             "fence operations expect MissionType::Fence plan".to_string(),
@@ -530,8 +312,14 @@ fn fence_decode_error(detail: &str) -> VehicleError {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::mission::{MissionDomain, MissionProtocolScope};
+    use crate::geo::GeoPoint2d;
+    use crate::mission::MissionType;
+
+    use super::{
+        FenceExclusionCircle, FenceExclusionPolygon, FenceInclusionCircle, FenceInclusionPolygon,
+        FencePlan, FenceRegion, MAV_CMD_NAV_FENCE_RETURN_POINT, fence_plan_from_mission_plan,
+        mission_plan_from_fence_plan,
+    };
 
     fn point(latitude_deg: f64, longitude_deg: f64) -> GeoPoint2d {
         GeoPoint2d {
@@ -544,35 +332,31 @@ mod tests {
         FencePlan {
             return_point: Some(point(47.40, 8.54)),
             regions: vec![
-                FenceInclusionPolygon {
+                FenceRegion::InclusionPolygon(FenceInclusionPolygon {
                     vertices: vec![
                         point(47.401, 8.541),
                         point(47.402, 8.542),
                         point(47.403, 8.543),
                     ],
                     inclusion_group: 7,
-                }
-                .into(),
-                FenceExclusionPolygon {
+                }),
+                FenceRegion::ExclusionPolygon(FenceExclusionPolygon {
                     vertices: vec![
                         point(47.411, 8.551),
                         point(47.412, 8.552),
                         point(47.413, 8.553),
                         point(47.414, 8.554),
                     ],
-                }
-                .into(),
-                FenceInclusionCircle {
+                }),
+                FenceRegion::InclusionCircle(FenceInclusionCircle {
                     center: point(47.421, 8.561),
                     radius_m: 120.0,
                     inclusion_group: 3,
-                }
-                .into(),
-                FenceExclusionCircle {
+                }),
+                FenceRegion::ExclusionCircle(FenceExclusionCircle {
                     center: point(47.431, 8.571),
                     radius_m: 35.0,
-                }
-                .into(),
+                }),
             ],
         }
     }
@@ -599,40 +383,5 @@ mod tests {
         let roundtrip =
             fence_plan_from_mission_plan(wire_plan).expect("fence download should regroup");
         assert_eq!(roundtrip, plan);
-    }
-
-    #[test]
-    fn mission_upload_conflicts_with_fence_download() {
-        let mission_protocol = MissionProtocolScope::new();
-        let mission = MissionDomain::new();
-        let fence = FenceDomain::new();
-
-        let upload = mission
-            .begin_operation(
-                &mission_protocol,
-                crate::types::MissionOperationKind::Upload,
-                "upload",
-            )
-            .expect("mission upload should start first");
-
-        let conflict = match fence.begin_operation(
-            &mission_protocol,
-            "fence",
-            StoredPlanOperationKind::Download,
-            "download",
-        ) {
-            Ok(_) => panic!("fence download should conflict while mission upload is active"),
-            Err(err) => err,
-        };
-
-        assert!(matches!(
-            conflict,
-            VehicleError::OperationConflict {
-                conflicting_domain,
-                conflicting_op,
-            } if conflicting_domain == "mission" && conflicting_op == "upload"
-        ));
-
-        mission.finish_operation(&mission_protocol, upload.id);
     }
 }
