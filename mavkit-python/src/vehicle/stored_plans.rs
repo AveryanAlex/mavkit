@@ -2,7 +2,7 @@ use pyo3::exceptions::PyTypeError;
 use pyo3::prelude::*;
 
 use crate::geo::{
-    geo_point2d_from_py, PyGeoPoint2d, PyGeoPoint3dMsl, PyGeoPoint3dRelHome, PyGeoPoint3dTerrain,
+    PyGeoPoint2d, PyGeoPoint3dMsl, PyGeoPoint3dRelHome, PyGeoPoint3dTerrain, geo_point2d_from_py,
 };
 
 #[pyclass(name = "FenceInclusionPolygon", frozen, skip_from_py_object)]
