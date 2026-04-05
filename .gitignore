@@ -29,3 +29,25 @@ __pycache__/
 docs/plans/
 
 lcov.info
+
+# ── GSD baseline (auto-generated) ──
+.gsd
+.gsd-id
+*.swp
+*.swo
+*~
+*.code-workspace
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+dist/
+build/
+*.pyc
+.venv/
+venv/
+vendor/
+coverage/
+.cache/
+tmp/
