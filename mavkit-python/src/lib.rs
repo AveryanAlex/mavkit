@@ -66,34 +66,8 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<enums::PyParamTransferPhase>()?;
     m.add_class::<enums::PyParamType>()?;
 
-    m.add_class::<telemetry::PySensorHealthState>()?;
-    m.add_class::<telemetry::PyGlobalPosition>()?;
-    m.add_class::<telemetry::PyEulerAttitude>()?;
-    m.add_class::<telemetry::PyGpsQuality>()?;
-    m.add_class::<telemetry::PyCellVoltages>()?;
-    m.add_class::<telemetry::PyWaypointProgress>()?;
-    m.add_class::<telemetry::PyGuidanceState>()?;
-    m.add_class::<telemetry::PyTerrainClearance>()?;
+    telemetry::register(m)?;
     m.add_class::<geo::PyGeoPoint3dMsl>()?;
-    m.add_class::<telemetry::PySensorHealthSummary>()?;
-    m.add_class::<telemetry::PyStatusTextEvent>()?;
-    m.add_class::<telemetry::PyMetricSample>()?;
-    m.add_class::<telemetry::PyMessageSample>()?;
-    m.add_class::<telemetry::PyMetricSubscription>()?;
-    m.add_class::<telemetry::PyMessageSubscription>()?;
-    m.add_class::<telemetry::PyMetricHandle>()?;
-    m.add_class::<telemetry::PyPeriodicMessageHandle>()?;
-    m.add_class::<telemetry::PyEventMessageHandle>()?;
-    m.add_class::<telemetry::PyMessageHandle>()?;
-    m.add_class::<telemetry::PyTelemetryPositionNamespace>()?;
-    m.add_class::<telemetry::PyTelemetryAttitudeNamespace>()?;
-    m.add_class::<telemetry::PyTelemetryBatteryNamespace>()?;
-    m.add_class::<telemetry::PyTelemetryGpsNamespace>()?;
-    m.add_class::<telemetry::PyTelemetryNavigationNamespace>()?;
-    m.add_class::<telemetry::PyTelemetryTerrainNamespace>()?;
-    m.add_class::<telemetry::PyTelemetryRcNamespace>()?;
-    m.add_class::<telemetry::PyTelemetryActuatorsNamespace>()?;
-    m.add_class::<telemetry::PyTelemetryMessagesHandle>()?;
 
     m.add_class::<support::PySupportState>()?;
     m.add_class::<support::PySupportStateHandle>()?;
@@ -156,7 +130,6 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     vehicle::register(m)?;
 
     // Vehicle
-    m.add_class::<telemetry::PyTelemetryHandle>()?;
     m.add_class::<modes::PyModesHandle>()?;
     m.add_class::<info::PyInfoHandle>()?;
     m.add_class::<support::PySupportHandle>()?;
