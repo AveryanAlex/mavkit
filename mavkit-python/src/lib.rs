@@ -66,9 +66,6 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<enums::PyParamTransferPhase>()?;
     m.add_class::<enums::PyParamType>()?;
 
-    m.add_class::<vehicle::PyMissionState>()?;
-    m.add_class::<vehicle::PyVehicleIdentity>()?;
-
     m.add_class::<telemetry::PySensorHealthState>()?;
     m.add_class::<telemetry::PyGlobalPosition>()?;
     m.add_class::<telemetry::PyEulerAttitude>()?;
@@ -131,12 +128,6 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<geo::PyGeoPoint2d>()?;
     m.add_class::<geo::PyGeoPoint3dRelHome>()?;
     m.add_class::<geo::PyGeoPoint3dTerrain>()?;
-    m.add_class::<vehicle::PyFenceInclusionPolygon>()?;
-    m.add_class::<vehicle::PyFenceExclusionPolygon>()?;
-    m.add_class::<vehicle::PyFenceInclusionCircle>()?;
-    m.add_class::<vehicle::PyFenceExclusionCircle>()?;
-    m.add_class::<vehicle::PyFencePlan>()?;
-    m.add_class::<vehicle::PyRallyPlan>()?;
 
     // Param types
     m.add_class::<params::PyParam>()?;
@@ -162,37 +153,14 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Raw message types
     m.add_class::<raw_message::PyRawMessage>()?;
     m.add_class::<raw_message::PyRawMessageStream>()?;
-    m.add_class::<vehicle::PyCommandAck>()?;
-    m.add_class::<vehicle::PyFenceState>()?;
-    m.add_class::<vehicle::PyRallyState>()?;
-    m.add_class::<vehicle::PyMissionStateSubscription>()?;
-    m.add_class::<vehicle::PyFenceStateSubscription>()?;
-    m.add_class::<vehicle::PyRallyStateSubscription>()?;
-    m.add_class::<vehicle::PyMissionOperationProgress>()?;
-    m.add_class::<vehicle::PyMissionProgressSubscription>()?;
-    m.add_class::<vehicle::PyMissionUploadOp>()?;
-    m.add_class::<vehicle::PyMissionDownloadOp>()?;
-    m.add_class::<vehicle::PyMissionClearOp>()?;
-    m.add_class::<vehicle::PyMissionVerifyOp>()?;
-    m.add_class::<vehicle::PyFenceUploadOp>()?;
-    m.add_class::<vehicle::PyFenceDownloadOp>()?;
-    m.add_class::<vehicle::PyFenceClearOp>()?;
-    m.add_class::<vehicle::PyRallyUploadOp>()?;
-    m.add_class::<vehicle::PyRallyDownloadOp>()?;
-    m.add_class::<vehicle::PyRallyClearOp>()?;
-    #[cfg(feature = "test-support")]
-    m.add_class::<vehicle::PyTestVehicleHarness>()?;
+    vehicle::register(m)?;
 
     // Vehicle
     m.add_class::<telemetry::PyTelemetryHandle>()?;
     m.add_class::<modes::PyModesHandle>()?;
     m.add_class::<info::PyInfoHandle>()?;
     m.add_class::<support::PySupportHandle>()?;
-    m.add_class::<vehicle::PyMissionHandle>()?;
-    m.add_class::<vehicle::PyFenceHandle>()?;
-    m.add_class::<vehicle::PyRallyHandle>()?;
     m.add_class::<params::PyParamsHandle>()?;
-    m.add_class::<vehicle::PyRawHandle>()?;
     m.add_class::<ardupilot::PyArduCopterHandle>()?;
     m.add_class::<ardupilot::PyArduPlaneHandle>()?;
     m.add_class::<ardupilot::PyArduPlaneVtolHandle>()?;
@@ -205,13 +173,9 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<guided::PyArduPlaneVtolGuidedHandle>()?;
     m.add_class::<guided::PyArduRoverGuidedHandle>()?;
     m.add_class::<guided::PyArduSubGuidedHandle>()?;
-    m.add_class::<vehicle::PyVehicle>()?;
 
     // Free functions (params)
     m.add_function(wrap_pyfunction!(params::format_param_file, m)?)?;
     m.add_function(wrap_pyfunction!(params::parse_param_file, m)?)?;
-    #[cfg(feature = "test-support")]
-    m.add_function(wrap_pyfunction!(vehicle::_connect_test_vehicle, m)?)?;
-
     Ok(())
 }

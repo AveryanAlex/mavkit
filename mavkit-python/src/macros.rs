@@ -185,7 +185,7 @@ macro_rules! define_vehicle_plan_handle {
         }
 
         impl $handle_name {
-            fn new(inner: mavkit::Vehicle) -> Self {
+            pub(crate) fn new(inner: mavkit::Vehicle) -> Self {
                 Self { inner }
             }
         }
