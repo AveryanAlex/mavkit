@@ -1,0 +1,95 @@
+use pyo3::prelude::*;
+
+mod commands;
+mod functions;
+mod model;
+
+pub use commands::*;
+pub use functions::*;
+pub use model::*;
+
+pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    m.add_class::<crate::geo::PyGeoPoint3d>()?;
+    m.add_class::<PyRawMissionCommand>()?;
+    m.add_class::<PyNavWaypoint>()?;
+    m.add_class::<PyNavTakeoff>()?;
+    m.add_class::<PyNavLand>()?;
+    m.add_class::<PyNavLoiterTime>()?;
+    m.add_class::<PyNavGuidedEnable>()?;
+    m.add_class::<PyNavReturnToLaunch>()?;
+    m.add_class::<PyNavSplineWaypoint>()?;
+    m.add_class::<PyNavArcWaypoint>()?;
+    m.add_class::<PyNavLoiterUnlimited>()?;
+    m.add_class::<PyNavLoiterTurns>()?;
+    m.add_class::<PyNavLoiterToAlt>()?;
+    m.add_class::<PyNavContinueAndChangeAlt>()?;
+    m.add_class::<PyNavDelay>()?;
+    m.add_class::<PyNavAltitudeWait>()?;
+    m.add_class::<PyNavVtolTakeoff>()?;
+    m.add_class::<PyNavVtolLand>()?;
+    m.add_class::<PyNavPayloadPlace>()?;
+    m.add_class::<PyNavSetYawSpeed>()?;
+    m.add_class::<PyNavScriptTime>()?;
+    m.add_class::<PyNavAttitudeTime>()?;
+    m.add_class::<PyDoChangeSpeed>()?;
+    m.add_class::<PyDoSetHome>()?;
+    m.add_class::<PyDoSetRelay>()?;
+    m.add_class::<PyDoSetRoiNone>()?;
+    m.add_class::<PyDoJump>()?;
+    m.add_class::<PyDoJumpTag>()?;
+    m.add_class::<PyDoTag>()?;
+    m.add_class::<PyDoPauseContinue>()?;
+    m.add_class::<PyDoSetReverse>()?;
+    m.add_class::<PyDoLandStart>()?;
+    m.add_class::<PyDoReturnPathStart>()?;
+    m.add_class::<PyDoGoAround>()?;
+    m.add_class::<PyDoSetRoiLocation>()?;
+    m.add_class::<PyDoSetRoi>()?;
+    m.add_class::<PyDoMountControl>()?;
+    m.add_class::<PyDoGimbalManagerPitchYaw>()?;
+    m.add_class::<PyDoCamTriggerDistance>()?;
+    m.add_class::<PyDoDigicamConfigure>()?;
+    m.add_class::<PyDoDigicamControl>()?;
+    m.add_class::<PyDoFenceEnable>()?;
+    m.add_class::<PyDoParachute>()?;
+    m.add_class::<PyDoGripper>()?;
+    m.add_class::<PyDoSprayer>()?;
+    m.add_class::<PyDoWinch>()?;
+    m.add_class::<PyDoEngineControl>()?;
+    m.add_class::<PyDoInvertedFlight>()?;
+    m.add_class::<PyDoAutotuneEnable>()?;
+    m.add_class::<PyDoSetServo>()?;
+    m.add_class::<PyDoRepeatServo>()?;
+    m.add_class::<PyDoRepeatRelay>()?;
+    m.add_class::<PyDoSetResumeRepeatDist>()?;
+    m.add_class::<PyDoAuxFunction>()?;
+    m.add_class::<PyDoSendScriptMessage>()?;
+    m.add_class::<PyDoImageStartCapture>()?;
+    m.add_class::<PyDoImageStopCapture>()?;
+    m.add_class::<PyDoVideoStartCapture>()?;
+    m.add_class::<PyDoVideoStopCapture>()?;
+    m.add_class::<PyDoSetCameraZoom>()?;
+    m.add_class::<PyDoSetCameraFocus>()?;
+    m.add_class::<PyDoSetCameraSource>()?;
+    m.add_class::<PyDoGuidedLimits>()?;
+    m.add_class::<PyDoVtolTransition>()?;
+    m.add_class::<PyCondDelay>()?;
+    m.add_class::<PyCondDistance>()?;
+    m.add_class::<PyCondYaw>()?;
+    m.add_class::<PyMissionItem>()?;
+    m.add_class::<PyHomePosition>()?;
+    m.add_class::<PyMissionPlan>()?;
+    m.add_class::<PyMissionIssue>()?;
+    m.add_class::<PyTransferProgress>()?;
+    m.add_class::<PyTransferError>()?;
+    m.add_class::<PyRetryPolicy>()?;
+    m.add_class::<PyCompareTolerance>()?;
+
+    m.add_function(wrap_pyfunction!(validate_plan, m)?)?;
+    m.add_function(wrap_pyfunction!(plans_equivalent, m)?)?;
+    m.add_function(wrap_pyfunction!(normalize_for_compare, m)?)?;
+    m.add_function(wrap_pyfunction!(mission_items_for_upload, m)?)?;
+    m.add_function(wrap_pyfunction!(mission_plan_from_download, m)?)?;
+
+    Ok(())
+}
