@@ -40,15 +40,22 @@ impl<'a> MissionHandle<'a> {
         self.inner.mission.state().latest()
     }
 
-    /// Waits until a mission state is available and returns the current value.
+    /// Returns the current cached mission state immediately when one is already available;
+    /// otherwise waits for the first mission state observed after the call.
     ///
-    /// Returns the default state if the vehicle disconnects before an update arrives.
+    /// Returns the default state if the vehicle disconnects before any mission state becomes
+    /// available.
     pub async fn wait(&self) -> MissionState {
         self.inner.mission.state().wait().await.unwrap_or_default()
     }
 
-    /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if no state update
-    /// arrives within `timeout`.
+    /// Like [`wait`](Self::wait), but returns the current cached mission state immediately when
+    /// one is already available.
+    ///
+    /// If no mission state is cached yet, this waits for the first observed mission state and
+    /// returns [`VehicleError::Timeout`] if it does not arrive within `timeout`. Returns
+    /// [`VehicleError::Disconnected`] if the vehicle disconnects before any mission state becomes
+    /// available.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<MissionState, VehicleError> {
         self.inner.mission.state().wait_timeout(timeout).await
     }

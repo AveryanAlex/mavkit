@@ -52,15 +52,22 @@ impl<'a> FenceHandle<'a> {
         self.handle.latest()
     }
 
-    /// Waits until a fence state is available and returns the current value.
+    /// Returns the current cached fence state immediately when one is already available;
+    /// otherwise waits for the first fence state observed after the call.
     ///
-    /// Returns the default state if the vehicle disconnects before an update arrives.
+    /// Returns the default state if the vehicle disconnects before any fence state becomes
+    /// available.
     pub async fn wait(&self) -> FenceState {
         self.handle.wait().await
     }
 
-    /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if no
-    /// state update arrives within `timeout`.
+    /// Like [`wait`](Self::wait), but returns the current cached fence state immediately when one
+    /// is already available.
+    ///
+    /// If no fence state is cached yet, this waits for the first observed fence state and returns
+    /// [`VehicleError::Timeout`] if it does not arrive within `timeout`. Returns
+    /// [`VehicleError::Disconnected`] if the vehicle disconnects before any fence state becomes
+    /// available.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<FenceState, VehicleError> {
         self.handle.wait_timeout(timeout).await
     }

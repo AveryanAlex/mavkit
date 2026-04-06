@@ -17,6 +17,7 @@ pub mod params;
 pub(crate) mod protocol_scope;
 pub mod rally;
 pub mod raw;
+mod shared_state;
 mod state;
 mod stored_plan;
 #[cfg(feature = "stream")]

@@ -3,11 +3,12 @@ use std::time::Duration;
 use crate::command::Command;
 use crate::error::VehicleError;
 use crate::mission::{MissionType, WireMissionPlan, run_domain_operation};
-use crate::observation::{ObservationHandle, ObservationSubscription, ObservationWriter};
+use crate::observation::{ObservationHandle, ObservationSubscription};
 use crate::protocol_scope::{MissionProtocolScope, OperationReservation};
+use crate::shared_state::SharedState;
 use crate::types::{StoredPlanOperationKind, SupportState, SyncState};
 use crate::vehicle::VehicleInner;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 pub(crate) trait StoredPlanState:
     Clone + Default + PartialEq + Send + Sync + 'static
@@ -27,32 +28,24 @@ pub(crate) struct StoredPlanDomain<S: StoredPlanState> {
 }
 
 struct StoredPlanDomainInner<S: StoredPlanState> {
-    state_writer: ObservationWriter<S>,
-    state: ObservationHandle<S>,
-    latest_state: Mutex<S>,
+    state: SharedState<S>,
 }
 
 impl<S: StoredPlanState> StoredPlanDomain<S> {
     pub(crate) fn new() -> Self {
-        let (state_writer, state) = ObservationHandle::watch();
-        let latest = S::default();
-        let _ = state_writer.publish(latest.clone());
-
         Self {
             inner: Arc::new(StoredPlanDomainInner {
-                state_writer,
-                state,
-                latest_state: Mutex::new(latest),
+                state: SharedState::new(S::default()),
             }),
         }
     }
 
     pub(crate) fn state(&self) -> ObservationHandle<S> {
-        self.inner.state.clone()
+        self.inner.state.handle()
     }
 
     pub(crate) fn close(&self) {
-        self.inner.state_writer.close();
+        self.inner.state.close();
     }
 
     pub(crate) fn begin_operation(
@@ -104,13 +97,7 @@ impl<S: StoredPlanState> StoredPlanDomain<S> {
     }
 
     pub(crate) fn update_state(&self, edit: impl FnOnce(&mut S)) {
-        let mut latest = self.inner.latest_state.lock().unwrap();
-        let mut next = latest.clone();
-        edit(&mut next);
-        if *latest != next {
-            *latest = next.clone();
-            let _ = self.inner.state_writer.publish(next);
-        }
+        let _ = self.inner.state.update(edit);
     }
 }
 
@@ -190,9 +177,10 @@ where
         S::domain(self.inner).state().latest()
     }
 
-    /// Waits until a state value is available and returns the current value.
+    /// Returns the current cached state immediately when one is already available; otherwise waits
+    /// for the first state observed after the call.
     ///
-    /// Returns the default state if the vehicle disconnects before an update arrives.
+    /// Returns the default state if the vehicle disconnects before any state becomes available.
     pub async fn wait(&self) -> S {
         S::domain(self.inner)
             .state()
@@ -201,8 +189,13 @@ where
             .unwrap_or_default()
     }
 
-    /// Like [`wait`](Self::wait), but returns [`VehicleError::Timeout`] if no state update
-    /// arrives within `timeout`.
+    /// Like [`wait`](Self::wait), but returns the current cached state immediately when one is
+    /// already available.
+    ///
+    /// If no state is cached yet, this waits for the first observed state and returns
+    /// [`VehicleError::Timeout`] if it does not arrive within `timeout`. Returns
+    /// [`VehicleError::Disconnected`] if the vehicle disconnects before any state becomes
+    /// available.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<S, VehicleError> {
         S::domain(self.inner).state().wait_timeout(timeout).await
     }
