@@ -1,7 +1,17 @@
 import mavkit
 
 
+package_version: str = mavkit.__version__
 vehicle_type: type[mavkit.Vehicle] = mavkit.Vehicle
+ardupilot_handle_type: type[mavkit.ArduPilotHandle] = mavkit.ArduPilotHandle
+guided_session_type: type[mavkit.ArduGuidedSession] = mavkit.ArduGuidedSession
+copter_guided_type: type[mavkit.ArduCopterGuidedHandle] = mavkit.ArduCopterGuidedHandle
+plane_guided_type: type[mavkit.ArduPlaneGuidedHandle] = mavkit.ArduPlaneGuidedHandle
+plane_vtol_guided_type: type[mavkit.ArduPlaneVtolGuidedHandle] = (
+    mavkit.ArduPlaneVtolGuidedHandle
+)
+rover_guided_type: type[mavkit.ArduRoverGuidedHandle] = mavkit.ArduRoverGuidedHandle
+sub_guided_type: type[mavkit.ArduSubGuidedHandle] = mavkit.ArduSubGuidedHandle
 mission_handle_type: type[mavkit.MissionHandle] = mavkit.MissionHandle
 mission_item_type: type[mavkit.MissionItem] = mavkit.MissionItem
 mission_issue_type: type[mavkit.MissionIssue] = mavkit.MissionIssue

@@ -1,3 +1,5 @@
+import inspect
+
 import mavkit
 
 
@@ -39,6 +41,10 @@ class TestArduPilotBindings:
         ):
             assert hasattr(mavkit, name)
 
+    def test_ardupilot_guided_entrypoint_signature_stays_session_based(self):
+        guided = getattr(mavkit.ArduPilotHandle, "guided")
+        assert str(inspect.signature(guided)) == "(self, /)"
+
     def test_vehicle_keeps_guided_actions_off_root_api(self):
         assert not hasattr(mavkit.Vehicle, "guided")
         assert not hasattr(mavkit.Vehicle, "motor_test")
@@ -59,8 +65,15 @@ class TestArduGuidedBindings:
         assert hasattr(guided_session, "__aexit__")
         assert callable(getattr(guided_session, "__aexit__"))
 
+    def test_guided_session_close_signature_is_stable(self):
+        close = getattr(mavkit.ArduGuidedSession, "close")
+        assert str(inspect.signature(close)) == "(self, /)"
+
     def test_plane_handles_expose_vtol_narrowing_only_on_plane(self):
         plane_handle = getattr(mavkit, "ArduPlaneHandle")
+        copter_handle = getattr(mavkit, "ArduCopterHandle")
+        rover_handle = getattr(mavkit, "ArduRoverHandle")
+        sub_handle = getattr(mavkit, "ArduSubHandle")
         plane_guided_handle = getattr(mavkit, "ArduPlaneGuidedHandle")
         copter_guided_handle = getattr(mavkit, "ArduCopterGuidedHandle")
         rover_guided_handle = getattr(mavkit, "ArduRoverGuidedHandle")
@@ -71,6 +84,9 @@ class TestArduGuidedBindings:
         assert hasattr(plane_guided_handle, "vtol")
         assert callable(getattr(plane_guided_handle, "vtol"))
 
+        assert not hasattr(copter_handle, "vtol")
+        assert not hasattr(rover_handle, "vtol")
+        assert not hasattr(sub_handle, "vtol")
         assert not hasattr(copter_guided_handle, "vtol")
         assert not hasattr(rover_guided_handle, "vtol")
         assert not hasattr(sub_guided_handle, "vtol")

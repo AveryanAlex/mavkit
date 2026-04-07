@@ -1,4 +1,6 @@
 import asyncio
+import importlib.metadata
+import inspect
 import queue
 import socket
 import struct
@@ -220,9 +222,17 @@ class TestVehicleApi:
     def test_vehicle_root_commands_match_domain_split(self):
         for name in (
             "arm",
+            "arm_no_wait",
+            "force_arm",
+            "force_arm_no_wait",
             "disarm",
+            "disarm_no_wait",
+            "force_disarm",
+            "force_disarm_no_wait",
             "set_mode",
+            "set_mode_no_wait",
             "set_mode_by_name",
+            "set_mode_by_name_no_wait",
             "set_home",
             "set_home_current",
             "set_origin",
@@ -231,6 +241,23 @@ class TestVehicleApi:
         ):
             assert hasattr(mavkit.Vehicle, name)
             assert callable(getattr(mavkit.Vehicle, name))
+
+    def test_vehicle_root_no_wait_signatures_match_runtime_surface(self):
+        expected_signatures = {
+            "arm_no_wait": "(self, /)",
+            "force_arm_no_wait": "(self, /)",
+            "disarm_no_wait": "(self, /)",
+            "force_disarm_no_wait": "(self, /)",
+            "set_mode_no_wait": "(self, /, custom_mode)",
+            "set_mode_by_name_no_wait": "(self, /, name)",
+        }
+
+        for name, expected_signature in expected_signatures.items():
+            method = getattr(mavkit.Vehicle, name)
+            assert str(inspect.signature(method)) == expected_signature
+
+    def test_package_root_version_matches_installed_metadata(self):
+        assert mavkit.__version__ == importlib.metadata.version("mavkit")
 
     def test_domain_handles_expose_runtime_methods(self):
         async def scenario() -> None:
