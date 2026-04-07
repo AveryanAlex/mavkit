@@ -81,7 +81,7 @@ impl WireMissionState {
 /// `Error` is emitted when the transport encounters a non-recoverable failure (e.g.
 /// the serial port is removed). After `Disconnected` or `Error` no further MAVLink
 /// messages will arrive and all [`ObservationHandle::wait`] calls will return
-/// [`VehicleError::Disconnected`].
+/// [`crate::VehicleError::Disconnected`].
 ///
 /// [`ObservationHandle::wait`]: crate::ObservationHandle::wait
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

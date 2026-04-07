@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 ///
 /// Obtained from [`Vehicle::support`](crate::Vehicle::support). Capability flags are extracted
 /// from the `AUTOPILOT_VERSION` message (`capabilities` bitmask). Each observation starts as
-/// [`SupportState::Unknown`](crate::types::SupportState::Unknown) and is updated once the init
+/// [`SupportState::Unknown`] and is updated once the init
 /// sequence completes or the first heartbeat arrives.
 ///
 /// All observation handles have their initial value seeded from the current vehicle state, so
@@ -63,7 +63,7 @@ impl<'a> SupportHandle<'a> {
     /// Whether the connected autopilot is ArduPilot.
     ///
     /// Derived from the `autopilot` field in the heartbeat, not from capability bits. Returns
-    /// [`SupportState::Unsupported`](crate::types::SupportState::Unsupported) for any non-ArduPilot
+    /// [`SupportState::Unsupported`] for any non-ArduPilot
     /// autopilot once a heartbeat is received.
     pub fn ardupilot(&self) -> ObservationHandle<SupportState> {
         self.seed_from_vehicle_state();

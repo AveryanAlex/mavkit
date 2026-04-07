@@ -1,3 +1,9 @@
+//! Small crate-private state caches built on top of observations.
+//!
+//! Domains that need a deduped last-known snapshot keep it here and publish changes through the
+//! paired observation handles, reusing the crate's poison-recovery policy instead of
+//! reimplementing lock handling at each call site.
+
 use crate::observation::{ObservationHandle, ObservationWriter};
 use std::sync::{Mutex, MutexGuard};
 

@@ -1,8 +1,8 @@
 //! Thin root for telemetry metric backing stores and grouped accessors.
 //!
-//! The writer-side backing store creation lives in [`backing`], while the public grouped
-//! accessors exposed from [`crate::Vehicle::telemetry`] live in [`namespace`]. This module keeps
-//! the stable telemetry handle/type paths intact via re-exports.
+//! The backing-store construction helpers stay crate-private, while the grouped accessors reached
+//! from [`crate::Vehicle::telemetry`] are re-exported here through stable public handle and
+//! namespace types. This keeps the telemetry paths intact without exposing storage details.
 
 mod backing;
 mod namespace;

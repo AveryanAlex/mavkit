@@ -1,3 +1,10 @@
+//! Reactive observation primitives shared across the crate.
+//!
+//! This root owns the public handle, writer, and stream types used for vehicle state,
+//! telemetry, and discrete event delivery. The sibling files keep the low-level backing
+//! stores and typed wrappers separate so the exported [`crate::ObservationHandle`],
+//! [`crate::ObservationWriter`], and [`crate::ObservationSubscription`] paths stay stable.
+
 mod backing;
 mod subscription;
 #[cfg(test)]

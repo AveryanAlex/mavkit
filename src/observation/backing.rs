@@ -1,3 +1,9 @@
+//! Internal storage for observation handles and writers.
+//!
+//! Watch-backed observations keep the latest coalesced value in the Tokio watch channel.
+//! Broadcast-backed observations pair the channel with a recovered mutex cache so callers can
+//! read the most recent event immediately while subscriptions remain future-only.
+
 use std::sync::{Arc, Mutex, MutexGuard};
 use tokio::sync::{broadcast, watch};
 

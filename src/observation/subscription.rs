@@ -11,9 +11,9 @@ pub(super) enum SubscriptionBacking<T: Clone + Send + Sync + 'static> {
     Broadcast { stream: BroadcastStream<T> },
 }
 
-/// A `Stream<Item = T>` created from an [`ObservationHandle`].
+/// A `Stream<Item = T>` created from an [`crate::ObservationHandle`].
 ///
-/// The stream terminates (yields `None`) when the originating [`ObservationWriter`] is
+/// The stream terminates (yields `None`) when the originating [`crate::ObservationWriter`] is
 /// dropped. This signals vehicle disconnection and lets callers break out of
 /// `while let Some(value) = sub.recv().await` loops cleanly.
 ///

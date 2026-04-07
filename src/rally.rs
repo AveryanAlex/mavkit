@@ -147,10 +147,10 @@ impl<'a> RallyHandle<'a> {
 
     /// Begins uploading a rally-point plan to the vehicle.
     ///
-    /// Each [`GeoPoint3d`](crate::geo::GeoPoint3d) is encoded as a `MAV_CMD_NAV_RALLY_POINT`
+    /// Each [`GeoPoint3d`] is encoded as a `MAV_CMD_NAV_RALLY_POINT`
     /// mission item with the appropriate frame. Returns a [`RallyUploadOp`] handle. On success,
     /// the local cache is updated; on failure or cancellation it is marked as
-    /// [`SyncState::PossiblyStale`](crate::types::SyncState::PossiblyStale).
+    /// [`SyncState::PossiblyStale`].
     ///
     /// Returns [`VehicleError::OperationConflict`] immediately if any transfer is already active.
     pub fn upload(&self, plan: RallyPlan) -> Result<RallyUploadOp, VehicleError> {
