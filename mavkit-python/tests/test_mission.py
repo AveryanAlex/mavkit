@@ -93,10 +93,21 @@ class TestMissionItem:
         assert item.param2 == 0.0
         assert item.param3 == 0.0
         assert item.param4 == 0.0
-        assert item.current is False
+        assert not hasattr(item, "current")
         assert item.autocontinue is True
 
     def test_construction_with_all_fields(self):
+        with pytest.raises(TypeError, match="current"):
+            mavkit.MissionItem(
+                command=nav_takeoff_command(
+                    latitude_deg=47.42,
+                    longitude_deg=-122.2,
+                    altitude_m=100.0,
+                    pitch_deg=15.0,
+                ),
+                current=True,
+            )
+
         item = mavkit.MissionItem(
             command=nav_takeoff_command(
                 latitude_deg=47.42,
@@ -104,7 +115,6 @@ class TestMissionItem:
                 altitude_m=100.0,
                 pitch_deg=15.0,
             ),
-            current=True,
             autocontinue=False,
         )
         assert item.command == 22
@@ -113,7 +123,7 @@ class TestMissionItem:
         assert item.y == -1222000000
         assert item.z == pytest.approx(100.0)
         assert item.param1 == pytest.approx(15.0)
-        assert item.current is True
+        assert not hasattr(item, "current")
         assert item.autocontinue is False
 
     def test_repr(self):
@@ -862,7 +872,9 @@ class TestWireUploadDownload:
         plan = mavkit.mission_plan_from_download(wire_items)
         assert not hasattr(plan, "home")
         assert len(plan.items) == 1
-        assert plan.items[0].current is True
+        assert plan.items[0].command == 22
+        assert plan.items[0].frame == mavkit.MissionFrame.GlobalRelativeAltInt
+        assert not hasattr(plan.items[0], "current")
 
     def test_download_empty_items(self):
         plan = mavkit.mission_plan_from_download([])
