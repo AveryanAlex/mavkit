@@ -56,8 +56,10 @@ fn send_requested_item_msg(
     ))
 }
 
-// MAVLink crate deprecated this type/variant, but the wire protocol still requires it.
-#[allow(deprecated)]
+#[allow(
+    deprecated,
+    reason = "the MAVLink crate deprecated these mission transfer variants, but the MAVLink mission upload wire protocol still requires them"
+)]
 pub(in crate::event_loop) async fn handle_mission_upload(
     plan: WireMissionPlan,
     ctx: &mut CommandContext,

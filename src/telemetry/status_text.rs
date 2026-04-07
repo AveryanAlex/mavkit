@@ -3,6 +3,7 @@ use crate::dialect;
 use crate::observation::{
     MessageHandle, MessageSample, ObservationHandle, ObservationWriter, SupportState,
 };
+use crate::shared_state::recover_lock;
 use mavlink::MavHeader;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -80,10 +81,7 @@ impl StatusTextWriter {
 
     pub(crate) fn close(&self) {
         self.closed.store(true, Ordering::SeqCst);
-        self.pending
-            .lock()
-            .expect("status text pending map mutex poisoned")
-            .clear();
+        recover_lock(&self.pending).clear();
         self.sample.close();
         self.support.close();
     }
@@ -126,10 +124,7 @@ impl StatusTextWriter {
         let mut schedule_generation = None;
 
         {
-            let mut pending = self
-                .pending
-                .lock()
-                .expect("status text pending map mutex poisoned");
+            let mut pending = recover_lock(&self.pending);
             let entry = pending.entry(key).or_insert_with(|| PendingStatusText {
                 chunks: BTreeMap::new(),
                 severity: data.severity,
@@ -185,10 +180,7 @@ impl StatusTextWriter {
             }
 
             let flushed = {
-                let mut pending = writer
-                    .pending
-                    .lock()
-                    .expect("status text pending map mutex poisoned");
+                let mut pending = recover_lock(&writer.pending);
                 let should_flush = pending
                     .get(&key)
                     .is_some_and(|entry| entry.generation == generation);

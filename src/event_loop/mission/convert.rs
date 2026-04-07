@@ -22,8 +22,10 @@ pub(in crate::event_loop) fn to_mav_frame(frame: MissionFrame) -> dialect::MavFr
     }
 }
 
-// MAVLink crate deprecated this type/variant, but the wire protocol still requires it.
-#[allow(deprecated)]
+#[allow(
+    deprecated,
+    reason = "the MAVLink crate deprecated these legacy frame variants, but mission downloads still need to decode them"
+)]
 pub(in crate::event_loop) fn from_mav_frame(frame: dialect::MavFrame) -> MissionFrame {
     match frame {
         dialect::MavFrame::MAV_FRAME_MISSION => MissionFrame::Mission,

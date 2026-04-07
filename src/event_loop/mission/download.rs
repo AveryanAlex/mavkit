@@ -12,8 +12,10 @@ use super::convert::{
 };
 use super::protocol::transfer_failed;
 
-// MAVLink crate deprecated this type/variant, but the wire protocol still requires it.
-#[allow(deprecated)]
+#[allow(
+    deprecated,
+    reason = "the MAVLink crate deprecated MISSION_ITEM, but downloads still need to decode the float-form fallback from the wire"
+)]
 fn from_mission_item_float(data: &dialect::MISSION_ITEM_DATA) -> MissionItem {
     let is_global = matches!(
         data.frame,
@@ -46,8 +48,10 @@ fn from_mission_item_float(data: &dialect::MISSION_ITEM_DATA) -> MissionItem {
     }
 }
 
-// MAVLink crate deprecated this type/variant, but the wire protocol still requires it.
-#[allow(deprecated)]
+#[allow(
+    deprecated,
+    reason = "the MAVLink crate deprecated these mission transfer variants, but the MAVLink mission download wire protocol still requires them"
+)]
 pub(in crate::event_loop) async fn handle_mission_download(
     mission_type: MissionType,
     ctx: &mut CommandContext,

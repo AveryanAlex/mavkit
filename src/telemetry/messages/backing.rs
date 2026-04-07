@@ -3,6 +3,7 @@ use crate::dialect::{self, MavCmd};
 use crate::observation::{
     MessageHandle, MessageSample, ObservationHandle, ObservationWriter, SupportState,
 };
+use crate::shared_state::recover_lock;
 use crate::telemetry::status_text::{
     StatusTextEvent, StatusTextWriter, create_status_text_backing_store,
 };
@@ -82,10 +83,7 @@ where
     }
 
     fn entry(&self, key: K) -> IndexedMessageEntry<M> {
-        let mut entries = self
-            .entries
-            .lock()
-            .expect("indexed message family mutex poisoned");
+        let mut entries = recover_lock(&self.entries);
 
         if let Some(existing) = entries.get(&key) {
             return existing.clone();
@@ -111,10 +109,7 @@ where
 
     pub(crate) fn close(&self) {
         self.closed.store(true, Ordering::SeqCst);
-        let entries = self
-            .entries
-            .lock()
-            .expect("indexed message family mutex poisoned");
+        let entries = recover_lock(&self.entries);
         for entry in entries.values() {
             entry.writer.close();
         }
@@ -128,10 +123,7 @@ pub(crate) struct MessageCommandHub {
 
 impl MessageCommandHub {
     pub(crate) fn bind(&self, command_tx: &mpsc::Sender<Command>) {
-        *self
-            .command_tx
-            .lock()
-            .expect("message command hub mutex poisoned") = Some(command_tx.clone());
+        *recover_lock(&self.command_tx) = Some(command_tx.clone());
     }
 
     pub(super) async fn send_raw_command_long(
@@ -139,16 +131,11 @@ impl MessageCommandHub {
         command: MavCmd,
         params: [f32; 7],
     ) -> Result<(), VehicleError> {
-        let command_tx = self
-            .command_tx
-            .lock()
-            .expect("message command hub mutex poisoned")
-            .clone()
-            .ok_or_else(|| {
-                VehicleError::Unsupported(
-                    "telemetry message command bridge is not bound to a vehicle".to_string(),
-                )
-            })?;
+        let command_tx = recover_lock(&self.command_tx).clone().ok_or_else(|| {
+            VehicleError::Unsupported(
+                "telemetry message command bridge is not bound to a vehicle".to_string(),
+            )
+        })?;
 
         let (reply_tx, reply_rx) = oneshot::channel();
         command_tx

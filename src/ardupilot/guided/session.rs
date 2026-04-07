@@ -4,6 +4,7 @@ use super::{
 };
 use crate::command::Command;
 use crate::error::VehicleError;
+use crate::shared_state::recover_lock;
 use crate::state::LinkState;
 use crate::vehicle::VehicleInner;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -33,7 +34,7 @@ impl GuidedLeaseScope {
     }
 
     pub(crate) fn acquire(&self) -> Result<u64, VehicleError> {
-        let mut active = self.inner.active_lease.lock().unwrap();
+        let mut active = recover_lock(&self.inner.active_lease);
         if active.is_some() {
             return Err(VehicleError::OperationConflict {
                 conflicting_domain: "ardupilot_guided".to_string(),
@@ -47,7 +48,7 @@ impl GuidedLeaseScope {
     }
 
     pub(crate) fn release(&self, lease_id: u64) {
-        let mut active = self.inner.active_lease.lock().unwrap();
+        let mut active = recover_lock(&self.inner.active_lease);
         if active
             .as_ref()
             .is_some_and(|active_id| *active_id == lease_id)
@@ -151,10 +152,7 @@ impl ArduGuidedSession {
 
     #[cfg(test)]
     pub(crate) fn terminal_reason_for_test(&self) -> Option<&'static str> {
-        self.inner
-            .terminal_reason
-            .lock()
-            .unwrap()
+        recover_lock(&self.inner.terminal_reason)
             .as_ref()
             .map(GuidedTerminalReason::as_str)
     }
@@ -175,7 +173,7 @@ impl ArduGuidedSessionInner {
             });
         }
 
-        if self.terminal_reason.lock().unwrap().is_some() {
+        if recover_lock(&self.terminal_reason).is_some() {
             return Err(VehicleError::OperationConflict {
                 conflicting_domain: "ardupilot_guided".to_string(),
                 conflicting_op: "session_terminal".to_string(),
@@ -233,7 +231,7 @@ impl ArduGuidedSessionInner {
     }
 
     fn mark_terminal(&self, reason: GuidedTerminalReason) {
-        let mut terminal_reason = self.terminal_reason.lock().unwrap();
+        let mut terminal_reason = recover_lock(&self.terminal_reason);
         if terminal_reason.is_none() {
             *terminal_reason = Some(reason);
         }

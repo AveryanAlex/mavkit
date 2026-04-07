@@ -1,6 +1,7 @@
 use super::{SharedConnection, VehicleTarget, send_message};
 use crate::config::{InitDomainPolicy, VehicleConfig};
 use crate::dialect::{self, MavCmd};
+use crate::shared_state::recover_lock;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::sync::watch;
@@ -89,7 +90,7 @@ impl InitManager {
         cancel: CancellationToken,
     ) {
         let should_start = {
-            let mut inner = self.inner.lock().unwrap();
+            let mut inner = recover_lock(&self.inner);
             if inner.started {
                 false
             } else {
@@ -126,29 +127,28 @@ impl InitManager {
     }
 
     pub(super) fn handle_message(&self, message: &dialect::MavMessage) {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = recover_lock(&self.inner);
 
         match message {
             dialect::MavMessage::AUTOPILOT_VERSION(data) => {
                 inner.snapshot.autopilot_version = InitState::Available(data.clone());
             }
-            dialect::MavMessage::AVAILABLE_MODES(data) => {
-                match &mut inner.snapshot.available_modes {
-                    InitState::Available(modes) => {
-                        if let Some(existing) = modes
-                            .iter_mut()
-                            .find(|existing| existing.mode_index == data.mode_index)
-                        {
-                            *existing = data.clone();
-                        } else {
-                            modes.push(data.clone());
-                        }
-                    }
-                    _ => {
-                        inner.snapshot.available_modes = InitState::Available(vec![data.clone()]);
+            dialect::MavMessage::AVAILABLE_MODES(data) => match &mut inner.snapshot.available_modes
+            {
+                InitState::Available(modes) => {
+                    if let Some(existing) = modes
+                        .iter_mut()
+                        .find(|existing| existing.mode_index == data.mode_index)
+                    {
+                        *existing = data.clone();
+                    } else {
+                        modes.push(data.clone());
                     }
                 }
-            }
+                _ => {
+                    inner.snapshot.available_modes = InitState::Available(vec![data.clone()]);
+                }
+            },
             dialect::MavMessage::HOME_POSITION(data) => {
                 inner.snapshot.home_position = InitState::Available(data.clone());
             }
@@ -163,7 +163,7 @@ impl InitManager {
 
     #[cfg(test)]
     pub(super) fn snapshot(&self) -> InitSnapshot {
-        self.inner.lock().unwrap().snapshot.clone()
+        recover_lock(&self.inner).snapshot.clone()
     }
 
     fn spawn_domain(
@@ -237,7 +237,7 @@ impl InitManager {
     }
 
     fn is_terminal(&self, domain: InitDomain) -> bool {
-        let inner = self.inner.lock().unwrap();
+        let inner = recover_lock(&self.inner);
         match domain {
             InitDomain::AutopilotVersion => matches!(
                 inner.snapshot.autopilot_version,
@@ -259,7 +259,7 @@ impl InitManager {
     }
 
     fn set_requesting(&self, domain: InitDomain, attempt: u8) {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = recover_lock(&self.inner);
         match domain {
             InitDomain::AutopilotVersion => {
                 inner.snapshot.autopilot_version = InitState::Requesting { attempt }
@@ -279,7 +279,7 @@ impl InitManager {
     }
 
     fn finish_on_silence(&self, domain: InitDomain) {
-        let mut inner = self.inner.lock().unwrap();
+        let mut inner = recover_lock(&self.inner);
         match domain {
             InitDomain::AutopilotVersion => finish_state_on_silence(
                 &mut inner.snapshot.autopilot_version,
@@ -372,8 +372,10 @@ fn request_message_command(
     })
 }
 
-// MAVLink crate deprecated this type/variant, but the wire protocol still requires it.
-#[allow(deprecated)]
+#[allow(
+    deprecated,
+    reason = "the MAVLink crate deprecated MAV_CMD_GET_HOME_POSITION, but the wire protocol still requires this request"
+)]
 fn request_home_position_command(target: &VehicleTarget) -> dialect::MavMessage {
     dialect::MavMessage::COMMAND_LONG(dialect::COMMAND_LONG_DATA {
         target_system: target.system_id,
