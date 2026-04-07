@@ -476,9 +476,28 @@ class TestVehicleApi:
                 try:
                     link = vehicle.link()
                     state = link.state()
+                    subscription = state.subscribe()
+                    assert subscription.last_error_message is None
+                    assert await subscription.recv() == mavkit.LinkState.Connected
+                    assert subscription.last_error_message is None
                     assert state.latest() == mavkit.LinkState.Connected
                     assert await state.wait_timeout(0.1) == mavkit.LinkState.Connected
                 finally:
                     await vehicle.disconnect()
+
+        asyncio.run(scenario())
+
+    def test_raw_subscription_closes_after_disconnect(self):
+        async def scenario() -> None:
+            with _FakeMavlinkPeer(_free_udp_port()) as peer:
+                vehicle = await mavkit.Vehicle.connect_udp(peer.bind_addr)
+                raw = vehicle.raw()
+                subscribe = cast(
+                    Callable[[], mavkit.RawMessageStream], getattr(raw, "subscribe")
+                )
+                subscription = subscribe()
+                await vehicle.disconnect()
+                with pytest.raises(StopAsyncIteration):
+                    await asyncio.wait_for(subscription.recv(), timeout=0.25)
 
         asyncio.run(scenario())

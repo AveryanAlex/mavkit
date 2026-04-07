@@ -146,8 +146,12 @@ mod tests {
     #[test]
     fn iter_yields_all_pairs() {
         let store = sample_store();
-        let pairs: Vec<_> = store.iter().collect();
-        assert_eq!(pairs.len(), 2);
+        let mut pair_count = 0;
+        for (name, param) in store.iter() {
+            assert_eq!(name, &param.name);
+            pair_count += 1;
+        }
+        assert_eq!(pair_count, 2);
     }
 
     #[test]
@@ -168,8 +172,12 @@ mod tests {
     #[test]
     fn into_iter_owned_works() {
         let store = sample_store();
-        let items: Vec<_> = store.into_iter().collect();
-        assert_eq!(items.len(), 2);
+        let mut item_count = 0;
+        for (name, param) in store {
+            assert_eq!(name, param.name);
+            item_count += 1;
+        }
+        assert_eq!(item_count, 2);
     }
 }
 

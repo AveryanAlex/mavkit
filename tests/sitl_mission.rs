@@ -37,9 +37,7 @@ async fn sitl_clear_then_download_mission_is_empty() {
 
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let downloaded = common::download_with_retries(&vehicle)
-            .await
-            .map_err(|e| e.to_string())?;
+        let downloaded = common::download_with_retries(&vehicle).await?;
         assert!(
             downloaded.items.is_empty(),
             "expected empty mission after clear"
@@ -140,9 +138,7 @@ async fn sitl_upload_overwrites_previous_mission() {
 
         tokio::time::sleep(Duration::from_millis(500)).await;
 
-        let downloaded = common::download_with_retries(&vehicle)
-            .await
-            .map_err(|e| e.to_string())?;
+        let downloaded = common::download_with_retries(&vehicle).await?;
         assert_eq!(
             downloaded.items.len(),
             5,

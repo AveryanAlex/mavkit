@@ -14,6 +14,13 @@ use crate::error::MavkitError;
 
 type RawMessageSubscription = Pin<Box<dyn tokio_stream::Stream<Item = mavkit::RawMessage> + Send>>;
 
+fn take_poison_tolerant<T>(slot: &mut Mutex<Option<T>>) -> Option<T> {
+    match slot.get_mut() {
+        Ok(inner) => inner.take(),
+        Err(poisoned) => poisoned.into_inner().take(),
+    }
+}
+
 /// A single raw MAVLink message with header metadata.
 #[pyclass(name = "RawMessage", frozen)]
 pub struct PyRawMessage {
@@ -172,7 +179,7 @@ impl PyRawMessageStream {
 
 impl Drop for PyRawMessageStream {
     fn drop(&mut self) {
-        if let Some(handle) = self.forward_task.lock().unwrap().take() {
+        if let Some(handle) = take_poison_tolerant(&mut self.forward_task) {
             handle.abort();
         }
     }
@@ -201,5 +208,25 @@ impl PyRawMessageStream {
 
     fn __repr__(&self) -> &'static str {
         "RawMessageStream()"
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+    use std::sync::Mutex;
+
+    use super::take_poison_tolerant;
+
+    #[test]
+    fn take_poison_tolerant_recovers_value_from_poisoned_mutex() {
+        let mut slot = Mutex::new(Some(42_u8));
+        let _ = catch_unwind(AssertUnwindSafe(|| {
+            let _guard = slot.lock().unwrap();
+            panic!("poison raw forward-task slot");
+        }));
+
+        assert_eq!(take_poison_tolerant(&mut slot), Some(42));
+        assert_eq!(take_poison_tolerant(&mut slot), None);
     }
 }

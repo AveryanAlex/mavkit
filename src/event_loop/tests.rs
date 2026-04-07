@@ -1600,16 +1600,17 @@ async fn auto_request_home_only_sent_once() {
 
     {
         let sent_msgs = sent.lock().unwrap();
-        let home_reqs: Vec<_> = sent_msgs
-                .iter()
-                .filter(|(_, msg)| {
-                    matches!(
-                        msg,
-        dialect::MavMessage::COMMAND_LONG(d) if d.command == MavCmd::MAV_CMD_GET_HOME_POSITION
-                    )
-                })
-                .collect();
-        assert_eq!(home_reqs.len(), 1, "home should only be requested once");
+        let home_req_count = sent_msgs
+            .iter()
+            .filter(|(_, msg)| {
+                matches!(
+                    msg,
+                    dialect::MavMessage::COMMAND_LONG(d)
+                        if d.command == MavCmd::MAV_CMD_GET_HOME_POSITION
+                )
+            })
+            .count();
+        assert_eq!(home_req_count, 1, "home should only be requested once");
     }
 
     cmd_tx.send(Command::Shutdown).await.unwrap();

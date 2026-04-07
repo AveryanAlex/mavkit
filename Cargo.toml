@@ -9,6 +9,9 @@ unsafe_code = "deny"
 dbg_macro = "deny"
 todo = "deny"
 unimplemented = "deny"
+redundant_clone = "deny"
+clone_on_copy = "deny"
+needless_collect = "deny"
 
 [workspace.lints.rustdoc]
 broken_intra_doc_links = "deny"

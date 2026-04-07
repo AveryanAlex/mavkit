@@ -3,7 +3,7 @@ use std::sync::Arc;
 use pyo3::exceptions::PyStopAsyncIteration;
 use pyo3::prelude::*;
 
-use crate::error::{duration_from_secs, to_py_err};
+use crate::error::{MavkitError, duration_from_secs, to_py_err};
 use crate::vehicle::vehicle_label;
 
 #[pyclass(name = "LinkState", eq, frozen, from_py_object)]
@@ -26,6 +26,14 @@ impl From<mavkit::LinkState> for PyLinkState {
     }
 }
 
+fn lock_last_error_message(
+    cache: &std::sync::Mutex<Option<String>>,
+) -> PyResult<std::sync::MutexGuard<'_, Option<String>>> {
+    cache
+        .lock()
+        .map_err(|_| MavkitError::new_err("link-state error cache lock poisoned"))
+}
+
 // PyLinkStateHandle and PyLinkStateSubscription cannot use define_observation_wrapper!
 // because the subscription must carry last_error_message: Arc<Mutex<Option<String>>> to surface
 // the error string from LinkState::Error between recv() calls.  That extra field means
@@ -45,11 +53,10 @@ impl PyLinkStateSubscription {
             let mut guard = inner.lock().await;
             match guard.recv().await {
                 Some(value) => {
-                    if let mavkit::LinkState::Error(ref msg) = value {
-                        *last_err.lock().unwrap() = Some(msg.clone());
-                    } else {
-                        *last_err.lock().unwrap() = None;
-                    }
+                    *lock_last_error_message(&last_err)? = match &value {
+                        mavkit::LinkState::Error(msg) => Some(msg.clone()),
+                        _ => None,
+                    };
                     Ok(PyLinkState::from(value))
                 }
                 None => Err(PyStopAsyncIteration::new_err(
@@ -60,8 +67,8 @@ impl PyLinkStateSubscription {
     }
 
     #[getter]
-    fn last_error_message(&self) -> Option<String> {
-        self.last_error_message.lock().unwrap().clone()
+    fn last_error_message(&self) -> PyResult<Option<String>> {
+        Ok(lock_last_error_message(&self.last_error_message)?.clone())
     }
 
     fn __aiter__(slf: PyRef<'_, Self>) -> PyRef<'_, Self> {
@@ -136,5 +143,28 @@ impl PyLinkHandle {
 
     fn __repr__(&self) -> String {
         format!("LinkHandle({})", vehicle_label(&self.inner))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::panic::{AssertUnwindSafe, catch_unwind};
+    use std::sync::Mutex;
+
+    use super::lock_last_error_message;
+
+    #[test]
+    fn poisoned_last_error_cache_returns_python_error() {
+        let cache = Mutex::new(None::<String>);
+        let _ = catch_unwind(AssertUnwindSafe(|| {
+            let _guard = cache.lock().unwrap();
+            panic!("poison last-error cache");
+        }));
+
+        let err = lock_last_error_message(&cache).expect_err("poison should surface as an error");
+        assert!(
+            err.to_string()
+                .contains("link-state error cache lock poisoned")
+        );
     }
 }

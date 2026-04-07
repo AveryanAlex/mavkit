@@ -391,7 +391,7 @@ pub fn _connect_test_vehicle<'py>(py: Python<'py>) -> PyResult<Bound<'py, PyAny>
             .map_err(to_py_err)?;
 
         Ok((
-            PyVehicle::from_inner(vehicle.clone()),
+            PyVehicle::from_inner(vehicle),
             PyTestVehicleHarness { msg_tx, sent },
         ))
     })
