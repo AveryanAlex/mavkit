@@ -66,10 +66,16 @@ wasm-bindgen-futures = "0.4"
 web-time = "1"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
 tempfile = "3"
 async-trait = "0.1"
 serde_json = "1"
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+
+[target.'cfg(target_arch = "wasm32")'.dev-dependencies]
+tokio = { version = "1", default-features = false, features = ["rt", "macros", "sync", "time"] }
+wasm-bindgen-test = "0.3"
 
 [package.metadata.docs.rs]
 all-features = true

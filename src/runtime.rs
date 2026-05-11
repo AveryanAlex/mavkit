@@ -223,6 +223,8 @@ mod tests {
     };
     use std::time::Duration;
     use tokio::sync::oneshot;
+    #[cfg(not(target_arch = "wasm32"))]
+    use tokio::sync::{Barrier, Notify};
 
     #[tokio::test]
     async fn timeout_returns_error_when_sleep_wins() {
@@ -260,5 +262,32 @@ mod tests {
 
         assert!(errors.is_empty());
         assert!(!finished.load(Ordering::SeqCst));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[tokio::test]
+    async fn task_group_preserves_concurrent_execution() {
+        let barrier = Arc::new(Barrier::new(3));
+        let completion = Arc::new(Notify::new());
+        let completed = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+
+        let mut group = TaskGroup::new();
+        for _ in 0..2 {
+            let barrier = barrier.clone();
+            let completion = completion.clone();
+            let completed = completed.clone();
+            group.spawn(async move {
+                barrier.wait().await;
+                if completed.fetch_add(1, Ordering::SeqCst) + 1 == 2 {
+                    completion.notify_one();
+                }
+            });
+        }
+
+        barrier.wait().await;
+        completion.notified().await;
+
+        assert_eq!(completed.load(Ordering::SeqCst), 2);
+        assert!(group.join_all().await.is_empty());
     }
 }
