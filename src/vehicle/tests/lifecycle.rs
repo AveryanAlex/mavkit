@@ -1,16 +1,18 @@
 use super::support::*;
 use crate::dialect;
 use crate::{AutopilotType, Vehicle, VehicleError, VehicleIdentity, VehicleType};
+#[cfg(feature = "byte-connection")]
+use mavlink::MavHeader;
 #[cfg(feature = "stream")]
 use mavlink::async_peek_reader::AsyncPeekReader;
 #[cfg(feature = "byte-connection")]
 use mavlink::peek_reader::PeekReader;
-#[cfg(feature = "byte-connection")]
-use mavlink::{MavHeader, MavlinkVersion, ReadVersion};
-#[cfg(feature = "stream")]
-use mavlink::{MavlinkVersion, ReadVersion, read_versioned_msg_async, write_versioned_msg_async};
+#[cfg(any(feature = "byte-connection", feature = "stream"))]
+use mavlink::{MavlinkVersion, ReadVersion};
 #[cfg(feature = "byte-connection")]
 use mavlink::{read_versioned_msg, write_versioned_msg};
+#[cfg(feature = "stream")]
+use mavlink::{read_versioned_msg_async, write_versioned_msg_async};
 use std::sync::Arc;
 use std::time::Duration;
 #[cfg(feature = "stream")]

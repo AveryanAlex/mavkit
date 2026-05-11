@@ -28,17 +28,39 @@ fn sitl_endpoint() -> SitlEndpoint {
 
 async fn connect_sitl_vehicle() -> Result<Vehicle, String> {
     match sitl_endpoint() {
-        SitlEndpoint::Tcp(addr) => {
-            let vehicle = Vehicle::connect_tcp(&addr)
-                .await
-                .map_err(|err| format!("failed to connect to SITL TCP endpoint {addr}: {err}"))?;
-            prime_sitl_tcp_streams(&vehicle).await?;
-            Ok(vehicle)
-        }
-        SitlEndpoint::Udp(addr) => Vehicle::connect_udp(&addr)
-            .await
-            .map_err(|err| format!("failed to connect to SITL UDP bind {addr}: {err}")),
+        SitlEndpoint::Tcp(addr) => connect_sitl_vehicle_tcp(&addr).await,
+        SitlEndpoint::Udp(addr) => connect_sitl_vehicle_udp(&addr).await,
     }
+}
+
+#[cfg(feature = "tcp")]
+async fn connect_sitl_vehicle_tcp(addr: &str) -> Result<Vehicle, String> {
+    let vehicle = Vehicle::connect_tcp(addr)
+        .await
+        .map_err(|err| format!("failed to connect to SITL TCP endpoint {addr}: {err}"))?;
+    prime_sitl_tcp_streams(&vehicle).await?;
+    Ok(vehicle)
+}
+
+#[cfg(not(feature = "tcp"))]
+async fn connect_sitl_vehicle_tcp(addr: &str) -> Result<Vehicle, String> {
+    Err(format!(
+        "SITL TCP endpoint {addr} requested, but mavkit was built without the `tcp` feature"
+    ))
+}
+
+#[cfg(feature = "udp")]
+async fn connect_sitl_vehicle_udp(addr: &str) -> Result<Vehicle, String> {
+    Vehicle::connect_udp(addr)
+        .await
+        .map_err(|err| format!("failed to connect to SITL UDP bind {addr}: {err}"))
+}
+
+#[cfg(not(feature = "udp"))]
+async fn connect_sitl_vehicle_udp(addr: &str) -> Result<Vehicle, String> {
+    Err(format!(
+        "SITL UDP bind {addr} requested, but mavkit was built without the `udp` feature"
+    ))
 }
 
 async fn prime_sitl_tcp_streams(vehicle: &Vehicle) -> Result<(), String> {
