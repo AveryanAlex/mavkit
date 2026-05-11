@@ -49,6 +49,24 @@ impl Vehicle {
         Self::from_connection(Box::new(StreamConnection::new(reader, writer)), config).await
     }
 
+    /// Construct a vehicle future plus a byte bridge for callback-style transports.
+    ///
+    /// This returns the [`crate::byte_connection::ByteBridge`] immediately so callers can feed the
+    /// first heartbeat before awaiting vehicle readiness. Await the returned future to complete the
+    /// normal first-heartbeat connect path.
+    #[cfg(feature = "byte-connection")]
+    pub fn from_byte_connection(
+        config: VehicleConfig,
+        byte_config: crate::byte_connection::ByteConnectionConfig,
+    ) -> (
+        crate::byte_connection::ByteBridge,
+        impl std::future::Future<Output = Result<Self, VehicleError>> + Send,
+    ) {
+        let (connection, bridge) = crate::byte_connection::ByteConnection::new(byte_config);
+        let vehicle = async move { Self::from_connection(Box::new(connection), config).await };
+        (bridge, vehicle)
+    }
+
     /// Connect by listening on a UDP socket for an incoming MAVLink stream (`udp` feature).
     pub async fn connect_udp(bind_addr: &str) -> Result<Self, VehicleError> {
         Self::connect(&format!("udpin:{bind_addr}")).await

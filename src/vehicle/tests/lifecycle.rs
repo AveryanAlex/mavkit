@@ -3,8 +3,14 @@ use crate::dialect;
 use crate::{AutopilotType, Vehicle, VehicleError, VehicleIdentity, VehicleType};
 #[cfg(feature = "stream")]
 use mavlink::async_peek_reader::AsyncPeekReader;
+#[cfg(feature = "byte-connection")]
+use mavlink::peek_reader::PeekReader;
+#[cfg(feature = "byte-connection")]
+use mavlink::{MavHeader, MavlinkVersion, ReadVersion};
 #[cfg(feature = "stream")]
 use mavlink::{MavlinkVersion, ReadVersion, read_versioned_msg_async, write_versioned_msg_async};
+#[cfg(feature = "byte-connection")]
+use mavlink::{read_versioned_msg, write_versioned_msg};
 use std::sync::Arc;
 use std::time::Duration;
 #[cfg(feature = "stream")]
@@ -231,6 +237,133 @@ async fn from_stream_parts_supports_command_round_trip() {
     )
     .await
     .expect("ack should be written to the stream peer");
+
+    assert!(arm_task.await.expect("arm task should join").is_ok());
+
+    vehicle
+        .disconnect()
+        .await
+        .expect("disconnect should succeed");
+}
+
+#[cfg(feature = "byte-connection")]
+fn encode_byte_connection_frame(header: MavHeader, message: &dialect::MavMessage) -> Vec<u8> {
+    let mut bytes = Vec::new();
+    write_versioned_msg(&mut bytes, MavlinkVersion::V2, header, message)
+        .expect("frame should encode");
+    bytes
+}
+
+#[cfg(feature = "byte-connection")]
+fn decode_byte_connection_frame(bytes: Vec<u8>) -> (MavHeader, dialect::MavMessage) {
+    let mut reader = PeekReader::new(std::io::Cursor::new(bytes));
+    read_versioned_msg::<dialect::MavMessage, _>(&mut reader, ReadVersion::Any)
+        .expect("frame should decode")
+}
+
+#[cfg(feature = "byte-connection")]
+#[tokio::test]
+async fn from_byte_connection_exposes_bridge_before_first_heartbeat() {
+    let (bridge, vehicle_future) = Vehicle::from_byte_connection(
+        fast_config(),
+        crate::byte_connection::ByteConnectionConfig::default(),
+    );
+
+    bridge
+        .push_inbound(encode_byte_connection_frame(
+            crate::test_support::default_header(),
+            &heartbeat_msg(true, 5),
+        ))
+        .await
+        .expect("heartbeat should be delivered through the byte bridge");
+
+    let vehicle = timeout(Duration::from_millis(250), vehicle_future)
+        .await
+        .expect("vehicle future should finish after the queued heartbeat")
+        .expect("vehicle should connect");
+
+    assert_eq!(
+        vehicle.identity(),
+        VehicleIdentity {
+            system_id: 1,
+            component_id: 1,
+            autopilot: AutopilotType::ArduPilotMega,
+            vehicle_type: VehicleType::Quadrotor,
+        }
+    );
+    assert!(vehicle.available_modes().current().latest().is_some());
+
+    vehicle
+        .disconnect()
+        .await
+        .expect("disconnect should succeed");
+}
+
+#[cfg(feature = "byte-connection")]
+#[tokio::test]
+async fn from_byte_connection_supports_command_round_trip() {
+    let (bridge, vehicle_future) = Vehicle::from_byte_connection(
+        fast_config(),
+        crate::byte_connection::ByteConnectionConfig::default(),
+    );
+    let vehicle_task = tokio::spawn(vehicle_future);
+
+    bridge
+        .push_inbound(encode_byte_connection_frame(
+            crate::test_support::default_header(),
+            &heartbeat_msg(false, 7),
+        ))
+        .await
+        .expect("heartbeat should be delivered through the byte bridge");
+
+    let vehicle = timeout(Duration::from_millis(250), vehicle_task)
+        .await
+        .expect("vehicle future should finish after the heartbeat")
+        .expect("vehicle task should join")
+        .expect("vehicle should connect");
+
+    let arm_task = {
+        let vehicle = vehicle.clone();
+        tokio::spawn(async move { vehicle.arm().await })
+    };
+
+    let (_, outbound) = timeout(Duration::from_millis(250), async {
+        loop {
+            let outbound = bridge
+                .next_outbound()
+                .await
+                .expect("outbound frame should be available before close");
+            let decoded = decode_byte_connection_frame(outbound);
+
+            match &decoded.1 {
+                dialect::MavMessage::COMMAND_LONG(data)
+                    if data.command == dialect::MavCmd::MAV_CMD_COMPONENT_ARM_DISARM =>
+                {
+                    break decoded;
+                }
+                _ => {}
+            }
+        }
+    })
+    .await
+    .expect("arm command should be observed before timeout");
+
+    let arm_command = match outbound {
+        dialect::MavMessage::COMMAND_LONG(data) => data,
+        other => panic!("expected COMMAND_LONG, got {other:?}"),
+    };
+    assert_eq!(arm_command.param1, 1.0);
+
+    bridge
+        .push_inbound(encode_byte_connection_frame(
+            crate::test_support::default_header(),
+            &ack_msg(
+                dialect::MavCmd::MAV_CMD_COMPONENT_ARM_DISARM,
+                dialect::MavResult::MAV_RESULT_ACCEPTED,
+            ),
+        ))
+        .await
+        .expect("ack should be delivered through the byte bridge");
 
     assert!(arm_task.await.expect("arm task should join").is_ok());
 
