@@ -6,6 +6,7 @@ use crate::command::Command;
 use crate::error::VehicleError;
 use crate::observation::{ObservationSubscription, ObservationWriter};
 use crate::operation::send_domain_command;
+use crate::runtime;
 use crate::types::{MissionOperationKind, MissionOperationProgress};
 use crate::vehicle::VehicleInner;
 use std::time::Duration;
@@ -295,7 +296,7 @@ impl<'a> MissionHandle<'a> {
             }
         };
 
-        tokio::time::timeout(
+        runtime::timeout(
             self.inner._config.command_completion_timeout,
             wait_for_match,
         )

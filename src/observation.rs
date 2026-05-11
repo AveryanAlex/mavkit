@@ -12,6 +12,7 @@ mod tests;
 mod typed;
 
 use crate::error::VehicleError;
+use crate::runtime;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{broadcast, watch};
@@ -159,7 +160,7 @@ impl<T: Clone + Send + Sync + 'static> ObservationHandle<T> {
     }
 
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<T, VehicleError> {
-        match tokio::time::timeout(timeout, self.wait()).await {
+        match runtime::timeout(timeout, self.wait()).await {
             Ok(result) => result,
             Err(_) => Err(VehicleError::Timeout("observation wait".into())),
         }

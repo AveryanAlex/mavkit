@@ -3,6 +3,7 @@ use crate::dialect;
 use crate::observation::{
     MessageHandle, MessageSample, ObservationHandle, ObservationWriter, SupportState,
 };
+use crate::runtime;
 use crate::shared_state::recover_lock;
 use crate::time::Instant;
 use mavlink::MavHeader;
@@ -173,8 +174,8 @@ impl StatusTextWriter {
 
     fn schedule_flush(&self, key: PendingKey, generation: u64) {
         let writer = self.clone();
-        tokio::spawn(async move {
-            tokio::time::sleep(writer.flush_timeout).await;
+        runtime::spawn(async move {
+            runtime::sleep(writer.flush_timeout).await;
 
             if writer.closed.load(Ordering::SeqCst) {
                 return;

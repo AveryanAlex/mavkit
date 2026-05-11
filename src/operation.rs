@@ -4,8 +4,8 @@ use std::time::Duration;
 use crate::command::Command;
 use crate::error::VehicleError;
 use crate::observation::{ObservationHandle, ObservationSubscription, ObservationWriter};
+use crate::runtime::{self, TaskHandle, TimeoutError};
 use tokio::sync::{Mutex, mpsc, oneshot, watch};
-use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 pub(crate) struct OperationHandle<T: Send + 'static, P: Clone + Send + Sync + 'static> {
@@ -58,9 +58,9 @@ impl<T: Send + 'static, P: Clone + Send + Sync + 'static> OperationHandle<T, P> 
             })?
         };
 
-        tokio::time::timeout(timeout, receiver)
+        runtime::timeout(timeout, receiver)
             .await
-            .map_err(|_| VehicleError::Timeout(timeout_context.into()))?
+            .map_err(|TimeoutError| VehicleError::Timeout(timeout_context.into()))?
             .map_err(|_| VehicleError::Disconnected)?
     }
 
@@ -84,12 +84,12 @@ pub(crate) fn spawn_watch_progress_bridge<S, P>(
     progress_writer: ObservationWriter<P>,
     stop: CancellationToken,
     map: impl Fn(S) -> P + Send + 'static,
-) -> JoinHandle<()>
+) -> TaskHandle
 where
     S: Clone + Send + Sync + 'static,
     P: Clone + Send + Sync + 'static,
 {
-    tokio::spawn(async move {
+    runtime::spawn(async move {
         let _ = progress_rx.borrow_and_update();
 
         loop {
@@ -135,7 +135,7 @@ where
     };
 
     progress_stop.cancel();
-    let _ = progress_task.await;
+    let _ = progress_task.join().await;
 
     command_result
 }

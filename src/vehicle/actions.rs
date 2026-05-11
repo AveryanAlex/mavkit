@@ -4,6 +4,7 @@ use crate::error::VehicleError;
 use crate::geo::{GeoPoint3dMsl, try_latitude_e7, try_longitude_e7};
 use crate::modes::mode_number;
 use crate::observation::{MetricHandle, MetricSample, ObservationSubscription};
+use crate::runtime;
 use crate::time::Instant;
 use crate::vehicle::rc_override::RcOverride;
 use crate::vehicle::{Vehicle, VehicleInner};
@@ -124,7 +125,7 @@ impl VehicleInner {
             Err(VehicleError::Disconnected)
         };
 
-        tokio::time::timeout(self._config.command_completion_timeout, wait_for_match)
+        runtime::timeout(self._config.command_completion_timeout, wait_for_match)
             .await
             .map_err(|_| VehicleError::Timeout("waiting for mode change".into()))?
     }
@@ -384,7 +385,7 @@ impl Vehicle {
             Err(VehicleError::Disconnected)
         };
 
-        tokio::time::timeout(
+        runtime::timeout(
             self.inner._config.command_completion_timeout,
             wait_for_match,
         )

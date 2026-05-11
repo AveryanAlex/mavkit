@@ -4,6 +4,7 @@ use crate::dialect::MavCmd;
 use crate::observation::{
     MessageHandle, MessageSample, ObservationHandle, ObservationSubscription, SupportState,
 };
+use crate::runtime;
 use crate::time::Instant;
 use std::time::Duration;
 
@@ -25,7 +26,7 @@ async fn wait_for_fresh_sample<M: Clone + Send + Sync + 'static>(
         }
     };
 
-    match tokio::time::timeout(timeout, wait).await {
+    match runtime::timeout(timeout, wait).await {
         Ok(result) => result,
         Err(_) => Err(VehicleError::Timeout("message wait".into())),
     }

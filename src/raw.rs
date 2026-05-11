@@ -11,6 +11,7 @@ mod types;
 use crate::VehicleError;
 use crate::command::{Command, CommandIntPayload, send_command_int_ack};
 use crate::dialect::{self, MavCmd};
+use crate::runtime;
 use crate::vehicle::Vehicle;
 use num_traits::FromPrimitive;
 use std::time::Duration;
@@ -124,7 +125,7 @@ impl<'a> RawHandle<'a> {
             })
             .await?;
 
-        tokio::time::timeout(timeout, async {
+        runtime::timeout(timeout, async {
             stream.next().await.ok_or(VehicleError::Disconnected)
         })
         .await
