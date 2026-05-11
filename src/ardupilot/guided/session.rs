@@ -4,6 +4,7 @@ use super::{
 };
 use crate::command::Command;
 use crate::error::VehicleError;
+use crate::runtime;
 use crate::shared_state::recover_lock;
 use crate::state::LinkState;
 use crate::vehicle::VehicleInner;
@@ -189,7 +190,7 @@ impl ArduGuidedSessionInner {
         let current_mode = vehicle.modes.current();
         let mut current_mode_sub = current_mode.subscribe();
 
-        tokio::spawn(async move {
+        runtime::spawn(async move {
             if !matches!(link_state_rx.borrow().clone(), LinkState::Connected) {
                 session.mark_terminal(GuidedTerminalReason::LinkDropped);
                 return;
