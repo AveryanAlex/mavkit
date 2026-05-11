@@ -214,7 +214,7 @@ impl TaskGroup {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_arch = "wasm32")))]
 mod tests {
     use super::*;
     use std::sync::{
@@ -223,7 +223,6 @@ mod tests {
     };
     use std::time::Duration;
     use tokio::sync::oneshot;
-    #[cfg(not(target_arch = "wasm32"))]
     use tokio::sync::{Barrier, Notify};
 
     #[tokio::test]
@@ -264,7 +263,6 @@ mod tests {
         assert!(!finished.load(Ordering::SeqCst));
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
     #[tokio::test]
     async fn task_group_preserves_concurrent_execution() {
         let barrier = Arc::new(Barrier::new(3));

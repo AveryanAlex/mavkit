@@ -99,6 +99,28 @@ jobs:
       - name: Python tests
         run: uv run pytest tests/ -v
 
+  wasm:
+    needs: rust
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Wasm feature build check
+        run: cargo check -p mavkit --target wasm32-unknown-unknown --no-default-features --features wasm
+
+      - name: Compile wasm browser test artifact
+        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features wasm --test wasm_byte_connection --no-run
+
   sitl:
     needs: rust
     runs-on: ubuntu-latest

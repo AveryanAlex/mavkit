@@ -23,6 +23,13 @@ mavkit = "0.5"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
+For browser/wasm builds, disable default transports and enable the wasm entry point:
+
+```toml
+[dependencies]
+mavkit = { version = "0.5", default-features = false, features = ["wasm"] }
+```
+
 ## Quick Start
 
 ### Python
@@ -64,6 +71,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### Rust: custom byte transports / wasm
+
+`Vehicle::connect*` remains the easiest path when MAVKit owns the socket or serial transport.
+Use `Vehicle::from_connection` when you already have an `AsyncMavConnection`, and use
+`Vehicle::from_byte_connection` when the host environment owns raw MAVLink bytes (for example a
+browser WebSocket/WebSerial bridge or another callback-driven transport).
+
+With the `wasm` feature enabled, `from_byte_connection` returns a `ByteBridge` immediately plus a
+vehicle future. Feed inbound/outbound frames through the bridge, then await the future once the
+first heartbeat can flow through your transport.
+
+On the current stable `wasm32-unknown-unknown` toolchain, spawned task panics are not recoverable
+through MAVKit's internal task join handles; browser transports should treat such panics as fatal
+and restart the owning task/session.
+
 ## Features
 
 - **Connections** -- UDP, TCP, serial, BLE/SPP via byte-stream adapters
@@ -82,6 +104,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 | `serial` | Yes | MAVLink direct serial transport |
 | `ardupilot` | Yes | ArduPilot mode-name mapping |
 | `stream` | No | Generic async stream helpers for BLE/SPP/custom links |
+| `byte-connection` | No | Callback-style raw byte bridge for custom transports |
+| `wasm` | No | Browser-friendly runtime + `from_byte_connection` entry point (`byte-connection` implied) |
 | `tlog` | No | TLOG file parser for timestamped MAVLink logs |
 
 ## Mission Wire Semantics
