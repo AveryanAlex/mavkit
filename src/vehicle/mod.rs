@@ -42,8 +42,10 @@ pub use rc_override::{RcOverride, RcOverrideChannelValue};
 /// explicitly via [`Vehicle::disconnect`].
 ///
 /// # Lifecycle
-/// 1. Call [`Vehicle::connect`] (or a typed variant) to open the transport and wait for the
-///    first heartbeat.
+/// 1. Construct a `Vehicle` with the transport entry point that matches your target:
+///    [`Vehicle::connect`] / typed URL helpers on native targets, or wasm-safe byte/stream
+///    injection such as [`Vehicle::from_byte_connection`] when the browser owns the transport.
+///    These constructors wait for the first heartbeat before yielding a ready vehicle.
 /// 2. Use domain accessor methods (`vehicle.telemetry()`, `vehicle.mission()`, etc.) to get
 ///    short-lived handles that borrow `self`. Each handle exposes operations scoped to its domain.
 /// 3. Call [`Vehicle::disconnect`] when finished, or simply drop all clones.

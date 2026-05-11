@@ -26,6 +26,7 @@ impl Vehicle {
     /// Blocks until the first heartbeat is received or `connect_timeout` elapses.
     /// Returns [`VehicleError::Timeout`] on timeout, [`VehicleError::ConnectionFailed`] on
     /// transport errors.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn connect(address: &str) -> Result<Self, VehicleError> {
         Self::connect_with_config(address, VehicleConfig::default()).await
     }
@@ -60,7 +61,7 @@ impl Vehicle {
         byte_config: crate::byte_connection::ByteConnectionConfig,
     ) -> (
         crate::byte_connection::ByteBridge,
-        impl std::future::Future<Output = Result<Self, VehicleError>> + Send,
+        impl std::future::Future<Output = Result<Self, VehicleError>>,
     ) {
         let (connection, bridge) = crate::byte_connection::ByteConnection::new(byte_config);
         let vehicle = async move { Self::from_connection(Box::new(connection), config).await };
@@ -68,16 +69,19 @@ impl Vehicle {
     }
 
     /// Connect by listening on a UDP socket for an incoming MAVLink stream (`udp` feature).
+    #[cfg(all(feature = "udp", not(target_arch = "wasm32")))]
     pub async fn connect_udp(bind_addr: &str) -> Result<Self, VehicleError> {
         Self::connect(&format!("udpin:{bind_addr}")).await
     }
 
     /// Connect via an outbound TCP connection (`tcp` feature).
+    #[cfg(all(feature = "tcp", not(target_arch = "wasm32")))]
     pub async fn connect_tcp(addr: &str) -> Result<Self, VehicleError> {
         Self::connect(&format!("tcpout:{addr}")).await
     }
 
     /// Connect via a serial port (`serial` feature).
+    #[cfg(all(feature = "serial", not(target_arch = "wasm32")))]
     pub async fn connect_serial(port: &str, baud: u32) -> Result<Self, VehicleError> {
         Self::connect(&format!("serial:{port}:{baud}")).await
     }
@@ -86,6 +90,7 @@ impl Vehicle {
     ///
     /// See [`Vehicle::connect`] for supported URL schemes. Use this when you need to adjust
     /// timeouts, GCS IDs, or initialization policies.
+    #[cfg(not(target_arch = "wasm32"))]
     pub async fn connect_with_config(
         address: &str,
         config: VehicleConfig,
@@ -317,8 +322,8 @@ async fn wait_for_first_heartbeat(
         }
     };
 
-    tokio::select! {
-        result = ready_wait => result,
-        _ = tokio::time::sleep(connect_timeout) => Err(VehicleError::Timeout("connecting to vehicle".into())),
+    match runtime::timeout(connect_timeout, ready_wait).await {
+        Ok(result) => result,
+        Err(_) => Err(VehicleError::Timeout("connecting to vehicle".into())),
     }
 }

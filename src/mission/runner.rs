@@ -5,6 +5,7 @@ use crate::mission::transfer::{TransferDirection, TransferPhase, TransferProgres
 use crate::observation::{ObservationHandle, ObservationWriter};
 use crate::operation::{run_with_progress_bridge, send_domain_command};
 use crate::protocol_scope::OperationReservation;
+use crate::runtime;
 use crate::types::MissionOperationProgress;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
@@ -62,7 +63,7 @@ where
 
     let cancel = reservation.cancel;
 
-    tokio::spawn(async move {
+    runtime::spawn(async move {
         let command_result = run_with_progress_bridge(
             mission_progress_rx,
             progress_writer.clone(),

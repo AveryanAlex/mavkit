@@ -4,6 +4,7 @@ use crate::command::Command;
 use crate::error::VehicleError;
 use crate::observation::{ObservationHandle, ObservationSubscription};
 use crate::operation::{run_with_progress_bridge, send_domain_command};
+use crate::runtime;
 use crate::types::{ParamOperationKind, ParamOperationProgress};
 use crate::vehicle::VehicleInner;
 use std::time::Duration;
@@ -109,7 +110,7 @@ impl<'a> ParamsHandle<'a> {
         let op_id = reservation.id;
         let cancel = reservation.cancel;
 
-        tokio::spawn(async move {
+        runtime::spawn(async move {
             let command_result = run_with_progress_bridge(
                 param_progress_rx,
                 progress_writer.clone(),
@@ -198,7 +199,7 @@ impl<'a> ParamsHandle<'a> {
         let op_id = reservation.id;
         let cancel = reservation.cancel;
 
-        tokio::spawn(async move {
+        runtime::spawn(async move {
             let command_result = run_with_progress_bridge(
                 param_progress_rx,
                 progress_writer.clone(),
