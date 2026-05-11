@@ -1,7 +1,8 @@
 use super::{ObservationHandle, ObservationSubscription, SupportState};
 use crate::error::VehicleError;
 use crate::telemetry::{TelemetryMessageKind, VehicleTimestamp};
-use std::time::{Duration, Instant};
+use crate::time::Instant;
+use std::time::Duration;
 
 /// A decoded metric value together with the provenance needed to reason about freshness.
 ///

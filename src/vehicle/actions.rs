@@ -4,9 +4,9 @@ use crate::error::VehicleError;
 use crate::geo::{GeoPoint3dMsl, try_latitude_e7, try_longitude_e7};
 use crate::modes::mode_number;
 use crate::observation::{MetricHandle, MetricSample, ObservationSubscription};
+use crate::time::Instant;
 use crate::vehicle::rc_override::RcOverride;
 use crate::vehicle::{Vehicle, VehicleInner};
-use std::time::Instant;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct WireNormalizedGeo {

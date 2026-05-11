@@ -4,11 +4,12 @@ use crate::observation::{
     MessageHandle, MessageSample, ObservationHandle, ObservationWriter, SupportState,
 };
 use crate::shared_state::recover_lock;
+use crate::time::Instant;
 use mavlink::MavHeader;
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 pub(crate) const STATUS_TEXT_BROADCAST_CAPACITY: usize = 256;
 const STATUS_TEXT_FLUSH_TIMEOUT: Duration = Duration::from_secs(2);

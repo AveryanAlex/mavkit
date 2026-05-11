@@ -7,12 +7,12 @@ use crate::shared_state::recover_lock;
 use crate::telemetry::status_text::{
     StatusTextEvent, StatusTextWriter, create_status_text_backing_store,
 };
+use crate::time::Instant;
 use crate::{VehicleError, VehicleTimestamp};
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::time::Instant;
 use tokio::sync::{mpsc, oneshot};
 
 #[derive(Clone)]

@@ -4,7 +4,8 @@ use crate::dialect::MavCmd;
 use crate::observation::{
     MessageHandle, MessageSample, ObservationHandle, ObservationSubscription, SupportState,
 };
-use std::time::{Duration, Instant};
+use crate::time::Instant;
+use std::time::Duration;
 
 async fn wait_for_fresh_sample<M: Clone + Send + Sync + 'static>(
     handle: &MessageHandle<M>,

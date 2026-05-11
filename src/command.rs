@@ -3,7 +3,7 @@ use crate::error::VehicleError;
 use crate::mission::{MissionType, WireMissionPlan};
 use crate::params::{ParamStore, ParamWriteResult};
 use crate::raw::CommandAck;
-use std::time::Instant;
+use crate::time::Instant;
 use tokio::sync::{mpsc, oneshot};
 use tokio_util::sync::CancellationToken;
 

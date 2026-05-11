@@ -3,7 +3,6 @@
 use std::array;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Instant;
 
 use crate::geo::GeoPoint3dMsl;
 use crate::observation::{
@@ -16,6 +15,7 @@ use crate::telemetry::values::{
     CellVoltages, EulerAttitude, GlobalPosition, GpsQuality, GuidanceState, TerrainClearance,
     WaypointProgress,
 };
+use crate::time::Instant;
 use crate::types::SensorHealthSummary;
 use crate::{TelemetryMessageKind, VehicleTimestamp};
 

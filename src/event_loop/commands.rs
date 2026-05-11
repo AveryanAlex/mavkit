@@ -7,7 +7,7 @@ use crate::command::CommandIntPayload;
 use crate::dialect::{self, MavCmd};
 use crate::error::VehicleError;
 use crate::raw::CommandAck;
-use std::time::Instant;
+use crate::time::Instant;
 
 /// Bitmask for SET_POSITION_TARGET_GLOBAL_INT: use only lat/lon/alt, ignore
 /// velocity, acceleration, and yaw fields.

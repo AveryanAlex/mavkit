@@ -1,7 +1,7 @@
 use crate::VehicleError;
 use crate::dialect;
+use crate::time::Instant;
 use mavlink::{MavHeader, MavlinkVersion, Message};
-use std::time::Instant;
 
 /// Decoded `COMMAND_ACK` payload returned from raw command helpers.
 #[derive(Clone, Debug, PartialEq, Eq)]
