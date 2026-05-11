@@ -249,15 +249,22 @@ async fn supervise_connection_shutdown(
 
     cancel.cancel();
 
-    for (index, watcher_handle) in watcher_handles.into_iter().enumerate() {
+    for watcher_handle in &watcher_handles {
         watcher_handle.abort();
+    }
+
+    for (index, watcher_handle) in watcher_handles.into_iter().enumerate() {
         if let Err(err) = watcher_handle.join().await {
             log_task_join_error(&format!("vehicle background watcher #{index}"), err);
         }
     }
 
-    for (index, init_handle) in init_manager.take_tasks().into_iter().enumerate() {
+    let init_handles = init_manager.take_tasks();
+    for init_handle in &init_handles {
         init_handle.abort();
+    }
+
+    for (index, init_handle) in init_handles.into_iter().enumerate() {
         if let Err(err) = init_handle.join().await {
             log_task_join_error(&format!("vehicle init task #{index}"), err);
         }
