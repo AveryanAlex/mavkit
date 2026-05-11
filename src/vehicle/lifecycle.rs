@@ -3,6 +3,7 @@ use crate::config::VehicleConfig;
 use crate::dialect;
 use crate::error::VehicleError;
 use crate::event_loop::{InitManager, run_event_loop_with_init};
+use crate::runtime::{self, TaskHandle, TaskJoinError};
 use crate::state::{LinkState, create_channels};
 #[cfg(feature = "stream")]
 use crate::stream::StreamConnection;
@@ -11,7 +12,6 @@ use std::sync::Arc;
 #[cfg(feature = "stream")]
 use tokio::io::{AsyncRead, AsyncWrite};
 use tokio::sync::{mpsc, watch};
-use tokio::task::{JoinError, JoinHandle};
 use tokio_util::sync::CancellationToken;
 
 impl Vehicle {
@@ -105,13 +105,14 @@ impl Vehicle {
         let close_bundle = inner.connection_scoped_observation_closers();
         let (shutdown_complete_tx, shutdown_complete_rx) = watch::channel(false);
         inner.shutdown_complete = Some(shutdown_complete_rx);
+        let vehicle_cancel = inner.cancel.clone();
 
-        let event_loop_handle = tokio::spawn(run_event_loop_with_init(
+        let event_loop_handle = runtime::spawn(run_event_loop_with_init(
             connection,
             command_rx,
             writers,
             inner._config.clone(),
-            init_manager,
+            init_manager.clone(),
             inner.cancel.clone(),
         ));
 
@@ -119,9 +120,11 @@ impl Vehicle {
             inner: Arc::new(inner),
         };
 
-        tokio::spawn(supervise_connection_shutdown(
+        runtime::spawn(supervise_connection_shutdown(
             event_loop_handle,
             background_handles,
+            vehicle_cancel,
+            init_manager,
             close_bundle,
             shutdown_complete_tx,
         ));
@@ -210,18 +213,30 @@ async fn await_shutdown_completion(
 }
 
 async fn supervise_connection_shutdown(
-    event_loop_handle: JoinHandle<()>,
-    watcher_handles: Vec<JoinHandle<()>>,
+    event_loop_handle: TaskHandle,
+    watcher_handles: Vec<TaskHandle>,
+    cancel: CancellationToken,
+    init_manager: InitManager,
     close_bundle: ConnectionScopedObservationClosers,
     shutdown_complete: watch::Sender<bool>,
 ) {
-    if let Err(err) = event_loop_handle.await {
-        log_join_error("vehicle event-loop", &err);
+    if let Err(err) = event_loop_handle.join().await {
+        log_task_join_error("vehicle event-loop", err);
     }
 
+    cancel.cancel();
+
     for (index, watcher_handle) in watcher_handles.into_iter().enumerate() {
-        if let Err(err) = watcher_handle.await {
-            log_join_error(&format!("vehicle background watcher #{index}"), &err);
+        watcher_handle.abort();
+        if let Err(err) = watcher_handle.join().await {
+            log_task_join_error(&format!("vehicle background watcher #{index}"), err);
+        }
+    }
+
+    for (index, init_handle) in init_manager.take_tasks().into_iter().enumerate() {
+        init_handle.abort();
+        if let Err(err) = init_handle.join().await {
+            log_task_join_error(&format!("vehicle init task #{index}"), err);
         }
     }
 
@@ -230,11 +245,9 @@ async fn supervise_connection_shutdown(
     let _ = shutdown_complete.send(true);
 }
 
-fn log_join_error(task_name: &str, err: &JoinError) {
-    if err.is_panic() {
-        tracing::error!("{task_name} task panicked: {err}");
-    } else {
-        tracing::warn!("{task_name} task join error: {err}");
+fn log_task_join_error(task_name: &str, err: TaskJoinError) {
+    match err {
+        TaskJoinError::Panic => tracing::error!("{task_name} task panicked"),
     }
 }
 

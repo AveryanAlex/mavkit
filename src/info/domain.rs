@@ -5,10 +5,10 @@ use crate::info::logic::{
 };
 use crate::info::{FirmwareInfo, HardwareInfo, PersistentIdentity, UniqueIds};
 use crate::observation::{ObservationHandle, ObservationWriter};
+use crate::runtime::{self, TaskHandle};
 use crate::shared_state::recover_lock;
 use crate::state::{StateChannels, VehicleState};
 use std::sync::{Arc, Mutex};
-use tokio::task::JoinHandle;
 
 #[derive(Clone)]
 pub(crate) struct InfoDomain {
@@ -59,11 +59,7 @@ impl InfoDomain {
         }
     }
 
-    pub(crate) fn start(
-        &self,
-        stores: &StateChannels,
-        init_manager: &InitManager,
-    ) -> JoinHandle<()> {
+    pub(crate) fn start(&self, stores: &StateChannels, init_manager: &InitManager) -> TaskHandle {
         let inner = self.inner.clone();
         let mut vehicle_state_rx = stores.vehicle_state.clone();
         let mut init_rx = init_manager.subscribe();
@@ -71,7 +67,7 @@ impl InfoDomain {
         inner.handle_vehicle_state(&vehicle_state_rx.borrow().clone());
         inner.handle_init_snapshot(&init_rx.borrow().clone());
 
-        tokio::spawn(async move {
+        runtime::spawn(async move {
             loop {
                 tokio::select! {
                     changed = vehicle_state_rx.changed() => {

@@ -1,9 +1,9 @@
 use super::{MagCalProgress, MagCalReport, guided, mag_cal};
 use crate::error::VehicleError;
 use crate::observation::ObservationHandle;
+use crate::runtime::TaskHandle;
 use crate::state::StateChannels;
 use std::sync::Arc;
-use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
@@ -30,7 +30,7 @@ impl ArduPilotDomain {
         &self,
         stores: &StateChannels,
         cancel: CancellationToken,
-    ) -> Vec<JoinHandle<()>> {
+    ) -> Vec<TaskHandle> {
         self.inner.mag_cal.start(stores, cancel)
     }
 

@@ -2,10 +2,10 @@ use super::types::{MissionPlan, MissionState};
 use crate::error::VehicleError;
 use crate::observation::ObservationHandle;
 use crate::protocol_scope::{MissionProtocolScope, OperationReservation};
+use crate::runtime::{self, TaskHandle};
 use crate::state::StateChannels;
 use crate::stored_plan::StoredPlanDomain;
 use crate::types::MissionOperationKind;
-use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
@@ -20,16 +20,12 @@ impl MissionDomain {
         }
     }
 
-    pub(crate) fn start(
-        &self,
-        stores: &StateChannels,
-        cancel: CancellationToken,
-    ) -> JoinHandle<()> {
+    pub(crate) fn start(&self, stores: &StateChannels, cancel: CancellationToken) -> TaskHandle {
         self.update_current_index(stores.mission_state.borrow().current_seq);
         let mut mission_state_rx = stores.mission_state.clone();
         let domain = self.clone();
 
-        tokio::spawn(async move {
+        runtime::spawn(async move {
             loop {
                 tokio::select! {
                     _ = cancel.cancelled() => break,

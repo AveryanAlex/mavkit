@@ -1,6 +1,7 @@
 use super::{SharedConnection, VehicleTarget, send_message};
 use crate::config::{InitDomainPolicy, VehicleConfig};
 use crate::dialect::{self, MavCmd};
+use crate::runtime::{self, TaskHandle, TaskJoinError};
 use crate::shared_state::recover_lock;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
@@ -43,13 +44,13 @@ impl Default for InitSnapshot {
     }
 }
 
-#[derive(Debug)]
 struct InitInner {
     started: bool,
     snapshot: InitSnapshot,
+    tasks: Vec<TaskHandle>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub(crate) struct InitManager {
     config: VehicleConfig,
     inner: Arc<Mutex<InitInner>>,
@@ -74,6 +75,7 @@ impl InitManager {
             inner: Arc::new(Mutex::new(InitInner {
                 started: false,
                 snapshot,
+                tasks: Vec::new(),
             })),
             snapshot_tx,
         }
@@ -166,6 +168,37 @@ impl InitManager {
         recover_lock(&self.inner).snapshot.clone()
     }
 
+    pub(crate) fn take_tasks(&self) -> Vec<TaskHandle> {
+        let mut inner = recover_lock(&self.inner);
+        std::mem::take(&mut inner.tasks)
+    }
+
+    pub(super) async fn reap_finished_tasks(&self) -> Vec<TaskJoinError> {
+        let finished = {
+            let mut inner = recover_lock(&self.inner);
+            let mut finished = Vec::new();
+            let mut index = 0;
+
+            while index < inner.tasks.len() {
+                if inner.tasks[index].is_finished() {
+                    finished.push(inner.tasks.remove(index));
+                } else {
+                    index += 1;
+                }
+            }
+
+            finished
+        };
+
+        let mut errors = Vec::new();
+        for task in finished {
+            if let Err(err) = task.join().await {
+                errors.push(err);
+            }
+        }
+        errors
+    }
+
     fn spawn_domain(
         &self,
         domain: InitDomain,
@@ -183,19 +216,14 @@ impl InitManager {
 
         let manager = self.clone();
         let config = self.config.clone();
-        tokio::spawn(async move {
-            let domain_task = tokio::spawn(async move {
-                manager
-                    .run_domain(domain, policy, connection, target, config, cancel)
-                    .await;
-            });
-
-            if let Err(err) = domain_task.await
-                && err.is_panic()
-            {
-                tracing::error!(domain = ?domain, "init domain task panicked: {err}");
-            }
+        let handle = runtime::spawn(async move {
+            manager
+                .run_domain(domain, policy, connection, target, config, cancel)
+                .await;
         });
+
+        let mut inner = recover_lock(&self.inner);
+        inner.tasks.push(handle);
     }
 
     async fn run_domain(
@@ -220,7 +248,7 @@ impl InitManager {
 
             tokio::select! {
                 _ = cancel.cancelled() => return,
-                _ = tokio::time::sleep(retry_delay) => {}
+                _ = runtime::sleep(retry_delay) => {}
             }
         }
 
@@ -390,4 +418,30 @@ fn request_home_position_command(target: &VehicleTarget) -> dialect::MavMessage 
         param6: 0.0,
         param7: 0.0,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::event_loop::test_support::fast_event_loop_test_config;
+    use crate::runtime::{self, TaskJoinError};
+
+    #[tokio::test]
+    async fn reap_finished_tasks_drains_panicked_init_tasks() {
+        let manager = InitManager::new(fast_event_loop_test_config());
+
+        {
+            let mut inner = recover_lock(&manager.inner);
+            inner.tasks.push(runtime::spawn(async move {
+                panic!("boom");
+            }));
+        }
+
+        tokio::task::yield_now().await;
+
+        let errors = manager.reap_finished_tasks().await;
+
+        assert_eq!(errors, vec![TaskJoinError::Panic]);
+        assert!(manager.take_tasks().is_empty());
+    }
 }

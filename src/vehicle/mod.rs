@@ -10,12 +10,12 @@ use crate::modes::ModeDomain;
 use crate::params::ParamsDomain;
 use crate::protocol_scope::MissionProtocolScope;
 use crate::rally::RallyDomain;
+use crate::runtime::TaskHandle;
 use crate::state::StateChannels;
 use crate::support::SupportDomain;
 use crate::telemetry::TelemetryMetricHandles;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot, watch};
-use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 mod accessors;
@@ -115,10 +115,7 @@ impl VehicleInner {
         }
     }
 
-    pub(crate) fn start_background_domains(
-        &self,
-        init_manager: &InitManager,
-    ) -> Vec<JoinHandle<()>> {
+    pub(crate) fn start_background_domains(&self, init_manager: &InitManager) -> Vec<TaskHandle> {
         let mut handles = Vec::with_capacity(6);
         handles.push(self.mission.start(&self.stores, self.cancel.clone()));
         handles.extend(self.ardupilot.start(&self.stores, self.cancel.clone()));

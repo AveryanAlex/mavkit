@@ -1,8 +1,8 @@
 use crate::observation::{ObservationHandle, ObservationWriter};
+use crate::runtime::{self, TaskHandle};
 use crate::state::{MagCalProgress, MagCalReport, StateChannels};
 use std::collections::BTreeMap;
 use tokio::sync::watch;
-use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 #[derive(Clone)]
@@ -32,7 +32,7 @@ impl MagCalObservations {
         &self,
         stores: &StateChannels,
         cancel: CancellationToken,
-    ) -> Vec<JoinHandle<()>> {
+    ) -> Vec<TaskHandle> {
         vec![
             spawn_compass_aggregator(
                 stores.mag_cal_progress.clone(),
@@ -68,11 +68,11 @@ fn spawn_compass_aggregator<T>(
     writer: ObservationWriter<Vec<T>>,
     cancel: CancellationToken,
     compass_id_of: fn(&T) -> u8,
-) -> JoinHandle<()>
+) -> TaskHandle
 where
     T: Clone + Send + Sync + 'static,
 {
-    tokio::spawn(async move {
+    runtime::spawn(async move {
         let mut by_compass = BTreeMap::<u8, T>::new();
         if let Some(item) = rx.borrow().clone() {
             by_compass.insert(compass_id_of(&item), item);

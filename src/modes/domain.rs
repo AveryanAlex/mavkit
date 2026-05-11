@@ -3,13 +3,13 @@ use crate::dialect;
 use crate::modes::catalog::{catalog_name_or_fallback, dynamic_catalog, static_catalog};
 use crate::modes::{CurrentMode, CurrentModeSource, ModeDescriptor};
 use crate::observation::{ObservationHandle, ObservationWriter};
+use crate::runtime::{self, TaskHandle};
 use crate::shared_state::recover_lock;
 use crate::state::{AutopilotType, StateChannels, VehicleState, VehicleType};
 use crate::types::SupportState;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{broadcast, mpsc, oneshot};
-use tokio::task::JoinHandle;
 
 const AVAILABLE_MODES_MSG_ID: f32 = 435.0;
 
@@ -69,14 +69,14 @@ impl ModeDomain {
         &self,
         stores: &StateChannels,
         command_tx: mpsc::Sender<Command>,
-    ) -> JoinHandle<()> {
+    ) -> TaskHandle {
         let inner = self.inner.clone();
         let mut vehicle_state_rx = stores.vehicle_state.clone();
         let mut raw_rx = stores.raw_message_tx.subscribe();
 
         inner.handle_vehicle_state(&vehicle_state_rx.borrow().clone());
 
-        tokio::spawn(async move {
+        runtime::spawn(async move {
             loop {
                 tokio::select! {
                     changed = vehicle_state_rx.changed() => {

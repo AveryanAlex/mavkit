@@ -21,6 +21,7 @@ use state_update::update_state;
 use crate::command::Command;
 use crate::config::VehicleConfig;
 use crate::error::VehicleError;
+use crate::runtime::{self, TaskGroup, TaskJoinError};
 use crate::state::{LinkState, StateWriters};
 use dispatcher::{AckCommandDispatcher, WireCommandAck};
 #[cfg(test)]
@@ -38,6 +39,14 @@ const MAGIC_FORCE_ARM_VALUE: f32 = 2989.0;
 const MAGIC_FORCE_DISARM_VALUE: f32 = 21196.0;
 const ROUTER_CHANNEL_CAPACITY: usize = 256;
 const COMMAND_ACK_MESSAGE_ID: u32 = 77;
+
+fn log_task_join_errors(scope: &str, errors: Vec<TaskJoinError>) {
+    for err in errors {
+        match err {
+            TaskJoinError::Panic => tracing::error!("{scope} task panicked"),
+        }
+    }
+}
 
 type RouterMessage = (MavHeader, dialect::MavMessage);
 type SharedConnection = Arc<dyn AsyncMavConnection<dialect::MavMessage> + Sync + Send>;
@@ -107,20 +116,20 @@ pub(crate) async fn run_event_loop_with_init(
         config.gcs_system_id,
         config.gcs_component_id,
     ));
-    let mut command_tasks = tokio::task::JoinSet::new();
+    let mut command_tasks = TaskGroup::new();
 
     let mut vehicle_target: Option<VehicleTarget> = None;
 
     publish_link_state(state_writers.as_ref(), LinkState::Connected);
 
     loop {
-        tokio::select! {
+        let should_exit = tokio::select! {
             biased;
 
             _ = cancel.cancelled() => {
                 debug!("event loop cancelled");
                 publish_link_state(state_writers.as_ref(), LinkState::Disconnected);
-                break;
+                true
             }
             Some(cmd) = command_rx.recv() => {
                 match cmd {
@@ -128,7 +137,7 @@ pub(crate) async fn run_event_loop_with_init(
                         debug!("event loop shutdown requested");
                         cancel.cancel();
                         publish_link_state(state_writers.as_ref(), LinkState::Disconnected);
-                        break;
+                        true
                     }
                     cmd => {
                         let mut ctx = CommandContext {
@@ -143,6 +152,7 @@ pub(crate) async fn run_event_loop_with_init(
                         command_tasks.spawn(async move {
                             handle_command(cmd, &mut ctx).await;
                         });
+                        false
                     }
                 }
             }
@@ -172,29 +182,31 @@ pub(crate) async fn run_event_loop_with_init(
                                     && let Some(ack) = parse_command_ack_payload(raw.payload())
                                 {
                                     router_ctx.ack_dispatcher.route_command_ack_raw(header, ack);
-                                    continue;
+                                } else {
+                                    warn!("MAVLink parse error: {err}");
                                 }
-                                warn!("MAVLink parse error: {err}");
                             }
                         }
+                        false
                     }
                     Err(err) => {
                         warn!("MAVLink recv error: {err}");
                         publish_link_state(state_writers.as_ref(), LinkState::Error(err.to_string()));
-                        break;
+                        true
                     }
                 }
             }
-            Some(join_result) = command_tasks.join_next(), if !command_tasks.is_empty() => {
-                if let Err(err) = join_result {
-                    warn!("command task join error: {err}");
-                }
-            }
+        };
+
+        log_task_join_errors("init", init_manager.reap_finished_tasks().await);
+        log_task_join_errors("command", command_tasks.reap_finished().await);
+        if should_exit {
+            break;
         }
     }
 
     command_tasks.abort_all();
-    while command_tasks.join_next().await.is_some() {}
+    log_task_join_errors("command", command_tasks.join_all().await);
 }
 
 fn publish_link_state(state_writers: &StateWriters, state: LinkState) {
@@ -205,7 +217,7 @@ fn publish_link_state(state_writers: &StateWriters, state: LinkState) {
 fn bridge_vehicle_cancel_to_op(vehicle: &CancellationToken, op: &CancellationToken) {
     let vehicle = vehicle.clone();
     let op = op.clone();
-    tokio::spawn(async move {
+    runtime::spawn(async move {
         vehicle.cancelled().await;
         op.cancel();
     });
