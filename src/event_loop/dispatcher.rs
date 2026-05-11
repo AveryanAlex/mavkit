@@ -2,6 +2,8 @@ use crate::config::VehicleConfig;
 use crate::dialect::{self, MavCmd};
 use crate::error::{CommandResult, VehicleError};
 use crate::raw::CommandAck;
+use crate::runtime;
+use crate::time::Instant;
 use mavlink::{AsyncMavConnection, MavHeader};
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
@@ -296,10 +298,10 @@ impl AckCommandDispatcher {
         cancel: &CancellationToken,
         command_id: u16,
     ) -> Result<CommandAck, VehicleError> {
-        let deadline = tokio::time::Instant::now() + timeout;
+        let deadline = Instant::now() + timeout;
 
         loop {
-            let now = tokio::time::Instant::now();
+            let now = Instant::now();
             if now >= deadline {
                 return Err(VehicleError::Timeout("command ack".into()));
             }
@@ -340,7 +342,7 @@ impl AckCommandDispatcher {
                     None => Err(VehicleError::Disconnected),
                 }
             }
-            _ = tokio::time::sleep(timeout) => Ok(None),
+            _ = runtime::sleep(timeout) => Ok(None),
         }
     }
 

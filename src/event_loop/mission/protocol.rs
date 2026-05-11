@@ -2,6 +2,7 @@ use super::super::{CommandContext, recv_routed, send_message};
 use crate::dialect;
 use crate::error::VehicleError;
 use crate::mission::{MissionTransferMachine, MissionType};
+use crate::runtime;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
@@ -40,7 +41,7 @@ where
     let mav_mission_type = to_mav_mission_type(mission_type);
     loop {
         let timeout = Duration::from_millis(machine.timeout_ms());
-        let deadline = tokio::time::sleep(timeout);
+        let deadline = runtime::sleep(timeout);
         tokio::pin!(deadline);
         let cancel = op_cancel.clone();
 

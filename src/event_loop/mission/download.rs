@@ -4,6 +4,7 @@ use crate::error::VehicleError;
 use crate::mission::{
     MissionItem, MissionTransferMachine, MissionType, WireMissionPlan, commands, wire,
 };
+use crate::runtime;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
@@ -77,7 +78,7 @@ pub(in crate::event_loop) async fn handle_mission_download(
 
     let count = loop {
         let timeout = Duration::from_millis(machine.timeout_ms());
-        let deadline = tokio::time::sleep(timeout);
+        let deadline = runtime::sleep(timeout);
         tokio::pin!(deadline);
         let cancel = op_cancel.clone();
 
@@ -148,7 +149,7 @@ pub(in crate::event_loop) async fn handle_mission_download(
 
         let item = loop {
             let timeout = Duration::from_millis(machine.timeout_ms());
-            let deadline = tokio::time::sleep(timeout);
+            let deadline = runtime::sleep(timeout);
             tokio::pin!(deadline);
             let cancel = op_cancel.clone();
 

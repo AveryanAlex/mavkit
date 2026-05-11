@@ -4,6 +4,7 @@ use crate::error::VehicleError;
 use crate::mission::{
     MissionItem, MissionTransferMachine, MissionType, TransferPhase, WireMissionPlan, wire,
 };
+use crate::runtime;
 use std::collections::HashSet;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
@@ -97,7 +98,7 @@ pub(in crate::event_loop) async fn handle_mission_upload(
 
     while machine.progress().phase != TransferPhase::AwaitAck {
         let timeout = Duration::from_millis(machine.timeout_ms());
-        let deadline = tokio::time::sleep(timeout);
+        let deadline = runtime::sleep(timeout);
         tokio::pin!(deadline);
         let cancel = op_cancel.clone();
 

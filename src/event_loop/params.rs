@@ -2,6 +2,8 @@ use super::{CommandContext, get_target, recv_routed, send_message};
 use crate::dialect::{self, MavParamType};
 use crate::error::VehicleError;
 use crate::params::{Param, ParamStore, ParamType, ParamWriteResult};
+use crate::runtime;
+use crate::time::Instant;
 use crate::types::ParamOperationProgress;
 use std::collections::{HashMap, HashSet};
 use std::time::Duration;
@@ -76,13 +78,10 @@ pub(super) async fn handle_param_download_all(
     let max_retries = u32::from(ctx.config.retry_policy.max_retries);
     let mut retries = 0u32;
 
-    let overall_deadline = tokio::time::sleep(ctx.config.transfer_timeout);
-    tokio::pin!(overall_deadline);
+    let overall_deadline = Instant::now() + ctx.config.transfer_timeout;
 
     loop {
-        let round_timeout = Duration::from_secs(2);
-        let round_deadline = tokio::time::sleep(round_timeout);
-        tokio::pin!(round_deadline);
+        let mut round_deadline = Instant::now() + Duration::from_secs(2);
         let cancel = ctx.cancel.clone();
 
         let mut got_new = false;
@@ -96,7 +95,7 @@ pub(super) async fn handle_param_download_all(
                         .send_replace(Some(ParamOperationProgress::Cancelled));
                     return Err(VehicleError::Cancelled);
                 }
-                _ = &mut overall_deadline => {
+                _ = runtime::sleep_until(overall_deadline) => {
                     let received = params.len() as u16;
                     warn!(
                         "param download timed out after {:?}: received {}/{}",
@@ -107,7 +106,7 @@ pub(super) async fn handle_param_download_all(
                         .send_replace(Some(ParamOperationProgress::Failed));
                     return Err(VehicleError::Timeout("parameter download".into()));
                 }
-                _ = &mut round_deadline => break,
+                _ = runtime::sleep_until(round_deadline) => break,
                 result = recv_routed(&mut ctx.inbound_rx) => {
                     let (_, msg) = result?;
 
@@ -149,7 +148,7 @@ pub(super) async fn handle_param_download_all(
                         }
 
                         // Reset round deadline on new data
-                        round_deadline.as_mut().reset(tokio::time::Instant::now() + Duration::from_secs(2));
+                        round_deadline = Instant::now() + Duration::from_secs(2);
                     }
                 }
             }
@@ -261,7 +260,7 @@ pub(super) async fn handle_param_write(
         .await?;
 
         let timeout = Duration::from_millis(request_timeout_ms);
-        let deadline = tokio::time::sleep(timeout);
+        let deadline = runtime::sleep(timeout);
         tokio::pin!(deadline);
         let cancel = ctx.cancel.clone();
 

@@ -77,6 +77,12 @@ pub(crate) async fn sleep(duration: Duration) {
     gloo_timers::future::TimeoutFuture::new(millis).await;
 }
 
+#[cfg(not(target_arch = "wasm32"))]
+pub(crate) async fn sleep_until(deadline: Instant) {
+    tokio::time::sleep_until(deadline).await;
+}
+
+#[cfg(target_arch = "wasm32")]
 pub(crate) async fn sleep_until(deadline: Instant) {
     let now = Instant::now();
     if deadline > now {
@@ -227,6 +233,14 @@ mod tests {
         .await;
 
         assert_eq!(result, Err(TimeoutError));
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn native_instant_alias_matches_tokio_clock() {
+        fn accept_tokio_instant(_instant: tokio::time::Instant) {}
+
+        accept_tokio_instant(Instant::now());
     }
 
     #[tokio::test]

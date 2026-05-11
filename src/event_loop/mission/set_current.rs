@@ -2,6 +2,7 @@ use super::super::{CommandContext, get_target, recv_routed, send_message};
 use crate::dialect::{self, MavCmd};
 use crate::error::VehicleError;
 use crate::mission::MissionType;
+use crate::runtime;
 use std::time::Duration;
 
 use super::protocol::transfer_failed;
@@ -43,7 +44,7 @@ pub(in crate::event_loop) async fn handle_mission_set_current(
         .await?;
 
         let timeout = Duration::from_millis(request_timeout_ms);
-        let deadline = tokio::time::sleep(timeout);
+        let deadline = runtime::sleep(timeout);
         tokio::pin!(deadline);
         let cancel = ctx.cancel.clone();
 
