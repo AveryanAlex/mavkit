@@ -6,6 +6,7 @@
 
 use crate::dialect;
 use core::ops::DerefMut;
+use futures::FutureExt;
 use futures::lock::Mutex;
 use mavlink::async_peek_reader::AsyncPeekReader;
 use mavlink::{
@@ -75,6 +76,17 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send>
         let mut reader = self.reader.lock().await;
         read_versioned_raw_message_async::<dialect::MavMessage, _>(reader.deref_mut(), version)
             .await
+    }
+
+    async fn try_recv(
+        &self,
+    ) -> Result<(MavHeader, dialect::MavMessage), mavlink::error::MessageReadError> {
+        match self.recv().now_or_never() {
+            Some(result) => result,
+            None => Err(mavlink::error::MessageReadError::Io(
+                io::ErrorKind::WouldBlock.into(),
+            )),
+        }
     }
 
     async fn send(

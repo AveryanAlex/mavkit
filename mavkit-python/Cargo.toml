@@ -22,5 +22,5 @@ pyo3 = "0.28"
 pyo3-async-runtimes = { version = "0.28", features = ["tokio-runtime"] }
 tokio = { version = "1", features = ["sync", "time", "rt", "rt-multi-thread"] }
 tokio-stream = "0.1"
-mavlink = { version = "0.17", default-features = false, features = ["all", "std", "serde", "format-generated-code", "emit-extensions"] }
+mavlink = { git = "https://github.com/AveryanAlex/rust-mavlink.git", rev = "a35d19c2708806f623406b5bfcd13a633416795a", package = "mavlink", default-features = false, features = ["std", "serde", "format-generated-code", "mav2-message-extensions", "dialect-all"] }
 num-traits = "0.2"

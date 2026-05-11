@@ -1,6 +1,8 @@
 #![doc = include_str!("../README.md")]
 
 pub mod ardupilot;
+#[cfg(feature = "byte-connection")]
+pub mod byte_connection;
 pub(crate) mod command;
 pub mod config;
 pub mod error;
@@ -17,6 +19,7 @@ pub mod params;
 pub(crate) mod protocol_scope;
 pub mod rally;
 pub mod raw;
+pub(crate) mod runtime;
 mod shared_state;
 mod state;
 mod stored_plan;
@@ -26,12 +29,13 @@ pub mod support;
 pub mod telemetry;
 #[cfg(test)]
 pub(crate) mod test_support;
+pub mod time;
 #[cfg(feature = "tlog")]
 pub mod tlog;
 pub mod types;
 pub mod vehicle;
 
-pub use mavlink::all as dialect;
+pub use mavlink::dialects::all as dialect;
 
 pub use ardupilot::{
     ArduCopterGuidedHandle, ArduCopterHandle, ArduGuidedKind, ArduGuidedSession, ArduPilotHandle,

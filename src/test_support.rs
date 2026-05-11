@@ -2,6 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use async_trait::async_trait;
+use futures::FutureExt;
 use mavlink::{MAVLinkMessageRaw, MAVLinkV2MessageRaw, MavHeader, MavlinkVersion};
 use tokio::sync::mpsc;
 use tokio::time::timeout;
@@ -180,6 +181,17 @@ impl mavlink::AsyncMavConnection<dialect::MavMessage> for MockConnection {
         let mut raw = MAVLinkV2MessageRaw::new();
         raw.serialize_message(header, &message);
         Ok(MAVLinkMessageRaw::V2(raw))
+    }
+
+    async fn try_recv(
+        &self,
+    ) -> Result<(MavHeader, dialect::MavMessage), mavlink::error::MessageReadError> {
+        match self.recv().now_or_never() {
+            Some(result) => result,
+            None => Err(mavlink::error::MessageReadError::Io(
+                std::io::ErrorKind::WouldBlock.into(),
+            )),
+        }
     }
 
     async fn send(
