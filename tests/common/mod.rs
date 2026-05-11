@@ -7,9 +7,71 @@ use mavkit::{
 use std::time::Duration;
 
 pub const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
+const SITL_STREAM_RATE_HZ: f32 = 5.0;
 
-pub fn sitl_bind_addr() -> String {
-    std::env::var("MAVKIT_SITL_UDP_BIND").unwrap_or_else(|_| String::from("0.0.0.0:14550"))
+enum SitlEndpoint {
+    Tcp(String),
+    Udp(String),
+}
+
+fn sitl_endpoint() -> SitlEndpoint {
+    if let Ok(addr) = std::env::var("MAVKIT_SITL_TCP_ADDR") {
+        return SitlEndpoint::Tcp(addr);
+    }
+
+    if let Ok(addr) = std::env::var("MAVKIT_SITL_UDP_BIND") {
+        return SitlEndpoint::Udp(addr);
+    }
+
+    SitlEndpoint::Tcp(String::from("127.0.0.1:5760"))
+}
+
+async fn connect_sitl_vehicle() -> Result<Vehicle, String> {
+    match sitl_endpoint() {
+        SitlEndpoint::Tcp(addr) => {
+            let vehicle = Vehicle::connect_tcp(&addr)
+                .await
+                .map_err(|err| format!("failed to connect to SITL TCP endpoint {addr}: {err}"))?;
+            prime_sitl_tcp_streams(&vehicle).await?;
+            Ok(vehicle)
+        }
+        SitlEndpoint::Udp(addr) => Vehicle::connect_udp(&addr)
+            .await
+            .map_err(|err| format!("failed to connect to SITL UDP bind {addr}: {err}")),
+    }
+}
+
+async fn prime_sitl_tcp_streams(vehicle: &Vehicle) -> Result<(), String> {
+    let telemetry = vehicle.telemetry();
+    let messages = telemetry.messages();
+
+    messages
+        .global_position_int()
+        .set_rate(SITL_STREAM_RATE_HZ)
+        .await
+        .map_err(|err| format!("failed to request GLOBAL_POSITION_INT stream: {err}"))?;
+    messages
+        .attitude()
+        .set_rate(SITL_STREAM_RATE_HZ)
+        .await
+        .map_err(|err| format!("failed to request ATTITUDE stream: {err}"))?;
+    messages
+        .gps_raw_int()
+        .set_rate(SITL_STREAM_RATE_HZ)
+        .await
+        .map_err(|err| format!("failed to request GPS_RAW_INT stream: {err}"))?;
+    messages
+        .sys_status()
+        .set_rate(SITL_STREAM_RATE_HZ)
+        .await
+        .map_err(|err| format!("failed to request SYS_STATUS stream: {err}"))?;
+    messages
+        .vfr_hud()
+        .set_rate(SITL_STREAM_RATE_HZ)
+        .await
+        .map_err(|err| format!("failed to request VFR_HUD stream: {err}"))?;
+
+    Ok(())
 }
 
 pub fn is_optional_type_unsupported(mission_type: MissionType, error: &VehicleError) -> bool {
@@ -132,19 +194,41 @@ pub async fn wait_for_mode_name(
 }
 
 pub async fn wait_for_telemetry(vehicle: &Vehicle, timeout: Duration) -> Result<(), String> {
-    let sample = vehicle
-        .telemetry()
-        .position()
-        .global()
-        .wait_timeout(timeout)
-        .await
-        .map_err(|err| format!("timed out waiting for telemetry position: {err}"))?;
-
-    if !sample.value.latitude_deg.is_finite() || !sample.value.longitude_deg.is_finite() {
-        return Err(String::from("received non-finite telemetry position"));
+    let global_position = vehicle.telemetry().position().global();
+    if let Some(sample) = global_position.latest()
+        && is_usable_sitl_position(sample.value.latitude_deg, sample.value.longitude_deg)
+    {
+        return Ok(());
     }
 
-    Ok(())
+    let mut subscription = global_position.subscribe();
+    let deadline = tokio::time::sleep(timeout);
+    tokio::pin!(deadline);
+    let mut saw_non_finite = false;
+    loop {
+        tokio::select! {
+            _ = &mut deadline => {
+                let suffix = if saw_non_finite { " after receiving non-finite samples" } else { "" };
+                return Err(format!("timed out waiting for usable telemetry position{suffix}"));
+            }
+            observed = subscription.recv() => {
+                let sample = observed.ok_or_else(|| String::from("telemetry position stream closed"))?;
+                if !sample.value.latitude_deg.is_finite() || !sample.value.longitude_deg.is_finite() {
+                    saw_non_finite = true;
+                    continue;
+                }
+                if is_usable_sitl_position(sample.value.latitude_deg, sample.value.longitude_deg) {
+                    return Ok(());
+                }
+            }
+        }
+    }
+}
+
+fn is_usable_sitl_position(latitude_deg: f64, longitude_deg: f64) -> bool {
+    latitude_deg.is_finite()
+        && longitude_deg.is_finite()
+        && (latitude_deg.abs() > f64::EPSILON || longitude_deg.abs() > f64::EPSILON)
 }
 
 pub async fn download_with_retries(vehicle: &Vehicle) -> Result<MissionPlan, String> {
@@ -192,7 +276,7 @@ pub async fn download_with_retries(vehicle: &Vehicle) -> Result<MissionPlan, Str
 }
 
 pub async fn setup_sitl_vehicle() -> Vehicle {
-    let vehicle = Vehicle::connect_udp(&sitl_bind_addr()).await.unwrap();
+    let vehicle = connect_sitl_vehicle().await.unwrap();
     wait_for_telemetry(&vehicle, CONNECT_TIMEOUT)
         .await
         .expect("should receive telemetry from SITL");
@@ -225,7 +309,7 @@ pub async fn arm_with_retries(
 }
 
 pub async fn run_roundtrip_case(plan: MissionPlan) {
-    let vehicle = Vehicle::connect_udp(&sitl_bind_addr()).await.unwrap();
+    let vehicle = connect_sitl_vehicle().await.unwrap();
 
     let result: Result<(), String> = async {
         wait_for_telemetry(&vehicle, CONNECT_TIMEOUT).await?;

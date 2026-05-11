@@ -3,11 +3,11 @@ target/
 # Rust libraries typically do not commit Cargo.lock
 Cargo.lock
 
-# Local SITL/MAVProxy runtime artifacts
+# Local SITL runtime artifacts
 *.log
 *.pid
 
-# MAVProxy telemetry artifacts
+# MAVLink telemetry artifacts
 mav.*
 
 # Editor and OS files

@@ -19,7 +19,8 @@ impl Vehicle {
     ///
     /// Supported URL schemes depend on enabled Cargo features:
     /// - `udpin:<bind_addr>` — listen for incoming UDP packets (`udp` feature)
-    /// - `tcpin:<addr>` — outbound TCP connection (`tcp` feature)
+    /// - `tcpout:<addr>` — outbound TCP connection (`tcp` feature)
+    /// - `tcpin:<addr>` — listen for an incoming TCP connection (`tcp` feature)
     /// - `serial:<port>:<baud>` — serial port (`serial` feature)
     ///
     /// Blocks until the first heartbeat is received or `connect_timeout` elapses.
@@ -55,7 +56,7 @@ impl Vehicle {
 
     /// Connect via an outbound TCP connection (`tcp` feature).
     pub async fn connect_tcp(addr: &str) -> Result<Self, VehicleError> {
-        Self::connect(&format!("tcpin:{addr}")).await
+        Self::connect(&format!("tcpout:{addr}")).await
     }
 
     /// Connect via a serial port (`serial` feature).

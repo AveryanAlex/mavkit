@@ -113,21 +113,5 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v4
-
-      - name: Start SITL bridge
-        run: make bridge-up
-
       - name: Integration tests
         run: make test-sitl-strict
-
-      - name: Dump logs on failure
-        if: failure()
-        run: |
-          cat /tmp/mavkit-mavproxy.log 2>/dev/null || true
-          docker logs ardupilot-sitl 2>/dev/null || true
-
-      - name: Teardown
-        if: always()
-        run: make bridge-down

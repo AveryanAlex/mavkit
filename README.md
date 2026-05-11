@@ -130,12 +130,11 @@ uv run ruff check .
 Requires Docker + ArduPilot SITL:
 
 ```bash
-make bridge-up        # start SITL + MAVProxy bridge
-make test-sitl        # run integration tests
-make bridge-down      # cleanup
+make test-sitl        # start fresh TCP SITL, run integration tests, cleanup
+make test-sitl-strict # same with MAVKIT_SITL_STRICT=1
 ```
 
-Environment: `MAVKIT_SITL_UDP_BIND` (default `0.0.0.0:14550`), `MAVKIT_SITL_STRICT` (set `1` for strict mode).
+Each `make test-sitl` invocation gets its own Docker container and random localhost TCP port, so parallel invocations do not contend on UDP `14550`. Keep in-process SITL test threads at the default `1` for stateful tests; parallelize by running separate `make test-sitl` invocations. For a specific test binary, run `MAVKIT_SITL_CARGO_TEST_ARGS="--test sitl_roundtrip" make test-sitl`.
 
 ## License
 

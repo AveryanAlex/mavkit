@@ -19,18 +19,17 @@ cargo test wire_upload_prepends_home -- --exact --nocapture  # Single test
 ### SITL Integration Tests (requires Docker + ArduPilot SITL)
 
 ```bash
-make bridge-up                # Start SITL Docker container + MAVProxy bridge
-make test-sitl                # Run ignored SITL tests
+make test-sitl                # Start fresh TCP SITL container, run ignored tests, cleanup
 make test-sitl-strict         # Run with MAVKIT_SITL_STRICT=1
-make bridge-down              # Cleanup
 ```
 
 Run a specific SITL test file:
 ```bash
-cargo test --test sitl_roundtrip -- --ignored --nocapture --test-threads=1
+MAVKIT_SITL_CARGO_TEST_ARGS="--test sitl_roundtrip" make test-sitl
 ```
 
-Environment: `MAVKIT_SITL_UDP_BIND` (default `0.0.0.0:14550`), `MAVKIT_SITL_STRICT` (set `1` for strict mode).
+Each `make test-sitl` invocation gets a fresh container and random localhost TCP port, so parallel invocations do not contend on UDP `14550`. Keep in-process SITL test threads at the default `1` for stateful tests; parallelize by running separate `make test-sitl` invocations.
+Environment: `MAVKIT_SITL_TCP_ADDR` for manually supplied TCP SITL endpoints when running cargo directly, `MAVKIT_SITL_STRICT` (set `1` for strict mode), `MAVKIT_SITL_TEST_THREADS` (default `1`).
 
 ### Python Bindings (`mavkit-python/`)
 
