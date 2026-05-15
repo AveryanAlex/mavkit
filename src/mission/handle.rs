@@ -36,16 +36,17 @@ impl<'a> MissionHandle<'a> {
         Self { inner }
     }
 
-    /// Returns the most recently observed mission state, or `None` if no update has arrived yet.
+    /// Returns the current cached mission state.
+    ///
+    /// The mission domain publishes its default cache immediately; default `plan`/`sync` values
+    /// mean no vehicle-confirmed mission plan is cached yet.
     pub fn latest(&self) -> Option<MissionState> {
         self.inner.mission.state().latest()
     }
 
-    /// Returns the current cached mission state immediately when one is already available;
-    /// otherwise waits for the first mission state observed after the call.
+    /// Returns the current cached mission state immediately.
     ///
-    /// Returns the default state if the vehicle disconnects before any mission state becomes
-    /// available.
+    /// The default cache represents no vehicle-confirmed mission data yet.
     pub async fn wait(&self) -> MissionState {
         self.inner.mission.state().wait().await.unwrap_or_default()
     }
@@ -53,10 +54,9 @@ impl<'a> MissionHandle<'a> {
     /// Like [`wait`](Self::wait), but returns the current cached mission state immediately when
     /// one is already available.
     ///
-    /// If no mission state is cached yet, this waits for the first observed mission state and
-    /// returns [`VehicleError::Timeout`] if it does not arrive within `timeout`. Returns
-    /// [`VehicleError::Disconnected`] if the vehicle disconnects before any mission state becomes
-    /// available.
+    /// Because the mission domain publishes a default cache at construction, this normally returns
+    /// immediately. [`VehicleError::Timeout`] or [`VehicleError::Disconnected`] are only expected
+    /// if the observation channel has no cached value due to future semantic changes or teardown.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<MissionState, VehicleError> {
         self.inner.mission.state().wait_timeout(timeout).await
     }

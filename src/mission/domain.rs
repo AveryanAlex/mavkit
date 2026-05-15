@@ -58,8 +58,8 @@ impl MissionDomain {
         self.inner.begin_operation(scope, "mission", kind, op_name)
     }
 
-    pub(crate) fn finish_operation(&self, scope: &MissionProtocolScope, op_id: u64) {
-        self.inner.finish_operation(scope, op_id);
+    pub(crate) fn finish_operation(&self, scope: &MissionProtocolScope, op_id: u64) -> bool {
+        self.inner.finish_operation(scope, op_id)
     }
 
     pub(crate) fn note_operation_error(&self) {
@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn operation_conflict() {
-        let scope = MissionProtocolScope::new();
+        let scope = MissionProtocolScope::detached_for_test();
         let domain = MissionDomain::new();
         let first = domain
             .begin_operation(&scope, MissionOperationKind::Upload, "upload")

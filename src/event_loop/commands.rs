@@ -8,6 +8,7 @@ use crate::dialect::{self, MavCmd};
 use crate::error::VehicleError;
 use crate::raw::CommandAck;
 use crate::time::Instant;
+use tokio_util::sync::CancellationToken;
 
 /// Bitmask for SET_POSITION_TARGET_GLOBAL_INT: use only lat/lon/alt, ignore
 /// velocity, acceleration, and yaw fields.
@@ -21,6 +22,7 @@ pub(super) async fn handle_arm_disarm(
     arm: bool,
     force: bool,
     ctx: &mut CommandContext,
+    cancel: &CancellationToken,
 ) -> Result<(), VehicleError> {
     let target = get_target(&ctx.vehicle_target)?;
     let param1 = if arm { 1.0 } else { 0.0 };
@@ -39,6 +41,7 @@ pub(super) async fn handle_arm_disarm(
         [param1, param2, 0.0, 0.0, 0.0, 0.0, 0.0],
         target,
         ctx,
+        cancel,
     )
     .await
     .map(|_| ())
@@ -49,12 +52,13 @@ async fn send_command_long_ack(
     params: [f32; 7],
     target: VehicleTarget,
     ctx: &mut CommandContext,
+    cancel: &CancellationToken,
 ) -> Result<CommandAck, VehicleError> {
     ctx.ack_dispatcher
         .dispatch_command_long(CommandLongRequest {
             connection: ctx.connection.as_ref(),
             config: &ctx.config,
-            cancel: &ctx.cancel,
+            cancel,
             target_system: target.system_id,
             target_component: target.component_id,
             command_id,
@@ -70,6 +74,7 @@ async fn send_command_long_ack(
 pub(super) async fn handle_set_mode(
     custom_mode: u32,
     ctx: &mut CommandContext,
+    cancel: &CancellationToken,
 ) -> Result<(), VehicleError> {
     let target = get_target(&ctx.vehicle_target)?;
 
@@ -85,6 +90,7 @@ pub(super) async fn handle_set_mode(
         [1.0, custom_mode as f32, 0.0, 0.0, 0.0, 0.0, 0.0],
         target,
         ctx,
+        cancel,
     )
     .await
     .map(|_| ())
@@ -98,30 +104,33 @@ pub(super) async fn handle_command_long(
     command: MavCmd,
     params: [f32; 7],
     ctx: &mut CommandContext,
+    cancel: &CancellationToken,
 ) -> Result<CommandAck, VehicleError> {
     let target = get_target(&ctx.vehicle_target)?;
-    send_command_long_ack(command as u16, params, target, ctx).await
+    send_command_long_ack(command as u16, params, target, ctx, cancel).await
 }
 
 pub(super) async fn handle_command_long_raw(
     command_id: u16,
     params: [f32; 7],
     ctx: &mut CommandContext,
+    cancel: &CancellationToken,
 ) -> Result<CommandAck, VehicleError> {
     let target = get_target(&ctx.vehicle_target)?;
-    send_command_long_ack(command_id, params, target, ctx).await
+    send_command_long_ack(command_id, params, target, ctx, cancel).await
 }
 
 pub(super) async fn handle_command_int(
     payload: CommandIntPayload,
     ctx: &mut CommandContext,
+    cancel: &CancellationToken,
 ) -> Result<CommandAck, VehicleError> {
     let target = get_target(&ctx.vehicle_target)?;
     ctx.ack_dispatcher
         .dispatch_command_int(CommandIntRequest {
             connection: ctx.connection.as_ref(),
             config: &ctx.config,
-            cancel: &ctx.cancel,
+            cancel,
             target_system: target.system_id,
             target_component: target.component_id,
             command: payload.command,

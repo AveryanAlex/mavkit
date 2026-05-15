@@ -41,22 +41,23 @@ impl<'a> FenceHandle<'a> {
 
     /// Returns a capability-support observation for the fence domain.
     ///
-    /// The initial value is seeded from the current vehicle identity so callers get a non-stale
-    /// result even before the event loop has pushed an update.
+    /// The observation remains unpublished until `AUTOPILOT_VERSION` provides capability evidence
+    /// or init reaches a terminal inconclusive state.
     pub fn support(&self) -> ObservationHandle<SupportState> {
         self.handle.support()
     }
 
-    /// Returns the most recently observed fence state, or `None` if no update has arrived yet.
+    /// Returns the current cached fence state.
+    ///
+    /// The fence domain publishes its default cache immediately; default `plan`/`sync` values mean
+    /// no vehicle-confirmed fence plan is cached yet.
     pub fn latest(&self) -> Option<FenceState> {
         self.handle.latest()
     }
 
-    /// Returns the current cached fence state immediately when one is already available;
-    /// otherwise waits for the first fence state observed after the call.
+    /// Returns the current cached fence state immediately.
     ///
-    /// Returns the default state if the vehicle disconnects before any fence state becomes
-    /// available.
+    /// The default cache represents no vehicle-confirmed fence data yet.
     pub async fn wait(&self) -> FenceState {
         self.handle.wait().await
     }
@@ -64,10 +65,9 @@ impl<'a> FenceHandle<'a> {
     /// Like [`wait`](Self::wait), but returns the current cached fence state immediately when one
     /// is already available.
     ///
-    /// If no fence state is cached yet, this waits for the first observed fence state and returns
-    /// [`VehicleError::Timeout`] if it does not arrive within `timeout`. Returns
-    /// [`VehicleError::Disconnected`] if the vehicle disconnects before any fence state becomes
-    /// available.
+    /// Because the fence domain publishes a default cache at construction, this normally returns
+    /// immediately. [`VehicleError::Timeout`] or [`VehicleError::Disconnected`] are only expected
+    /// if the observation channel has no cached value due to future semantic changes or teardown.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<FenceState, VehicleError> {
         self.handle.wait_timeout(timeout).await
     }

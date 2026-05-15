@@ -12,12 +12,13 @@ use std::sync::Mutex;
 /// Accessor for capability support observations derived from the vehicle's protocol capabilities.
 ///
 /// Obtained from [`Vehicle::support`](crate::Vehicle::support). Capability flags are extracted
-/// from the `AUTOPILOT_VERSION` message (`capabilities` bitmask). Each observation starts as
-/// [`SupportState::Unknown`] and is updated once the init
-/// sequence completes or the first heartbeat arrives.
+/// from the `AUTOPILOT_VERSION` message (`capabilities` bitmask). Observations remain unpublished
+/// until there is evidence for the domain: `AUTOPILOT_VERSION` for capability support, and a
+/// heartbeat/autopilot identity for ArduPilot support.
 ///
-/// All observation handles have their initial value seeded from the current vehicle state, so
-/// callers get a non-stale result even before the async loop pushes an update.
+/// [`ObservationHandle::latest`](crate::ObservationHandle::latest) returns `None` before evidence
+/// exists, [`SupportState::Supported`] or [`SupportState::Unsupported`] once the vehicle gives a
+/// conclusive signal, and [`SupportState::Unknown`] only for terminal but inconclusive signals.
 #[derive(Clone)]
 pub struct SupportHandle<'a> {
     inner: &'a VehicleInner,
@@ -109,20 +110,6 @@ struct SupportTracker {
     ardupilot: Option<SupportState>,
 }
 
-impl SupportTracker {
-    fn seeded_unknowns() -> Self {
-        Self {
-            command_int: Some(SupportState::Unknown),
-            ftp: Some(SupportState::Unknown),
-            terrain: Some(SupportState::Unknown),
-            mission_fence: Some(SupportState::Unknown),
-            mission_rally: Some(SupportState::Unknown),
-            ardupilot: Some(SupportState::Unknown),
-            ..Self::default()
-        }
-    }
-}
-
 impl SupportDomain {
     pub(crate) fn new() -> Self {
         let (command_int_writer, command_int) = ObservationHandle::watch();
@@ -132,7 +119,7 @@ impl SupportDomain {
         let (mission_rally_writer, mission_rally) = ObservationHandle::watch();
         let (ardupilot_writer, ardupilot) = ObservationHandle::watch();
 
-        let domain = Self {
+        Self {
             inner: Arc::new(SupportDomainInner {
                 command_int_writer,
                 command_int,
@@ -146,12 +133,9 @@ impl SupportDomain {
                 mission_rally,
                 ardupilot_writer,
                 ardupilot,
-                tracker: Mutex::new(SupportTracker::seeded_unknowns()),
+                tracker: Mutex::new(SupportTracker::default()),
             }),
-        };
-
-        domain.publish_unknowns();
-        domain
+        }
     }
 
     pub(crate) fn start(&self, stores: &StateChannels, init_manager: &InitManager) -> TaskHandle {
@@ -215,21 +199,6 @@ impl SupportDomain {
         self.inner.ardupilot_writer.close();
     }
 
-    fn publish_unknowns(&self) {
-        let _ = self.inner.command_int_writer.publish(SupportState::Unknown);
-        let _ = self.inner.ftp_writer.publish(SupportState::Unknown);
-        let _ = self.inner.terrain_writer.publish(SupportState::Unknown);
-        let _ = self
-            .inner
-            .mission_fence_writer
-            .publish(SupportState::Unknown);
-        let _ = self
-            .inner
-            .mission_rally_writer
-            .publish(SupportState::Unknown);
-        let _ = self.inner.ardupilot_writer.publish(SupportState::Unknown);
-    }
-
     pub(crate) fn seed_from_vehicle_state(&self, state: &VehicleState) {
         self.inner.handle_vehicle_state(state);
     }
@@ -265,12 +234,10 @@ impl SupportDomainInner {
     }
 
     fn recompute(&self, tracker: &mut SupportTracker) {
-        let capabilities = capabilities_from_init_state(&tracker.init_snapshot.autopilot_version);
-
         publish_if_changed(
             &mut tracker.command_int,
             support_from_capability(
-                capabilities,
+                &tracker.init_snapshot.autopilot_version,
                 MavProtocolCapability::MAV_PROTOCOL_CAPABILITY_COMMAND_INT,
             ),
             &self.command_int_writer,
@@ -278,7 +245,7 @@ impl SupportDomainInner {
         publish_if_changed(
             &mut tracker.ftp,
             support_from_capability(
-                capabilities,
+                &tracker.init_snapshot.autopilot_version,
                 MavProtocolCapability::MAV_PROTOCOL_CAPABILITY_FTP,
             ),
             &self.ftp_writer,
@@ -286,7 +253,7 @@ impl SupportDomainInner {
         publish_if_changed(
             &mut tracker.terrain,
             support_from_capability(
-                capabilities,
+                &tracker.init_snapshot.autopilot_version,
                 MavProtocolCapability::MAV_PROTOCOL_CAPABILITY_TERRAIN,
             ),
             &self.terrain_writer,
@@ -294,7 +261,7 @@ impl SupportDomainInner {
         publish_if_changed(
             &mut tracker.mission_fence,
             support_from_capability(
-                capabilities,
+                &tracker.init_snapshot.autopilot_version,
                 MavProtocolCapability::MAV_PROTOCOL_CAPABILITY_MISSION_FENCE,
             ),
             &self.mission_fence_writer,
@@ -302,7 +269,7 @@ impl SupportDomainInner {
         publish_if_changed(
             &mut tracker.mission_rally,
             support_from_capability(
-                capabilities,
+                &tracker.init_snapshot.autopilot_version,
                 MavProtocolCapability::MAV_PROTOCOL_CAPABILITY_MISSION_RALLY,
             ),
             &self.mission_rally_writer,
@@ -317,9 +284,13 @@ impl SupportDomainInner {
 
 fn publish_if_changed(
     slot: &mut Option<SupportState>,
-    next: SupportState,
+    next: Option<SupportState>,
     writer: &ObservationWriter<SupportState>,
 ) {
+    let Some(next) = next else {
+        return;
+    };
+
     if slot.as_ref() == Some(&next) {
         return;
     }
@@ -328,35 +299,30 @@ fn publish_if_changed(
     let _ = writer.publish(next);
 }
 
-fn capabilities_from_init_state(
-    state: &InitState<dialect::AUTOPILOT_VERSION_DATA>,
-) -> Option<MavProtocolCapability> {
-    match state {
-        InitState::Available(version) => Some(version.capabilities),
-        InitState::Unknown | InitState::Requesting { .. } | InitState::Unavailable { .. } => None,
-    }
-}
-
 fn support_from_capability(
-    capabilities: Option<MavProtocolCapability>,
+    state: &InitState<dialect::AUTOPILOT_VERSION_DATA>,
     capability: MavProtocolCapability,
-) -> SupportState {
-    match capabilities {
-        Some(bits) if bits.contains(capability) => SupportState::Supported,
-        Some(_) | None => SupportState::Unknown,
+) -> Option<SupportState> {
+    match state {
+        InitState::Available(version) if version.capabilities.contains(capability) => {
+            Some(SupportState::Supported)
+        }
+        InitState::Available(_) => Some(SupportState::Unsupported),
+        InitState::Unavailable { .. } => Some(SupportState::Unknown),
+        InitState::Unknown | InitState::Requesting { .. } => None,
     }
 }
 
-fn ardupilot_support(vehicle_state: &VehicleState) -> SupportState {
+fn ardupilot_support(vehicle_state: &VehicleState) -> Option<SupportState> {
     if !vehicle_state.heartbeat_received {
-        return SupportState::Unknown;
+        return None;
     }
 
-    match vehicle_state.autopilot {
+    Some(match vehicle_state.autopilot {
         AutopilotType::Unknown => SupportState::Unknown,
         AutopilotType::ArduPilotMega => SupportState::Supported,
         _ => SupportState::Unsupported,
-    }
+    })
 }
 
 #[cfg(test)]
@@ -376,25 +342,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn seeded_unknown_does_not_republish_when_inputs_still_unknown() {
+    async fn support_observations_remain_unpublished_until_evidence_exists() {
         let domain = SupportDomain::new();
         let mut command_int = domain.command_int().subscribe();
         let mut ardupilot = domain.ardupilot().subscribe();
 
-        assert_eq!(
-            tokio::time::timeout(Duration::from_millis(100), command_int.recv())
-                .await
-                .expect("initial command_int state should be published")
-                .expect("command_int subscription should remain open"),
-            SupportState::Unknown,
-        );
-        assert_eq!(
-            tokio::time::timeout(Duration::from_millis(100), ardupilot.recv())
-                .await
-                .expect("initial ardupilot state should be published")
-                .expect("ardupilot subscription should remain open"),
-            SupportState::Unknown,
-        );
+        assert_eq!(domain.command_int().latest(), None);
+        assert_eq!(domain.ardupilot().latest(), None);
 
         domain.handle_vehicle_state(&VehicleState::default());
         domain.handle_init_snapshot(&InitSnapshot::default());
@@ -403,13 +357,13 @@ mod tests {
             tokio::time::timeout(Duration::from_millis(100), command_int.recv())
                 .await
                 .is_err(),
-            "expected no duplicate Unknown publish for command_int"
+            "expected no command_int publish without AUTOPILOT_VERSION evidence"
         );
         assert!(
             tokio::time::timeout(Duration::from_millis(100), ardupilot.recv())
                 .await
                 .is_err(),
-            "expected no duplicate Unknown publish for ardupilot"
+            "expected no ardupilot publish before heartbeat evidence"
         );
     }
 
@@ -428,14 +382,38 @@ mod tests {
 
         assert_eq!(domain.command_int().latest(), Some(SupportState::Supported));
         assert_eq!(domain.ftp().latest(), Some(SupportState::Supported));
-        assert_eq!(domain.terrain().latest(), Some(SupportState::Unknown));
-        assert_eq!(domain.mission_fence().latest(), Some(SupportState::Unknown));
-        assert_eq!(domain.mission_rally().latest(), Some(SupportState::Unknown));
-        assert_eq!(domain.ardupilot().latest(), Some(SupportState::Unknown));
+        assert_eq!(domain.terrain().latest(), Some(SupportState::Unsupported));
+        assert_eq!(
+            domain.mission_fence().latest(),
+            Some(SupportState::Unsupported)
+        );
+        assert_eq!(
+            domain.mission_rally().latest(),
+            Some(SupportState::Unsupported)
+        );
+        assert_eq!(domain.ardupilot().latest(), None);
     }
 
     #[test]
-    fn bounded_autopilot_version_silence_keeps_capability_domains_unknown() {
+    fn absent_capability_bit_becomes_unsupported_when_autopilot_version_is_known() {
+        let domain = SupportDomain::new();
+
+        domain.handle_init_snapshot(&InitSnapshot {
+            autopilot_version: InitState::Available(dialect::AUTOPILOT_VERSION_DATA {
+                capabilities: MavProtocolCapability::MAV_PROTOCOL_CAPABILITY_FTP,
+                ..dialect::AUTOPILOT_VERSION_DATA::default()
+            }),
+            ..InitSnapshot::default()
+        });
+
+        assert_eq!(
+            domain.command_int().latest(),
+            Some(SupportState::Unsupported)
+        );
+    }
+
+    #[test]
+    fn terminal_inconclusive_autopilot_version_yields_unknown() {
         let domain = SupportDomain::new();
 
         domain.handle_init_snapshot(&InitSnapshot {
@@ -453,8 +431,11 @@ mod tests {
     }
 
     #[test]
-    fn ardupilot_support_uses_identity_signal_not_capability_bits() {
+    fn ardupilot_support_remains_unpublished_before_heartbeat_then_resolves() {
         let domain = SupportDomain::new();
+
+        domain.handle_vehicle_state(&VehicleState::default());
+        assert_eq!(domain.ardupilot().latest(), None);
 
         domain.handle_vehicle_state(&vehicle_state(AutopilotType::ArduPilotMega));
         assert_eq!(domain.ardupilot().latest(), Some(SupportState::Supported));

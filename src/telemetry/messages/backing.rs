@@ -3,6 +3,7 @@ use crate::dialect::{self, MavCmd};
 use crate::observation::{
     MessageHandle, MessageSample, ObservationHandle, ObservationWriter, SupportState,
 };
+use crate::operation::send_cancellable_domain_command;
 use crate::shared_state::recover_lock;
 use crate::telemetry::status_text::{
     StatusTextEvent, StatusTextWriter, create_status_text_backing_store,
@@ -13,7 +14,7 @@ use std::collections::HashMap;
 use std::hash::Hash;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 
 #[derive(Clone)]
 pub(crate) struct MessageSlotWriter<M: Clone + Send + Sync + 'static> {
@@ -137,17 +138,13 @@ impl MessageCommandHub {
             )
         })?;
 
-        let (reply_tx, reply_rx) = oneshot::channel();
-        command_tx
-            .send(Command::RawCommandLong {
-                command,
-                params,
-                reply: reply_tx,
-            })
-            .await
-            .map_err(|_| VehicleError::Disconnected)?;
-
-        reply_rx.await.map_err(|_| VehicleError::Disconnected)?
+        send_cancellable_domain_command(command_tx, |reply, cancel| Command::RawCommandLong {
+            command,
+            params,
+            reply,
+            cancel,
+        })
+        .await
     }
 }
 

@@ -101,9 +101,9 @@ impl VehicleInner {
     ) -> Self {
         Self {
             command_tx,
-            cancel,
+            cancel: cancel.clone(),
             stores,
-            mission_protocol: MissionProtocolScope::new(),
+            mission_protocol: MissionProtocolScope::new(cancel),
             mission: MissionDomain::new(),
             params: ParamsDomain::new(),
             fence: FenceDomain::new(),
@@ -187,5 +187,12 @@ impl Vehicle {
             .map_err(|_| VehicleError::Disconnected)?;
 
         rx.await.map_err(|_| VehicleError::Disconnected)?
+    }
+
+    pub(crate) async fn send_cancellable_command<T>(
+        &self,
+        make: impl FnOnce(oneshot::Sender<Result<T, VehicleError>>, CancellationToken) -> Command,
+    ) -> Result<T, VehicleError> {
+        crate::operation::send_cancellable_domain_command(self.inner.command_tx.clone(), make).await
     }
 }

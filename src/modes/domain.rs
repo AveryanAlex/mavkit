@@ -10,6 +10,7 @@ use crate::types::SupportState;
 use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 use tokio::sync::{broadcast, mpsc, oneshot};
+use tokio_util::sync::CancellationToken;
 
 const AVAILABLE_MODES_MSG_ID: f32 = 435.0;
 
@@ -282,6 +283,7 @@ async fn request_available_modes(command_tx: &mpsc::Sender<Command>) {
             command: dialect::MavCmd::MAV_CMD_REQUEST_MESSAGE,
             params: [AVAILABLE_MODES_MSG_ID, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await;
 }

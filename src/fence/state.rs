@@ -9,6 +9,9 @@ use super::plan::FencePlan;
 use super::wire::{fence_plan_from_mission_plan, mission_plan_from_fence_plan};
 
 /// Cached fence-domain state plus sync and active-operation markers.
+///
+/// The default value is published immediately and means no vehicle-confirmed fence plan is cached
+/// yet.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FenceState {
     pub plan: Option<FencePlan>,
@@ -80,7 +83,7 @@ mod tests {
 
     #[test]
     fn mission_upload_conflicts_with_fence_download() {
-        let mission_protocol = MissionProtocolScope::new();
+        let mission_protocol = MissionProtocolScope::detached_for_test();
         let mission = MissionDomain::new();
         let fence = FenceDomain::new();
 

@@ -45,11 +45,14 @@ impl ParamsDomain {
         Ok(reservation)
     }
 
-    pub(crate) fn finish_operation(&self, scope: &MissionProtocolScope, op_id: u64) {
-        scope.finish_operation(op_id);
-        self.update_state(|state| {
-            state.active_op = None;
-        });
+    pub(crate) fn finish_operation(&self, scope: &MissionProtocolScope, op_id: u64) -> bool {
+        let finished = scope.finish_operation(op_id);
+        if finished {
+            self.update_state(|state| {
+                state.active_op = None;
+            });
+        }
+        finished
     }
 
     pub(crate) fn note_download_success(&self, store: ParamStore) {
@@ -149,6 +152,22 @@ mod tests {
             no_change.is_err(),
             "expected no publish for unchanged state"
         );
+    }
+
+    #[test]
+    fn stale_finish_operation_does_not_clear_active_op() {
+        let domain = ParamsDomain::new();
+        let scope = MissionProtocolScope::detached_for_test();
+
+        let reservation = domain
+            .begin_operation(&scope, ParamOperationKind::DownloadAll, "download_all")
+            .unwrap();
+        assert!(!domain.finish_operation(&scope, reservation.id + 1));
+
+        let state = domain.state().latest().unwrap();
+        assert_eq!(state.active_op, Some(ParamOperationKind::DownloadAll));
+
+        assert!(domain.finish_operation(&scope, reservation.id));
     }
 
     #[tokio::test]

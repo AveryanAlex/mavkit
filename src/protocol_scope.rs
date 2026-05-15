@@ -10,6 +10,7 @@ pub(crate) struct MissionProtocolScope {
 }
 
 struct MissionProtocolScopeInner {
+    vehicle_cancel: CancellationToken,
     active_operation: Mutex<Option<ActiveOperation>>,
     operation_id: AtomicU64,
 }
@@ -27,13 +28,19 @@ pub(crate) struct OperationReservation {
 }
 
 impl MissionProtocolScope {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(vehicle_cancel: CancellationToken) -> Self {
         Self {
             inner: Arc::new(MissionProtocolScopeInner {
+                vehicle_cancel,
                 active_operation: Mutex::new(None),
                 operation_id: AtomicU64::new(1),
             }),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn detached_for_test() -> Self {
+        Self::new(CancellationToken::new())
     }
 
     pub(crate) fn begin_operation(
@@ -50,7 +57,7 @@ impl MissionProtocolScope {
         }
 
         let id = self.inner.operation_id.fetch_add(1, Ordering::Relaxed);
-        let cancel = CancellationToken::new();
+        let cancel = self.inner.vehicle_cancel.child_token();
         *active = Some(ActiveOperation {
             id,
             domain,
@@ -60,14 +67,17 @@ impl MissionProtocolScope {
         Ok(OperationReservation { id, cancel })
     }
 
-    pub(crate) fn finish_operation(&self, op_id: u64) {
+    pub(crate) fn finish_operation(&self, op_id: u64) -> bool {
         let mut active = recover_lock(&self.inner.active_operation);
         if active
             .as_ref()
             .is_some_and(|active_op| active_op.id == op_id)
         {
             *active = None;
+            return true;
         }
+
+        false
     }
 }
 
@@ -77,7 +87,7 @@ mod tests {
 
     #[test]
     fn finish_operation_clears_only_matching_reservation() {
-        let scope = MissionProtocolScope::new();
+        let scope = MissionProtocolScope::detached_for_test();
         let reservation = scope
             .begin_operation("mission", "upload")
             .expect("first reservation should succeed");
@@ -93,7 +103,7 @@ mod tests {
             } if conflicting_domain == "mission" && conflicting_op == "upload"
         ));
 
-        scope.finish_operation(reservation.id + 1);
+        assert!(!scope.finish_operation(reservation.id + 1));
 
         let stale_id_conflict = scope
             .begin_operation("params", "download_all")
@@ -106,11 +116,26 @@ mod tests {
             } if conflicting_domain == "mission" && conflicting_op == "upload"
         ));
 
-        scope.finish_operation(reservation.id);
+        assert!(scope.finish_operation(reservation.id));
 
         let next = scope
             .begin_operation("params", "download_all")
             .expect("matching finish should clear the reservation");
         assert_eq!(next.id, reservation.id + 1);
+    }
+
+    #[test]
+    fn vehicle_cancellation_cancels_active_operation_token() {
+        let vehicle_cancel = CancellationToken::new();
+        let scope = MissionProtocolScope::new(vehicle_cancel.clone());
+        let reservation = scope
+            .begin_operation("mission", "download")
+            .expect("operation should start");
+
+        assert!(!reservation.cancel.is_cancelled());
+
+        vehicle_cancel.cancel();
+
+        assert!(reservation.cancel.is_cancelled());
     }
 }

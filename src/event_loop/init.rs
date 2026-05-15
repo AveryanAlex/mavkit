@@ -129,38 +129,51 @@ impl InitManager {
     }
 
     pub(super) fn handle_message(&self, message: &dialect::MavMessage) {
-        let mut inner = recover_lock(&self.inner);
+        let changed_snapshot = {
+            let mut inner = recover_lock(&self.inner);
+            let before = inner.snapshot.clone();
 
-        match message {
-            dialect::MavMessage::AUTOPILOT_VERSION(data) => {
-                inner.snapshot.autopilot_version = InitState::Available(data.clone());
-            }
-            dialect::MavMessage::AVAILABLE_MODES(data) => match &mut inner.snapshot.available_modes
-            {
-                InitState::Available(modes) => {
-                    if let Some(existing) = modes
-                        .iter_mut()
-                        .find(|existing| existing.mode_index == data.mode_index)
-                    {
-                        *existing = data.clone();
-                    } else {
-                        modes.push(data.clone());
+            match message {
+                dialect::MavMessage::AUTOPILOT_VERSION(data) => {
+                    inner.snapshot.autopilot_version = InitState::Available(data.clone());
+                }
+                dialect::MavMessage::AVAILABLE_MODES(data) => {
+                    match &mut inner.snapshot.available_modes {
+                        InitState::Available(modes) => {
+                            if let Some(existing) = modes
+                                .iter_mut()
+                                .find(|existing| existing.mode_index == data.mode_index)
+                            {
+                                *existing = data.clone();
+                            } else {
+                                modes.push(data.clone());
+                            }
+                        }
+                        _ => {
+                            inner.snapshot.available_modes =
+                                InitState::Available(vec![data.clone()]);
+                        }
                     }
                 }
-                _ => {
-                    inner.snapshot.available_modes = InitState::Available(vec![data.clone()]);
+                dialect::MavMessage::HOME_POSITION(data) => {
+                    inner.snapshot.home_position = InitState::Available(data.clone());
                 }
-            },
-            dialect::MavMessage::HOME_POSITION(data) => {
-                inner.snapshot.home_position = InitState::Available(data.clone());
+                dialect::MavMessage::GPS_GLOBAL_ORIGIN(data) => {
+                    inner.snapshot.gps_global_origin = InitState::Available(data.clone());
+                }
+                _ => {}
             }
-            dialect::MavMessage::GPS_GLOBAL_ORIGIN(data) => {
-                inner.snapshot.gps_global_origin = InitState::Available(data.clone());
-            }
-            _ => {}
-        }
 
-        self.snapshot_tx.send_replace(inner.snapshot.clone());
+            if inner.snapshot == before {
+                None
+            } else {
+                Some(inner.snapshot.clone())
+            }
+        };
+
+        if let Some(snapshot) = changed_snapshot {
+            self.snapshot_tx.send_replace(snapshot);
+        }
     }
 
     #[cfg(test)]
@@ -239,11 +252,10 @@ impl InitManager {
         let retry_delay = retry_delay(&policy);
 
         for attempt in 1..=max_attempts {
-            if self.is_terminal(domain) {
+            if !self.begin_attempt(domain, attempt) {
                 return;
             }
 
-            self.set_requesting(domain, attempt);
             let _ = request_domain(&connection, &config, &target, domain).await;
 
             tokio::select! {
@@ -264,70 +276,97 @@ impl InitManager {
         }
     }
 
-    fn is_terminal(&self, domain: InitDomain) -> bool {
-        let inner = recover_lock(&self.inner);
-        match domain {
-            InitDomain::AutopilotVersion => matches!(
-                inner.snapshot.autopilot_version,
-                InitState::Available(_) | InitState::Unavailable { .. }
-            ),
-            InitDomain::AvailableModes => matches!(
-                inner.snapshot.available_modes,
-                InitState::Available(_) | InitState::Unavailable { .. }
-            ),
-            InitDomain::HomePosition => matches!(
-                inner.snapshot.home_position,
-                InitState::Available(_) | InitState::Unavailable { .. }
-            ),
-            InitDomain::GpsGlobalOrigin => matches!(
-                inner.snapshot.gps_global_origin,
-                InitState::Available(_) | InitState::Unavailable { .. }
-            ),
-        }
-    }
+    fn begin_attempt(&self, domain: InitDomain, attempt: u8) -> bool {
+        let changed_snapshot = {
+            let mut inner = recover_lock(&self.inner);
+            if is_terminal(&inner.snapshot, domain) {
+                return false;
+            }
 
-    fn set_requesting(&self, domain: InitDomain, attempt: u8) {
-        let mut inner = recover_lock(&self.inner);
-        match domain {
-            InitDomain::AutopilotVersion => {
-                inner.snapshot.autopilot_version = InitState::Requesting { attempt }
+            let before = inner.snapshot.clone();
+            set_requesting(&mut inner.snapshot, domain, attempt);
+            if inner.snapshot == before {
+                None
+            } else {
+                Some(inner.snapshot.clone())
             }
-            InitDomain::AvailableModes => {
-                inner.snapshot.available_modes = InitState::Requesting { attempt }
-            }
-            InitDomain::HomePosition => {
-                inner.snapshot.home_position = InitState::Requesting { attempt }
-            }
-            InitDomain::GpsGlobalOrigin => {
-                inner.snapshot.gps_global_origin = InitState::Requesting { attempt }
-            }
+        };
+
+        if let Some(snapshot) = changed_snapshot {
+            self.snapshot_tx.send_replace(snapshot);
         }
 
-        self.snapshot_tx.send_replace(inner.snapshot.clone());
+        true
     }
 
     fn finish_on_silence(&self, domain: InitDomain) {
-        let mut inner = recover_lock(&self.inner);
-        match domain {
-            InitDomain::AutopilotVersion => finish_state_on_silence(
-                &mut inner.snapshot.autopilot_version,
-                marks_unavailable_on_silence(domain),
-            ),
-            InitDomain::AvailableModes => finish_state_on_silence(
-                &mut inner.snapshot.available_modes,
-                marks_unavailable_on_silence(domain),
-            ),
-            InitDomain::HomePosition => finish_state_on_silence(
-                &mut inner.snapshot.home_position,
-                marks_unavailable_on_silence(domain),
-            ),
-            InitDomain::GpsGlobalOrigin => finish_state_on_silence(
-                &mut inner.snapshot.gps_global_origin,
-                marks_unavailable_on_silence(domain),
-            ),
-        }
+        let changed_snapshot = {
+            let mut inner = recover_lock(&self.inner);
+            let before = inner.snapshot.clone();
 
-        self.snapshot_tx.send_replace(inner.snapshot.clone());
+            match domain {
+                InitDomain::AutopilotVersion => finish_state_on_silence(
+                    &mut inner.snapshot.autopilot_version,
+                    marks_unavailable_on_silence(domain),
+                ),
+                InitDomain::AvailableModes => finish_state_on_silence(
+                    &mut inner.snapshot.available_modes,
+                    marks_unavailable_on_silence(domain),
+                ),
+                InitDomain::HomePosition => finish_state_on_silence(
+                    &mut inner.snapshot.home_position,
+                    marks_unavailable_on_silence(domain),
+                ),
+                InitDomain::GpsGlobalOrigin => finish_state_on_silence(
+                    &mut inner.snapshot.gps_global_origin,
+                    marks_unavailable_on_silence(domain),
+                ),
+            }
+
+            if inner.snapshot == before {
+                None
+            } else {
+                Some(inner.snapshot.clone())
+            }
+        };
+
+        if let Some(snapshot) = changed_snapshot {
+            self.snapshot_tx.send_replace(snapshot);
+        }
+    }
+}
+
+fn is_terminal(snapshot: &InitSnapshot, domain: InitDomain) -> bool {
+    match domain {
+        InitDomain::AutopilotVersion => matches!(
+            snapshot.autopilot_version,
+            InitState::Available(_) | InitState::Unavailable { .. }
+        ),
+        InitDomain::AvailableModes => matches!(
+            snapshot.available_modes,
+            InitState::Available(_) | InitState::Unavailable { .. }
+        ),
+        InitDomain::HomePosition => matches!(
+            snapshot.home_position,
+            InitState::Available(_) | InitState::Unavailable { .. }
+        ),
+        InitDomain::GpsGlobalOrigin => matches!(
+            snapshot.gps_global_origin,
+            InitState::Available(_) | InitState::Unavailable { .. }
+        ),
+    }
+}
+
+fn set_requesting(snapshot: &mut InitSnapshot, domain: InitDomain, attempt: u8) {
+    match domain {
+        InitDomain::AutopilotVersion => {
+            snapshot.autopilot_version = InitState::Requesting { attempt }
+        }
+        InitDomain::AvailableModes => snapshot.available_modes = InitState::Requesting { attempt },
+        InitDomain::HomePosition => snapshot.home_position = InitState::Requesting { attempt },
+        InitDomain::GpsGlobalOrigin => {
+            snapshot.gps_global_origin = InitState::Requesting { attempt }
+        }
     }
 }
 
@@ -443,5 +482,55 @@ mod tests {
 
         assert_eq!(errors, vec![TaskJoinError::Panic]);
         assert!(manager.take_tasks().is_empty());
+    }
+
+    #[test]
+    fn begin_attempt_does_not_regress_available_state_to_requesting() {
+        let manager = InitManager::new(fast_event_loop_test_config());
+        manager.handle_message(&dialect::MavMessage::AUTOPILOT_VERSION(
+            dialect::AUTOPILOT_VERSION_DATA {
+                flight_sw_version: 0x01020304,
+                ..dialect::AUTOPILOT_VERSION_DATA::default()
+            },
+        ));
+
+        let began = manager.begin_attempt(InitDomain::AutopilotVersion, 2);
+
+        assert!(!began);
+        assert!(matches!(
+            manager.snapshot().autopilot_version,
+            InitState::Available(_)
+        ));
+    }
+
+    #[test]
+    fn irrelevant_message_does_not_republish_snapshot() {
+        let manager = InitManager::new(fast_event_loop_test_config());
+        let rx = manager.subscribe();
+
+        manager.handle_message(&dialect::MavMessage::HEARTBEAT(
+            dialect::HEARTBEAT_DATA::default(),
+        ));
+
+        assert!(!rx.has_changed().unwrap());
+    }
+
+    #[test]
+    fn identical_init_message_does_not_republish_snapshot() {
+        let manager = InitManager::new(fast_event_loop_test_config());
+        let mut rx = manager.subscribe();
+        let message = dialect::MavMessage::AUTOPILOT_VERSION(dialect::AUTOPILOT_VERSION_DATA {
+            flight_sw_version: 0x01020304,
+            uid: 42,
+            ..dialect::AUTOPILOT_VERSION_DATA::default()
+        });
+
+        manager.handle_message(&message);
+        assert!(rx.has_changed().unwrap());
+        rx.borrow_and_update();
+
+        manager.handle_message(&message);
+
+        assert!(!rx.has_changed().unwrap());
     }
 }

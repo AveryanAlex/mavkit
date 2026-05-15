@@ -191,6 +191,9 @@ pub struct ParamWriteResult {
 }
 
 /// Cached parameter-domain state plus sync and active-operation markers.
+///
+/// The default value is published immediately and means no vehicle-confirmed parameter store is
+/// cached yet.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct ParamState {
     pub store: Option<ParamStore>,

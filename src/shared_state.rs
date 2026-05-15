@@ -21,6 +21,9 @@ pub(crate) fn recover_lock<T>(mutex: &Mutex<T>) -> MutexGuard<'_, T> {
 
 /// Small crate-private helper for watch-backed cached domain state.
 ///
+/// `new` publishes the supplied initial snapshot immediately. Domains that pass `T::default()` use
+/// that default as a visible cache marker, not as proof that vehicle data has been confirmed.
+///
 /// Poisoned mutex state is recovered with `into_inner()` instead of panicking: this cache is a
 /// last-known snapshot used to dedupe publishes, so future observation updates should keep making
 /// progress even if a previous updater panicked while holding the lock.

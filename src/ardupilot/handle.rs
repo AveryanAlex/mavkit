@@ -7,7 +7,7 @@ use crate::command::Command;
 use crate::dialect;
 use crate::error::VehicleError;
 use crate::observation::ObservationHandle;
-use crate::operation::send_domain_command;
+use crate::operation::send_cancellable_domain_command;
 use crate::state::VehicleType;
 use crate::vehicle::VehicleInner;
 use calibration::{
@@ -241,19 +241,25 @@ impl<'a> ArduPilotHandle<'a> {
         command: dialect::MavCmd,
         params: [f32; 7],
     ) -> Result<(), VehicleError> {
-        send_domain_command(self.inner.command_tx.clone(), |reply| Command::Long {
-            command,
-            params,
-            reply,
+        send_cancellable_domain_command(self.inner.command_tx.clone(), |reply, cancel| {
+            Command::Long {
+                command,
+                params,
+                reply,
+                cancel,
+            }
         })
         .await
     }
 
     async fn send_long_raw(&self, command_id: u16, params: [f32; 7]) -> Result<(), VehicleError> {
-        send_domain_command(self.inner.command_tx.clone(), |reply| Command::LongRaw {
-            command_id,
-            params,
-            reply,
+        send_cancellable_domain_command(self.inner.command_tx.clone(), |reply, cancel| {
+            Command::LongRaw {
+                command_id,
+                params,
+                reply,
+                cancel,
+            }
         })
         .await
     }

@@ -89,18 +89,19 @@ impl<T: Clone + Send + Sync + 'static> Stream for ObservationSubscription<T> {
             return Poll::Ready(None);
         }
 
-        match Pin::new(&mut this.close_stream).poll_next(cx) {
-            Poll::Ready(None) => {
-                this.disconnect_emitted = true;
-                return Poll::Ready(None);
-            }
-            Poll::Ready(Some(closed)) => {
-                if closed {
+        loop {
+            match Pin::new(&mut this.close_stream).poll_next(cx) {
+                Poll::Ready(None) => {
                     this.disconnect_emitted = true;
                     return Poll::Ready(None);
                 }
+                Poll::Ready(Some(true)) => {
+                    this.disconnect_emitted = true;
+                    return Poll::Ready(None);
+                }
+                Poll::Ready(Some(false)) => continue,
+                Poll::Pending => break,
             }
-            Poll::Pending => {}
         }
 
         match &mut this.backing {

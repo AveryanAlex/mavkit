@@ -103,6 +103,7 @@ async fn periodic_request_waits_for_fresh_sample() {
             command,
             params,
             reply,
+            ..
         } => {
             assert_eq!(command, MavCmd::MAV_CMD_REQUEST_MESSAGE);
             assert_eq!(params[0], MSG_ID_VFR_HUD as f32);
@@ -145,6 +146,7 @@ async fn periodic_set_rate_sends_set_message_interval() {
             command,
             params,
             reply,
+            ..
         } => {
             assert_eq!(command, MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL);
             assert_eq!(params[0], MSG_ID_GPS_RAW_INT as f32);
@@ -178,6 +180,7 @@ async fn event_driven_request_sends_request_message() {
             command,
             params,
             reply,
+            ..
         } => {
             assert_eq!(command, MavCmd::MAV_CMD_REQUEST_MESSAGE);
             assert_eq!(params[0], MSG_ID_HOME_POSITION as f32);

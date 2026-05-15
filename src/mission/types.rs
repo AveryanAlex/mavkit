@@ -132,6 +132,9 @@ pub(crate) struct WireMissionPlan {
 }
 
 /// Cached mission-domain state plus sync and active-operation markers.
+///
+/// The default value is published immediately and means no vehicle-confirmed mission plan is
+/// cached yet.
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct MissionState {
     pub plan: Option<MissionPlan>,

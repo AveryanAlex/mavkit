@@ -218,9 +218,15 @@ fn bridge_vehicle_cancel_to_op(vehicle: &CancellationToken, op: &CancellationTok
     let vehicle = vehicle.clone();
     let op = op.clone();
     runtime::spawn(async move {
-        vehicle.cancelled().await;
-        op.cancel();
+        tokio::select! {
+            _ = vehicle.cancelled() => op.cancel(),
+            _ = op.cancelled() => {}
+        }
     });
+}
+
+fn finish_op_cancel(op_cancel: CancellationToken) {
+    op_cancel.cancel();
 }
 
 async fn route_incoming_message(
@@ -347,55 +353,95 @@ fn get_target(vehicle_target: &Option<VehicleTarget>) -> Result<VehicleTarget, V
 
 async fn handle_command(cmd: Command, ctx: &mut CommandContext) {
     match cmd {
-        Command::Arm { force, reply } => {
-            let result = handle_arm_disarm(true, force, ctx).await;
+        Command::Arm {
+            force,
+            reply,
+            cancel: op_cancel,
+        } => {
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_arm_disarm(true, force, ctx, &op_cancel).await;
             let _ = reply.send(result);
+            finish_op_cancel(op_cancel);
         }
-        Command::Disarm { force, reply } => {
-            let result = handle_arm_disarm(false, force, ctx).await;
+        Command::Disarm {
+            force,
+            reply,
+            cancel: op_cancel,
+        } => {
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_arm_disarm(false, force, ctx, &op_cancel).await;
             let _ = reply.send(result);
+            finish_op_cancel(op_cancel);
         }
-        Command::SetMode { custom_mode, reply } => {
-            let result = handle_set_mode(custom_mode, ctx).await;
+        Command::SetMode {
+            custom_mode,
+            reply,
+            cancel: op_cancel,
+        } => {
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_set_mode(custom_mode, ctx, &op_cancel).await;
             let _ = reply.send(result);
+            finish_op_cancel(op_cancel);
         }
         Command::Long {
             command,
             params,
             reply,
+            cancel: op_cancel,
         } => {
-            let result = handle_command_long(command, params, ctx).await.map(|_| ());
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_command_long(command, params, ctx, &op_cancel)
+                .await
+                .map(|_| ());
             let _ = reply.send(result);
+            finish_op_cancel(op_cancel);
         }
         Command::LongRaw {
             command_id,
             params,
             reply,
+            cancel: op_cancel,
         } => {
-            let result = handle_command_long_raw(command_id, params, ctx)
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_command_long_raw(command_id, params, ctx, &op_cancel)
                 .await
                 .map(|_| ());
             let _ = reply.send(result);
+            finish_op_cancel(op_cancel);
         }
         Command::RawCommandLong {
             command,
             params,
             reply,
+            cancel: op_cancel,
         } => {
-            let result = handle_command_long(command, params, ctx).await.map(|_| ());
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_command_long(command, params, ctx, &op_cancel)
+                .await
+                .map(|_| ());
             let _ = reply.send(result);
+            finish_op_cancel(op_cancel);
         }
         Command::RawCommandLongAck {
             command,
             params,
             reply,
+            cancel: op_cancel,
         } => {
-            let result = handle_command_long(command, params, ctx).await;
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_command_long(command, params, ctx, &op_cancel).await;
             let _ = reply.send(result);
+            finish_op_cancel(op_cancel);
         }
-        Command::RawCommandInt { payload, reply } => {
-            let result = handle_command_int(payload, ctx).await;
+        Command::RawCommandInt {
+            payload,
+            reply,
+            cancel: op_cancel,
+        } => {
+            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
+            let result = handle_command_int(payload, ctx, &op_cancel).await;
             let _ = reply.send(result);
+            finish_op_cancel(op_cancel);
         }
         Command::RawSend { message, reply } => {
             let result = handle_raw_send(*message, ctx).await;
@@ -424,7 +470,6 @@ async fn handle_command(cmd: Command, ctx: &mut CommandContext) {
             reply,
             cancel: op_cancel,
         } => {
-            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
             let result = handle_mission_upload(plan, ctx, &op_cancel).await;
             let _ = reply.send(result);
         }
@@ -433,7 +478,6 @@ async fn handle_command(cmd: Command, ctx: &mut CommandContext) {
             reply,
             cancel: op_cancel,
         } => {
-            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
             let result = handle_mission_download(mission_type, ctx, &op_cancel).await;
             let _ = reply.send(result);
         }
@@ -442,7 +486,6 @@ async fn handle_command(cmd: Command, ctx: &mut CommandContext) {
             reply,
             cancel: op_cancel,
         } => {
-            bridge_vehicle_cancel_to_op(&ctx.cancel, &op_cancel);
             let result = handle_mission_clear(mission_type, ctx, &op_cancel).await;
             let _ = reply.send(result);
         }

@@ -11,7 +11,10 @@ use crate::mission::{MissionFrame, MissionType};
 use crate::observation::SupportState;
 use crate::state::{self, LinkState, create_channels};
 use crate::telemetry::TelemetryHandle;
-use crate::test_support::{MockConnection, assert_approx, command_ack, default_header, heartbeat};
+use crate::test_support::{
+    ConnectedVehicleHarness, ConnectedVehicleOptions, MockConnection, SentMessages, assert_approx,
+    command_ack, default_header, heartbeat,
+};
 use mavlink::MavHeader;
 use std::time::Duration;
 use tokio::sync::{mpsc, oneshot};
@@ -63,6 +66,26 @@ fn fast_config() -> VehicleConfig {
 
 fn ack_msg(command: MavCmd, result: dialect::MavResult) -> dialect::MavMessage {
     command_ack(command, result)
+}
+
+fn count_sent_command_long(sent: &SentMessages, command: MavCmd) -> usize {
+    let sent_msgs = sent.lock().unwrap();
+    sent_msgs
+        .iter()
+        .filter(|(_, msg)| {
+            matches!(msg, dialect::MavMessage::COMMAND_LONG(data) if data.command == command)
+        })
+        .count()
+}
+
+fn count_sent_command_int(sent: &SentMessages, command: MavCmd) -> usize {
+    let sent_msgs = sent.lock().unwrap();
+    sent_msgs
+        .iter()
+        .filter(|(_, msg)| {
+            matches!(msg, dialect::MavMessage::COMMAND_INT(data) if data.command == command)
+        })
+        .count()
 }
 
 // -----------------------------------------------------------------------
@@ -453,6 +476,7 @@ async fn mock_outbound_capture() {
         .send(Command::Arm {
             force: false,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -508,6 +532,7 @@ async fn router_forwards_ack_to_raw_subscribers_during_command_wait() {
         .send(Command::Arm {
             force: false,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -674,6 +699,7 @@ async fn arm_command_sends_command_long_and_returns_ack() {
         .send(Command::Arm {
             force: false,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -735,6 +761,7 @@ async fn force_arm_uses_magic_value() {
         .send(Command::Arm {
             force: true,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -779,6 +806,7 @@ async fn arm_without_target_returns_identity_unknown() {
         .send(Command::Arm {
             force: false,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -807,6 +835,7 @@ async fn command_rejected_returns_error() {
         .send(Command::Arm {
             force: false,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -855,6 +884,7 @@ async fn set_mode_via_command_long_ack() {
         .send(Command::SetMode {
             custom_mode: 4,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -952,6 +982,7 @@ async fn arm_timeout_returns_error() {
         .send(Command::Arm {
             force: false,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -983,6 +1014,7 @@ async fn parallel_different_keys_commands_can_complete() {
         .send(Command::Arm {
             force: false,
             reply: arm_reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -992,6 +1024,7 @@ async fn parallel_different_keys_commands_can_complete() {
         .send(Command::SetMode {
             custom_mode: 4,
             reply: mode_reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -1026,6 +1059,250 @@ async fn parallel_different_keys_commands_can_complete() {
 }
 
 #[tokio::test]
+async fn successful_same_key_command_allows_immediate_retry_after_terminal_ack() {
+    let harness = EventLoopHarness::start(EventLoopOptions::default()).await;
+    let msg_tx = harness.msg_tx.clone();
+    let cmd_tx = harness.cmd_tx.clone();
+
+    msg_tx
+        .send((default_header(), heartbeat_msg(false, 0)))
+        .await
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    let (first_reply_tx, first_reply_rx) = oneshot::channel();
+    cmd_tx
+        .send(Command::Arm {
+            force: false,
+            reply: first_reply_tx,
+            cancel: CancellationToken::new(),
+        })
+        .await
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    msg_tx
+        .send((
+            default_header(),
+            ack_msg(
+                MavCmd::MAV_CMD_COMPONENT_ARM_DISARM,
+                dialect::MavResult::MAV_RESULT_ACCEPTED,
+            ),
+        ))
+        .await
+        .unwrap();
+    assert!(first_reply_rx.await.unwrap().is_ok());
+
+    let (second_reply_tx, mut second_reply_rx) = oneshot::channel();
+    cmd_tx
+        .send(Command::Arm {
+            force: false,
+            reply: second_reply_tx,
+            cancel: CancellationToken::new(),
+        })
+        .await
+        .unwrap();
+
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), &mut second_reply_rx)
+            .await
+            .is_err(),
+        "a fresh same-key command should await a fresh ACK rather than conflict or reuse the old one"
+    );
+
+    msg_tx
+        .send((
+            default_header(),
+            ack_msg(
+                MavCmd::MAV_CMD_COMPONENT_ARM_DISARM,
+                dialect::MavResult::MAV_RESULT_ACCEPTED,
+            ),
+        ))
+        .await
+        .unwrap();
+    assert!(second_reply_rx.await.unwrap().is_ok());
+
+    harness.shutdown().await;
+}
+
+#[tokio::test]
+async fn stale_duplicate_ack_during_drain_does_not_complete_later_same_key_command() {
+    let harness = EventLoopHarness::start(EventLoopOptions::default()).await;
+    let msg_tx = harness.msg_tx.clone();
+    let cmd_tx = harness.cmd_tx.clone();
+
+    msg_tx
+        .send((default_header(), heartbeat_msg(false, 0)))
+        .await
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    let (first_reply_tx, first_reply_rx) = oneshot::channel();
+    cmd_tx
+        .send(Command::Arm {
+            force: false,
+            reply: first_reply_tx,
+            cancel: CancellationToken::new(),
+        })
+        .await
+        .unwrap();
+
+    let first_result = tokio::time::timeout(Duration::from_millis(200), first_reply_rx)
+        .await
+        .expect("timed-out command should resolve")
+        .unwrap();
+    assert!(matches!(first_result, Err(VehicleError::Timeout(_))));
+
+    msg_tx
+        .send((
+            default_header(),
+            ack_msg(
+                MavCmd::MAV_CMD_COMPONENT_ARM_DISARM,
+                dialect::MavResult::MAV_RESULT_ACCEPTED,
+            ),
+        ))
+        .await
+        .unwrap();
+
+    let (drain_reply_tx, drain_reply_rx) = oneshot::channel();
+    cmd_tx
+        .send(Command::Arm {
+            force: false,
+            reply: drain_reply_tx,
+            cancel: CancellationToken::new(),
+        })
+        .await
+        .unwrap();
+    let drain_result = tokio::time::timeout(Duration::from_millis(200), drain_reply_rx)
+        .await
+        .expect("same-key command should fail during drain")
+        .unwrap();
+    assert!(matches!(
+        drain_result,
+        Err(VehicleError::OperationConflict { .. })
+    ));
+
+    tokio::time::sleep(fast_config().command_timeout + Duration::from_millis(20)).await;
+
+    let (later_reply_tx, mut later_reply_rx) = oneshot::channel();
+    cmd_tx
+        .send(Command::Arm {
+            force: false,
+            reply: later_reply_tx,
+            cancel: CancellationToken::new(),
+        })
+        .await
+        .unwrap();
+
+    assert!(
+        tokio::time::timeout(Duration::from_millis(20), &mut later_reply_rx)
+            .await
+            .is_err(),
+        "stale duplicate ACK must not be buffered for a later command"
+    );
+
+    msg_tx
+        .send((
+            default_header(),
+            ack_msg(
+                MavCmd::MAV_CMD_COMPONENT_ARM_DISARM,
+                dialect::MavResult::MAV_RESULT_ACCEPTED,
+            ),
+        ))
+        .await
+        .unwrap();
+    assert!(later_reply_rx.await.unwrap().is_ok());
+
+    harness.shutdown().await;
+}
+
+#[tokio::test]
+async fn dropped_command_future_stops_command_long_retries() {
+    let harness = ConnectedVehicleHarness::connect(ConnectedVehicleOptions {
+        config: fast_config(),
+        ..ConnectedVehicleOptions::default()
+    })
+    .await;
+    let vehicle = harness.vehicle.clone();
+    let sent = harness.sent.clone();
+
+    let command_task = tokio::spawn(async move { vehicle.arm().await });
+    tokio::time::timeout(Duration::from_millis(200), async {
+        while count_sent_command_long(&sent, MavCmd::MAV_CMD_COMPONENT_ARM_DISARM) == 0 {
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("arm command should be sent");
+
+    command_task.abort();
+    let _ = command_task.await;
+
+    let sends_after_drop = count_sent_command_long(&sent, MavCmd::MAV_CMD_COMPONENT_ARM_DISARM);
+    tokio::time::sleep(fast_config().command_timeout * 2).await;
+    assert_eq!(
+        count_sent_command_long(&sent, MavCmd::MAV_CMD_COMPONENT_ARM_DISARM),
+        sends_after_drop
+    );
+
+    harness.vehicle.disconnect().await.unwrap();
+}
+
+#[tokio::test]
+async fn command_int_completes_on_matching_ack() {
+    let harness = EventLoopHarness::start(EventLoopOptions::default()).await;
+    let msg_tx = harness.msg_tx.clone();
+    let cmd_tx = harness.cmd_tx.clone();
+    let sent = harness.sent.clone();
+
+    msg_tx
+        .send((default_header(), heartbeat_msg(false, 0)))
+        .await
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    let (reply_tx, reply_rx) = oneshot::channel();
+    cmd_tx
+        .send(Command::RawCommandInt {
+            payload: crate::command::CommandIntPayload {
+                command: MavCmd::MAV_CMD_DO_SET_HOME,
+                frame: dialect::MavFrame::MAV_FRAME_GLOBAL,
+                current: 0,
+                autocontinue: 0,
+                params: [0.0, 0.0, 0.0, 0.0],
+                x: 473_977_420,
+                y: 85_455_940,
+                z: 500.0,
+            },
+            reply: reply_tx,
+            cancel: CancellationToken::new(),
+        })
+        .await
+        .unwrap();
+    tokio::time::sleep(Duration::from_millis(10)).await;
+
+    assert_eq!(
+        count_sent_command_int(&sent, MavCmd::MAV_CMD_DO_SET_HOME),
+        1
+    );
+
+    msg_tx
+        .send((
+            default_header(),
+            ack_msg(
+                MavCmd::MAV_CMD_DO_SET_HOME,
+                dialect::MavResult::MAV_RESULT_ACCEPTED,
+            ),
+        ))
+        .await
+        .unwrap();
+
+    assert!(reply_rx.await.unwrap().is_ok());
+
+    harness.shutdown().await;
+}
+
+#[tokio::test]
 async fn same_key_conflict_returns_operation_conflict() {
     let (msg_tx, msg_rx) = mpsc::channel(64);
     let (conn, _sent) = MockConnection::new(msg_rx);
@@ -1049,6 +1326,7 @@ async fn same_key_conflict_returns_operation_conflict() {
         .send(Command::Arm {
             force: false,
             reply: reply1_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -1058,6 +1336,7 @@ async fn same_key_conflict_returns_operation_conflict() {
         .send(Command::Arm {
             force: false,
             reply: reply2_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -1112,6 +1391,7 @@ async fn in_progress_ack_stops_retries_and_waits_terminal_ack() {
         .send(Command::Arm {
             force: false,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -1186,6 +1466,7 @@ async fn command_long_retries_increment_confirmation_field() {
             command: MavCmd::MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN,
             params: [3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -1260,6 +1541,7 @@ async fn disarm_force_uses_magic_disarm_value() {
         .send(Command::Disarm {
             force: true,
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();
@@ -1320,6 +1602,7 @@ async fn command_long_reboot_to_bootloader_sends_preflight_reboot_shutdown() {
             command: MavCmd::MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN,
             params: [3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             reply: reply_tx,
+            cancel: CancellationToken::new(),
         })
         .await
         .unwrap();

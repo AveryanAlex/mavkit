@@ -58,10 +58,14 @@ impl VehicleInner {
         custom_mode: u32,
         wait_for_observation: bool,
     ) -> Result<(), VehicleError> {
-        crate::operation::send_domain_command(self.command_tx.clone(), |reply| Command::SetMode {
-            custom_mode,
-            reply,
-        })
+        crate::operation::send_cancellable_domain_command(
+            self.command_tx.clone(),
+            |reply, cancel| Command::SetMode {
+                custom_mode,
+                reply,
+                cancel,
+            },
+        )
         .await?;
 
         if wait_for_observation {
@@ -194,9 +198,10 @@ impl Vehicle {
     /// This returns after the vehicle ACKs or rejects the command. It does not wait for
     /// `HEARTBEAT` or other telemetry confirming that the armed state has changed.
     pub async fn arm(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Arm {
+        self.send_cancellable_command(|reply, cancel| Command::Arm {
             force: false,
             reply,
+            cancel,
         })
         .await
     }
@@ -206,9 +211,10 @@ impl Vehicle {
     /// This currently sends the same command and returns after the command ACK or rejection. It
     /// does not wait for armed-state telemetry.
     pub async fn arm_no_wait(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Arm {
+        self.send_cancellable_command(|reply, cancel| Command::Arm {
             force: false,
             reply,
+            cancel,
         })
         .await
     }
@@ -218,8 +224,12 @@ impl Vehicle {
     /// This returns after the vehicle ACKs or rejects the command. It does not wait for
     /// armed-state telemetry. Forces arming even when pre-arm checks fail. Use with care.
     pub async fn force_arm(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Arm { force: true, reply })
-            .await
+        self.send_cancellable_command(|reply, cancel| Command::Arm {
+            force: true,
+            reply,
+            cancel,
+        })
+        .await
     }
 
     /// Alias for [`force_arm`](Self::force_arm) today.
@@ -227,8 +237,12 @@ impl Vehicle {
     /// This currently sends the same command and returns after the command ACK or rejection. It
     /// does not wait for armed-state telemetry.
     pub async fn force_arm_no_wait(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Arm { force: true, reply })
-            .await
+        self.send_cancellable_command(|reply, cancel| Command::Arm {
+            force: true,
+            reply,
+            cancel,
+        })
+        .await
     }
 
     /// Send the disarm command and wait for command acknowledgment.
@@ -236,9 +250,10 @@ impl Vehicle {
     /// This returns after the vehicle ACKs or rejects the command. It does not wait for
     /// `HEARTBEAT` or other telemetry confirming that the disarmed state has changed.
     pub async fn disarm(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Disarm {
+        self.send_cancellable_command(|reply, cancel| Command::Disarm {
             force: false,
             reply,
+            cancel,
         })
         .await
     }
@@ -248,9 +263,10 @@ impl Vehicle {
     /// This currently sends the same command and returns after the command ACK or rejection. It
     /// does not wait for disarmed-state telemetry.
     pub async fn disarm_no_wait(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Disarm {
+        self.send_cancellable_command(|reply, cancel| Command::Disarm {
             force: false,
             reply,
+            cancel,
         })
         .await
     }
@@ -261,8 +277,12 @@ impl Vehicle {
     /// disarmed-state telemetry. Forces disarming even when the vehicle is in-flight. Use with
     /// care.
     pub async fn force_disarm(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Disarm { force: true, reply })
-            .await
+        self.send_cancellable_command(|reply, cancel| Command::Disarm {
+            force: true,
+            reply,
+            cancel,
+        })
+        .await
     }
 
     /// Alias for [`force_disarm`](Self::force_disarm) today.
@@ -270,8 +290,12 @@ impl Vehicle {
     /// This currently sends the same command and returns after the command ACK or rejection. It
     /// does not wait for disarmed-state telemetry.
     pub async fn force_disarm_no_wait(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Disarm { force: true, reply })
-            .await
+        self.send_cancellable_command(|reply, cancel| Command::Disarm {
+            force: true,
+            reply,
+            cancel,
+        })
+        .await
     }
 
     /// Set the flight mode and wait for the command ACK plus a matching mode observation.
@@ -330,10 +354,11 @@ impl Vehicle {
         reason = "the MAVLink crate deprecated this variant, but the MAVLink wire protocol still requires it"
     )]
     pub async fn set_home_current(&self) -> Result<(), VehicleError> {
-        self.send_command(|reply| Command::Long {
+        self.send_cancellable_command(|reply, cancel| Command::Long {
             command: dialect::MavCmd::MAV_CMD_DO_SET_HOME,
             params: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
             reply,
+            cancel,
         })
         .await
     }

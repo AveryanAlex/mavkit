@@ -83,6 +83,40 @@ impl AsyncMavConnection<dialect::MavMessage> for MockConnection {
         })
     }
 
+    fn try_recv<'life0, 'async_trait>(
+        &'life0 self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<
+                        (MavHeader, dialect::MavMessage),
+                        mavlink::error::MessageReadError,
+                    >,
+                > + Send
+                + 'async_trait,
+        >,
+    >
+    where
+        'life0: 'async_trait,
+        Self: 'async_trait,
+    {
+        Box::pin(async move {
+            let mut rx = self.recv_rx.lock().await;
+            match rx.try_recv() {
+                Ok(message) => Ok(message),
+                Err(tokio::sync::mpsc::error::TryRecvError::Empty) => Err(
+                    mavlink::error::MessageReadError::Io(std::io::ErrorKind::WouldBlock.into()),
+                ),
+                Err(tokio::sync::mpsc::error::TryRecvError::Disconnected) => {
+                    Err(mavlink::error::MessageReadError::Io(std::io::Error::new(
+                        std::io::ErrorKind::ConnectionReset,
+                        "mock connection closed",
+                    )))
+                }
+            }
+        })
+    }
+
     fn send<'life0, 'life1, 'life2, 'async_trait>(
         &'life0 self,
         header: &'life1 MavHeader,

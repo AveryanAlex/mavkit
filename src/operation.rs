@@ -8,6 +8,16 @@ use crate::runtime::{self, TaskHandle, TimeoutError};
 use tokio::sync::{Mutex, mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
+struct CancelOnDrop {
+    cancel: CancellationToken,
+}
+
+impl Drop for CancelOnDrop {
+    fn drop(&mut self) {
+        self.cancel.cancel();
+    }
+}
+
 pub(crate) struct OperationHandle<T: Send + 'static, P: Clone + Send + Sync + 'static> {
     progress: ObservationHandle<P>,
     result_rx: Mutex<Option<oneshot::Receiver<Result<T, VehicleError>>>>,
@@ -147,6 +157,23 @@ pub(crate) async fn send_domain_command<T>(
     let (tx, rx) = oneshot::channel();
     command_tx
         .send(make(tx))
+        .await
+        .map_err(|_| VehicleError::Disconnected)?;
+
+    rx.await.map_err(|_| VehicleError::Disconnected)?
+}
+
+pub(crate) async fn send_cancellable_domain_command<T>(
+    command_tx: mpsc::Sender<Command>,
+    make: impl FnOnce(oneshot::Sender<Result<T, VehicleError>>, CancellationToken) -> Command,
+) -> Result<T, VehicleError> {
+    let cancel = CancellationToken::new();
+    let _cancel_on_drop = CancelOnDrop {
+        cancel: cancel.clone(),
+    };
+    let (tx, rx) = oneshot::channel();
+    command_tx
+        .send(make(tx, cancel))
         .await
         .map_err(|_| VehicleError::Disconnected)?;
 

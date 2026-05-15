@@ -55,10 +55,11 @@ impl<'a> RawHandle<'a> {
     ) -> Result<CommandAck, VehicleError> {
         let command = parse_command(command)?;
         self.vehicle
-            .send_command(|reply| Command::RawCommandLongAck {
+            .send_cancellable_command(|reply, cancel| Command::RawCommandLongAck {
                 command,
                 params,
                 reply,
+                cancel,
             })
             .await
     }
@@ -118,10 +119,11 @@ impl<'a> RawHandle<'a> {
         tokio::pin!(stream);
 
         self.vehicle
-            .send_command(|reply| Command::RawCommandLong {
+            .send_cancellable_command(|reply, cancel| Command::RawCommandLong {
                 command: MavCmd::MAV_CMD_REQUEST_MESSAGE,
                 params: [message_id as f32, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
                 reply,
+                cancel,
             })
             .await?;
 
@@ -142,7 +144,7 @@ impl<'a> RawHandle<'a> {
         interval_us: i32,
     ) -> Result<(), VehicleError> {
         self.vehicle
-            .send_command(|reply| Command::RawCommandLong {
+            .send_cancellable_command(|reply, cancel| Command::RawCommandLong {
                 command: MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
                 params: [
                     message_id as f32,
@@ -154,6 +156,7 @@ impl<'a> RawHandle<'a> {
                     0.0,
                 ],
                 reply,
+                cancel,
             })
             .await
     }

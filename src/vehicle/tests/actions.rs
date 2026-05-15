@@ -53,6 +53,8 @@ async fn arm_variants_remain_ack_only() {
     assert_eq!(arm_sent.param1, 1.0);
     assert_eq!(arm_sent.param2, 0.0);
 
+    tokio::time::sleep(Duration::from_millis(20)).await;
+
     let arm_no_wait_task = {
         let vehicle = vehicle.clone();
         tokio::spawn(async move { vehicle.arm_no_wait().await })
@@ -86,6 +88,8 @@ async fn arm_variants_remain_ack_only() {
     assert_eq!(arm_no_wait_sent.param1, arm_sent.param1);
     assert_eq!(arm_no_wait_sent.param2, arm_sent.param2);
 
+    tokio::time::sleep(Duration::from_millis(20)).await;
+
     let force_arm_task = {
         let vehicle = vehicle.clone();
         tokio::spawn(async move { vehicle.force_arm().await })
@@ -118,6 +122,8 @@ async fn arm_variants_remain_ack_only() {
     let force_arm_sent = last_arm_disarm_command();
     assert_eq!(force_arm_sent.param1, 1.0);
     assert_ne!(force_arm_sent.param2, 0.0);
+
+    tokio::time::sleep(Duration::from_millis(20)).await;
 
     let force_arm_no_wait_task = {
         let vehicle = vehicle.clone();
@@ -211,6 +217,8 @@ async fn set_mode_waits_for_observation() {
             .is_ok()
     );
 
+    tokio::time::sleep(Duration::from_millis(20)).await;
+
     let set_mode_waiting = {
         let vehicle = vehicle.clone();
         tokio::spawn(async move { vehicle.set_mode(6).await })
@@ -248,6 +256,8 @@ async fn set_mode_waits_for_observation() {
             .expect("set mode wait task should join")
             .is_ok()
     );
+
+    tokio::time::sleep(Duration::from_millis(20)).await;
 
     let rejected = {
         let vehicle = vehicle.clone();
@@ -330,6 +340,8 @@ async fn set_mode_by_name_resolve() {
         })
         .expect("static mode command should be sent") as u32;
     assert_eq!(static_mode, 4);
+
+    tokio::time::sleep(Duration::from_millis(20)).await;
 
     msg_tx
         .send((

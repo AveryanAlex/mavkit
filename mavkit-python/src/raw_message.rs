@@ -1,8 +1,8 @@
 use std::sync::Arc;
-use std::time::Instant;
 use std::{pin::Pin, sync::Mutex};
 
 use mavkit::dialect::MavMessage;
+use mavkit::time::Instant;
 use mavlink::{MavHeader, MavlinkVersion, Message};
 use pyo3::exceptions::PyStopAsyncIteration;
 use pyo3::prelude::*;

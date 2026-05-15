@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
-use std::time::Instant;
 
+use mavkit::time::Instant;
 use pyo3::prelude::*;
 
 pub(super) static PY_INSTANT_EPOCH: OnceLock<Instant> = OnceLock::new();

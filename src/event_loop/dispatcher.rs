@@ -3,12 +3,14 @@ use crate::dialect::{self, MavCmd};
 use crate::error::{CommandResult, VehicleError};
 use crate::raw::CommandAck;
 use crate::runtime;
+use crate::shared_state::recover_lock;
 use crate::time::Instant;
 use mavlink::{AsyncMavConnection, MavHeader};
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tokio::sync::mpsc;
+use std::time::Duration;
+use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 
 type MavConnection = dyn AsyncMavConnection<dialect::MavMessage> + Sync + Send;
@@ -82,7 +84,36 @@ impl CommandKey {
 pub(super) struct AckCommandDispatcher {
     local_system_id: u8,
     local_component_id: u8,
-    active: Mutex<HashMap<CommandKey, mpsc::UnboundedSender<WireCommandAck>>>,
+    slots: Mutex<HashMap<CommandKey, AckSlot>>,
+}
+
+enum AckSlot {
+    Active(watch::Sender<Option<WireCommandAck>>),
+    Draining { until: Instant, drain_for: Duration },
+}
+
+struct ActiveAckSlot<'a> {
+    dispatcher: &'a AckCommandDispatcher,
+    key: CommandKey,
+    drain_for: Duration,
+    ack_rx: watch::Receiver<Option<WireCommandAck>>,
+    drain_on_drop: bool,
+}
+
+impl Drop for ActiveAckSlot<'_> {
+    fn drop(&mut self) {
+        if self.drain_on_drop {
+            self.dispatcher.drain_active_key(self.key, self.drain_for);
+        } else {
+            self.dispatcher.remove_active_key(self.key);
+        }
+    }
+}
+
+impl ActiveAckSlot<'_> {
+    fn finish_without_drain(&mut self) {
+        self.drain_on_drop = false;
+    }
 }
 
 impl AckCommandDispatcher {
@@ -90,7 +121,7 @@ impl AckCommandDispatcher {
         Self {
             local_system_id,
             local_component_id,
-            active: Mutex::new(HashMap::new()),
+            slots: Mutex::new(HashMap::new()),
         }
     }
 
@@ -107,13 +138,25 @@ impl AckCommandDispatcher {
         }
 
         let key = CommandKey::new(header.system_id, header.component_id, ack.command_id);
-        let tx = {
-            let active = self.active.lock().unwrap();
-            active.get(&key).cloned()
+        let now = Instant::now();
+        let drain_for = {
+            let mut slots = recover_lock(&self.slots);
+            match slots.get_mut(&key) {
+                Some(AckSlot::Active(tx)) => {
+                    tx.send_replace(Some(ack));
+                    return;
+                }
+                Some(AckSlot::Draining { until, drain_for }) if *until > now => Some(*drain_for),
+                Some(AckSlot::Draining { .. }) => {
+                    slots.remove(&key);
+                    None
+                }
+                None => None,
+            }
         };
 
-        if let Some(tx) = tx {
-            let _ = tx.send(ack);
+        if let Some(drain_for) = drain_for {
+            self.drain_active_key(key, drain_for);
         }
     }
 
@@ -126,11 +169,12 @@ impl AckCommandDispatcher {
             request.target_component,
             request.command_id,
         );
-        let mut ack_rx = self.register_active_key(key)?;
+        let mut slot = self.register_active_key(key, Self::drain_period(request.config))?;
 
-        let result = self.run_command_long(&request, &mut ack_rx).await;
-
-        self.unregister_active_key(key);
+        let result = self.run_command_long(&request, &mut slot.ack_rx).await;
+        if Self::is_definitive_result(&result) {
+            slot.finish_without_drain();
+        }
         result
     }
 
@@ -143,40 +187,89 @@ impl AckCommandDispatcher {
             request.target_component,
             request.command as u16,
         );
-        let mut ack_rx = self.register_active_key(key)?;
+        let mut slot = self.register_active_key(key, Self::drain_period(request.config))?;
 
-        let result = self.run_command_int(&request, &mut ack_rx).await;
-
-        self.unregister_active_key(key);
+        let result = self.run_command_int(&request, &mut slot.ack_rx).await;
+        if Self::is_definitive_result(&result) {
+            slot.finish_without_drain();
+        }
         result
     }
 
     fn register_active_key(
         &self,
         key: CommandKey,
-    ) -> Result<mpsc::UnboundedReceiver<WireCommandAck>, VehicleError> {
-        let mut active = self.active.lock().unwrap();
-        if active.contains_key(&key) {
-            return Err(VehicleError::OperationConflict {
-                conflicting_domain: "command".to_string(),
-                conflicting_op: "ack_key_in_flight".to_string(),
-            });
+        drain_for: Duration,
+    ) -> Result<ActiveAckSlot<'_>, VehicleError> {
+        let mut slots = recover_lock(&self.slots);
+        let now = Instant::now();
+        match slots.get(&key) {
+            Some(AckSlot::Active(_)) => return Err(Self::ack_key_conflict()),
+            Some(AckSlot::Draining { until, .. }) if *until > now => {
+                return Err(Self::ack_key_conflict());
+            }
+            Some(AckSlot::Draining { .. }) => {
+                slots.remove(&key);
+            }
+            None => {}
         }
 
-        let (tx, rx) = mpsc::unbounded_channel();
-        active.insert(key, tx);
-        Ok(rx)
+        let (tx, rx) = watch::channel(None);
+        slots.insert(key, AckSlot::Active(tx));
+        Ok(ActiveAckSlot {
+            dispatcher: self,
+            key,
+            drain_for,
+            ack_rx: rx,
+            drain_on_drop: true,
+        })
     }
 
-    fn unregister_active_key(&self, key: CommandKey) {
-        let mut active = self.active.lock().unwrap();
-        active.remove(&key);
+    fn drain_active_key(&self, key: CommandKey, drain_for: Duration) {
+        let mut slots = recover_lock(&self.slots);
+        if matches!(
+            slots.get(&key),
+            Some(AckSlot::Active(_) | AckSlot::Draining { .. })
+        ) {
+            slots.insert(
+                key,
+                AckSlot::Draining {
+                    until: Instant::now() + drain_for,
+                    drain_for,
+                },
+            );
+        }
+    }
+
+    fn remove_active_key(&self, key: CommandKey) {
+        let mut slots = recover_lock(&self.slots);
+        if matches!(slots.get(&key), Some(AckSlot::Active(_))) {
+            slots.remove(&key);
+        }
+    }
+
+    fn ack_key_conflict() -> VehicleError {
+        VehicleError::OperationConflict {
+            conflicting_domain: "command".to_string(),
+            conflicting_op: "ack_key_in_flight".to_string(),
+        }
+    }
+
+    fn drain_period(config: &VehicleConfig) -> Duration {
+        config.command_timeout / 10
+    }
+
+    fn is_definitive_result(result: &Result<CommandAck, VehicleError>) -> bool {
+        matches!(
+            result,
+            Ok(_) | Err(VehicleError::CommandRejected { .. }) | Err(VehicleError::Cancelled)
+        )
     }
 
     async fn run_command_long(
         &self,
         request: &CommandLongRequest<'_>,
-        ack_rx: &mut mpsc::UnboundedReceiver<WireCommandAck>,
+        ack_rx: &mut watch::Receiver<Option<WireCommandAck>>,
     ) -> Result<CommandAck, VehicleError> {
         let mut sent_once = false;
 
@@ -234,7 +327,7 @@ impl AckCommandDispatcher {
     async fn run_command_int(
         &self,
         request: &CommandIntRequest<'_>,
-        ack_rx: &mut mpsc::UnboundedReceiver<WireCommandAck>,
+        ack_rx: &mut watch::Receiver<Option<WireCommandAck>>,
     ) -> Result<CommandAck, VehicleError> {
         let mut sent_once = false;
 
@@ -293,7 +386,7 @@ impl AckCommandDispatcher {
     }
 
     async fn wait_for_terminal_ack(
-        ack_rx: &mut mpsc::UnboundedReceiver<WireCommandAck>,
+        ack_rx: &mut watch::Receiver<Option<WireCommandAck>>,
         timeout: std::time::Duration,
         cancel: &CancellationToken,
         command_id: u16,
@@ -318,7 +411,7 @@ impl AckCommandDispatcher {
     }
 
     async fn recv_ack_or_timeout(
-        ack_rx: &mut mpsc::UnboundedReceiver<WireCommandAck>,
+        ack_rx: &mut watch::Receiver<Option<WireCommandAck>>,
         timeout: std::time::Duration,
         cancel: &CancellationToken,
         sent_once: bool,
@@ -336,11 +429,9 @@ impl AckCommandDispatcher {
                     Err(VehicleError::Cancelled)
                 }
             },
-            ack = ack_rx.recv() => {
-                match ack {
-                    Some(ack) => Ok(Some(ack)),
-                    None => Err(VehicleError::Disconnected),
-                }
+            changed = ack_rx.changed() => {
+                changed.map_err(|_| VehicleError::Disconnected)?;
+                Ok(*ack_rx.borrow_and_update())
             }
             _ = runtime::sleep(timeout) => Ok(None),
         }

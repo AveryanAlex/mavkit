@@ -3,15 +3,19 @@ use mavlink::{MAVLinkMessageRaw, MavHeader, MavlinkVersion, Message, ReadVersion
 use std::io;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
-use tokio::sync::{Mutex, mpsc};
+use tokio::sync::{Mutex, OwnedSemaphorePermit, Semaphore, mpsc};
 use tokio_util::sync::CancellationToken;
+
+const DEFAULT_INBOUND_BYTE_CAPACITY: usize = 64 * 1024;
+const READER_BUFFER_COMPACT_THRESHOLD: usize = 4096;
 
 #[derive(Debug, Clone)]
 /// Channel capacities for [`ByteConnection`] and [`ByteBridge`].
 ///
 /// Both capacities are clamped to at least `1`. Inbound capacity controls how many ordered byte
 /// chunks can be queued for MAVLink parsing. Outbound capacity controls how many serialized MAVLink
-/// frames can wait to be drained by the bridge owner.
+/// frames can wait to be drained by the bridge owner. Inbound bytes are also capped internally to
+/// bound parser memory independently of chunk count.
 pub struct ByteConnectionConfig {
     pub inbound_capacity: usize,
     pub outbound_capacity: usize,
@@ -41,12 +45,19 @@ pub struct ByteConnection {
 }
 
 struct ReaderState {
-    inbound_rx: mpsc::Receiver<Vec<u8>>,
+    inbound_rx: mpsc::Receiver<InboundChunk>,
     buffer: Vec<u8>,
+    start: usize,
+    buffer_permit: Option<OwnedSemaphorePermit>,
 }
 
 struct WriterState {
     sequence: u8,
+}
+
+struct InboundChunk {
+    bytes: Vec<u8>,
+    permit: OwnedSemaphorePermit,
 }
 
 #[derive(Clone)]
@@ -56,7 +67,8 @@ struct WriterState {
 /// `Vec<u8>`. Calling [`ByteBridge::close`] is immediate: future inbound writes are rejected,
 /// `next_outbound` returns `None`, and the paired connection reports EOF for reads.
 pub struct ByteBridge {
-    inbound_tx: mpsc::Sender<Vec<u8>>,
+    inbound_tx: mpsc::Sender<InboundChunk>,
+    inbound_byte_permits: Arc<Semaphore>,
     outbound_rx: Arc<Mutex<mpsc::Receiver<Vec<u8>>>>,
     close: CancellationToken,
 }
@@ -76,6 +88,7 @@ impl ByteConnection {
         let outbound_capacity = config.outbound_capacity.max(1);
         let (inbound_tx, inbound_rx) = mpsc::channel(inbound_capacity);
         let (outbound_tx, outbound_rx) = mpsc::channel(outbound_capacity);
+        let inbound_byte_permits = Arc::new(Semaphore::new(DEFAULT_INBOUND_BYTE_CAPACITY));
         let close = CancellationToken::new();
 
         (
@@ -83,6 +96,8 @@ impl ByteConnection {
                 reader: Mutex::new(ReaderState {
                     inbound_rx,
                     buffer: Vec::new(),
+                    start: 0,
+                    buffer_permit: None,
                 }),
                 writer: Mutex::new(WriterState { sequence: 0 }),
                 outbound_tx,
@@ -92,6 +107,7 @@ impl ByteConnection {
             },
             ByteBridge {
                 inbound_tx,
+                inbound_byte_permits,
                 outbound_rx: Arc::new(Mutex::new(outbound_rx)),
                 close,
             },
@@ -140,27 +156,29 @@ impl ByteConnection {
     ) -> Result<Option<MAVLinkMessageRaw>, mavlink::error::MessageReadError> {
         loop {
             let Some(magic_index) = state
-                .buffer
+                .readable()
                 .iter()
                 .position(|byte| matches!(*byte, 0xFE | 0xFD))
             else {
-                state.buffer.clear();
+                state.consume(state.readable().len());
                 return Ok(None);
             };
 
             if magic_index > 0 {
-                state.buffer.drain(..magic_index);
+                state.consume(magic_index);
+                continue;
             }
 
-            let Some(frame_len) = candidate_frame_len(&state.buffer) else {
+            let readable = state.readable();
+            let Some(frame_len) = candidate_frame_len(readable) else {
                 return Ok(None);
             };
 
-            if state.buffer.len() < frame_len {
+            if readable.len() < frame_len {
                 return Ok(None);
             }
 
-            let frame = state.buffer[..frame_len].to_vec();
+            let frame = &readable[..frame_len];
             let cursor = std::io::Cursor::new(frame);
             let mut reader = mavlink::peek_reader::PeekReader::new(cursor);
 
@@ -169,13 +187,70 @@ impl ByteConnection {
                 read_version,
             ) {
                 Ok(raw) => {
-                    state.buffer.drain(..frame_len);
-                    return Ok(Some(raw));
+                    if raw_message_bytes(&raw) == frame {
+                        state.consume(frame_len);
+                        return Ok(Some(raw));
+                    }
+
+                    state.consume(1);
                 }
                 Err(_) => {
-                    state.buffer.drain(..1);
+                    state.consume(1);
                 }
             }
+        }
+    }
+}
+
+impl ReaderState {
+    fn readable(&self) -> &[u8] {
+        &self.buffer[self.start..]
+    }
+
+    fn push_chunk(&mut self, chunk: InboundChunk) {
+        let InboundChunk { bytes, permit } = chunk;
+
+        if !bytes.is_empty() {
+            match self.buffer_permit.as_mut() {
+                Some(buffer_permit) => buffer_permit.merge(permit),
+                None => self.buffer_permit = Some(permit),
+            }
+        }
+
+        self.buffer.extend(bytes);
+    }
+
+    fn consume(&mut self, byte_count: usize) {
+        if byte_count == 0 {
+            return;
+        }
+
+        debug_assert!(byte_count <= self.readable().len());
+        self.release_buffered_bytes(byte_count);
+        self.start += byte_count;
+
+        if self.start == self.buffer.len() {
+            self.buffer.clear();
+            self.start = 0;
+            self.buffer_permit = None;
+        } else if self.start >= READER_BUFFER_COMPACT_THRESHOLD {
+            self.buffer.drain(..self.start);
+            self.start = 0;
+        }
+    }
+
+    fn release_buffered_bytes(&mut self, byte_count: usize) {
+        let Some(permit) = self.buffer_permit.as_mut() else {
+            return;
+        };
+
+        let released = permit
+            .split(byte_count)
+            .expect("reader byte permits should match buffered bytes");
+        drop(released);
+
+        if permit.num_permits() == 0 {
+            self.buffer_permit = None;
         }
     }
 }
@@ -183,20 +258,46 @@ impl ByteConnection {
 impl ByteBridge {
     /// Queue inbound transport bytes, waiting for bounded capacity when necessary.
     pub async fn push_inbound(&self, bytes: Vec<u8>) -> Result<(), ByteBridgeError> {
+        if bytes.len() > DEFAULT_INBOUND_BYTE_CAPACITY {
+            return Err(ByteBridgeError::Full(bytes));
+        }
+
         let reserve = self.inbound_tx.reserve();
         tokio::pin!(reserve);
 
-        tokio::select! {
+        let chunk_permit = tokio::select! {
             biased;
-            _ = self.close.cancelled() => Err(ByteBridgeError::Closed(bytes)),
-            permit = reserve => match permit {
-                Ok(permit) => {
-                    permit.send(bytes);
-                    Ok(())
-                }
-                Err(_) => Err(ByteBridgeError::Closed(bytes)),
+            _ = self.close.cancelled() => return Err(ByteBridgeError::Closed(bytes)),
+            permit = &mut reserve => match permit {
+                Ok(permit) => permit,
+                Err(_) => return Err(ByteBridgeError::Closed(bytes)),
             },
+        };
+
+        let byte_permits = self
+            .inbound_byte_permits
+            .clone()
+            .acquire_many_owned(bytes.len() as u32);
+        tokio::pin!(byte_permits);
+
+        let byte_permit = tokio::select! {
+            biased;
+            _ = self.close.cancelled() => return Err(ByteBridgeError::Closed(bytes)),
+            permit = &mut byte_permits => match permit {
+                Ok(permit) => permit,
+                Err(_) => return Err(ByteBridgeError::Closed(bytes)),
+            },
+        };
+
+        if self.close.is_cancelled() {
+            return Err(ByteBridgeError::Closed(bytes));
         }
+
+        chunk_permit.send(InboundChunk {
+            bytes,
+            permit: byte_permit,
+        });
+        Ok(())
     }
 
     /// Try to queue inbound transport bytes without waiting.
@@ -205,13 +306,26 @@ impl ByteBridge {
             return Err(ByteBridgeError::Closed(bytes));
         }
 
-        match self.inbound_tx.try_send(bytes) {
+        if bytes.len() > DEFAULT_INBOUND_BYTE_CAPACITY {
+            return Err(ByteBridgeError::Full(bytes));
+        }
+
+        let permit = match self
+            .inbound_byte_permits
+            .clone()
+            .try_acquire_many_owned(bytes.len() as u32)
+        {
+            Ok(permit) => permit,
+            Err(_) => return Err(ByteBridgeError::Full(bytes)),
+        };
+
+        match self.inbound_tx.try_send(InboundChunk { bytes, permit }) {
             Ok(()) => Ok(()),
-            Err(tokio::sync::mpsc::error::TrySendError::Full(bytes)) => {
-                Err(ByteBridgeError::Full(bytes))
+            Err(tokio::sync::mpsc::error::TrySendError::Full(chunk)) => {
+                Err(ByteBridgeError::Full(chunk.bytes))
             }
-            Err(tokio::sync::mpsc::error::TrySendError::Closed(bytes)) => {
-                Err(ByteBridgeError::Closed(bytes))
+            Err(tokio::sync::mpsc::error::TrySendError::Closed(chunk)) => {
+                Err(ByteBridgeError::Closed(chunk.bytes))
             }
         }
     }
@@ -258,8 +372,8 @@ impl mavlink::AsyncMavConnection<dialect::MavMessage> for ByteConnection {
             tokio::select! {
                 biased;
                 _ = self.close.cancelled() => return Err(mavlink::error::MessageReadError::eof()),
-                bytes = reader.inbound_rx.recv() => match bytes {
-                    Some(bytes) => reader.buffer.extend(bytes),
+                chunk = reader.inbound_rx.recv() => match chunk {
+                    Some(chunk) => reader.push_chunk(chunk),
                     None => return Err(mavlink::error::MessageReadError::eof()),
                 },
             }
@@ -282,7 +396,7 @@ impl mavlink::AsyncMavConnection<dialect::MavMessage> for ByteConnection {
             }
 
             match reader.inbound_rx.try_recv() {
-                Ok(bytes) => reader.buffer.extend(bytes),
+                Ok(chunk) => reader.push_chunk(chunk),
                 Err(tokio::sync::mpsc::error::TryRecvError::Empty) => {
                     return Err(mavlink::error::MessageReadError::Io(
                         io::ErrorKind::WouldBlock.into(),
@@ -306,9 +420,7 @@ impl mavlink::AsyncMavConnection<dialect::MavMessage> for ByteConnection {
             system_id: header.system_id,
             component_id: header.component_id,
         };
-        writer.sequence = writer.sequence.wrapping_add(1);
         let protocol_version = Self::decode_version(self.protocol_version.load(Ordering::SeqCst));
-        drop(writer);
 
         let mut bytes = Vec::new();
         let written = mavlink::write_versioned_msg(&mut bytes, protocol_version, header, data)?;
@@ -322,6 +434,7 @@ impl mavlink::AsyncMavConnection<dialect::MavMessage> for ByteConnection {
             permit = reserve => match permit {
                 Ok(permit) => {
                     permit.send(bytes);
+                    writer.sequence = writer.sequence.wrapping_add(1);
                     Ok(written)
                 }
                 Err(_) => Err(closed_write_error()),
@@ -370,6 +483,13 @@ fn candidate_frame_len(buffer: &[u8]) -> Option<usize> {
     }
 }
 
+fn raw_message_bytes(raw: &MAVLinkMessageRaw) -> &[u8] {
+    match raw {
+        MAVLinkMessageRaw::V1(message) => message.raw_bytes(),
+        MAVLinkMessageRaw::V2(message) => message.raw_bytes(),
+    }
+}
+
 fn closed_write_error() -> mavlink::error::MessageWriteError {
     mavlink::error::MessageWriteError::Io(io::ErrorKind::BrokenPipe.into())
 }
@@ -387,12 +507,16 @@ mod tests {
     }
 
     fn encode_heartbeat_frame() -> Vec<u8> {
+        encode_heartbeat_frame_with_sequence(7)
+    }
+
+    fn encode_heartbeat_frame_with_sequence(sequence: u8) -> Vec<u8> {
         let mut bytes = Vec::new();
         mavlink::write_versioned_msg(
             &mut bytes,
             MavlinkVersion::V2,
             MavHeader {
-                sequence: 7,
+                sequence,
                 system_id: 1,
                 component_id: 1,
             },
@@ -400,6 +524,10 @@ mod tests {
         )
         .expect("heartbeat frame should encode");
         bytes
+    }
+
+    fn outbound_sequence(frame: &[u8]) -> u8 {
+        frame[4]
     }
 
     #[tokio::test]
@@ -427,6 +555,48 @@ mod tests {
 
         assert_eq!(raw.system_id(), 1);
         assert_eq!(raw.component_id(), 1);
+    }
+
+    #[tokio::test]
+    async fn recv_raw_keeps_later_frames_after_corrupt_false_magic_candidate() {
+        let (connection, bridge) = ByteConnection::new(ByteConnectionConfig::default());
+        let first = encode_heartbeat_frame_with_sequence(7);
+        let second = encode_heartbeat_frame_with_sequence(8);
+        let false_payload_len = first.len() + second.len();
+        let false_candidate_len = 10 + false_payload_len + 2;
+        let mut bytes = vec![0xFD, false_payload_len as u8, 0, 0, 0, 0, 0, 0, 0, 0];
+        bytes.extend(first);
+        bytes.extend(second);
+        bytes.resize(false_candidate_len, 0);
+
+        bridge.push_inbound(bytes).await.unwrap();
+
+        let first = connection.recv_raw().await.unwrap();
+        let second = connection.recv_raw().await.unwrap();
+
+        assert_eq!(first.sequence(), 7);
+        assert_eq!(second.sequence(), 8);
+    }
+
+    #[test]
+    fn parser_advances_offset_instead_of_draining_front_for_garbage() {
+        let (_tx, inbound_rx) = mpsc::channel(1);
+        let mut buffer = vec![0xFD, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        buffer.extend([0x00; 32]);
+        buffer.extend([0xFD, 250]);
+        let initial_len = buffer.len();
+        let mut state = ReaderState {
+            inbound_rx,
+            buffer,
+            start: 0,
+            buffer_permit: None,
+        };
+
+        let extracted = ByteConnection::try_extract_frame(&mut state, ReadVersion::Any).unwrap();
+
+        assert!(extracted.is_none());
+        assert!(state.start > 0);
+        assert_eq!(state.buffer.len(), initial_len);
     }
 
     #[tokio::test]
@@ -503,8 +673,101 @@ mod tests {
         let first = bridge.next_outbound().await.unwrap();
         let second = bridge.next_outbound().await.unwrap();
 
-        assert_eq!(first[4], 0);
-        assert_eq!(second[4], 1);
+        assert_eq!(outbound_sequence(&first), 0);
+        assert_eq!(outbound_sequence(&second), 1);
+    }
+
+    #[tokio::test]
+    async fn concurrent_sends_emit_frames_in_sequence_order() {
+        let (connection, bridge) = ByteConnection::new(ByteConnectionConfig {
+            inbound_capacity: 1,
+            outbound_capacity: 64,
+        });
+        let connection = Arc::new(connection);
+        let mut tasks = Vec::new();
+
+        for _ in 0..32 {
+            let connection = connection.clone();
+            tasks.push(tokio::spawn(async move {
+                connection
+                    .send(
+                        &MavHeader {
+                            sequence: 99,
+                            system_id: 255,
+                            component_id: 190,
+                        },
+                        &heartbeat(),
+                    )
+                    .await
+            }));
+        }
+
+        for task in tasks {
+            task.await
+                .expect("send task should not panic")
+                .expect("send should succeed");
+        }
+
+        for expected in 0..32 {
+            let outbound = bridge.next_outbound().await.unwrap();
+            assert_eq!(outbound_sequence(&outbound), expected);
+        }
+    }
+
+    #[tokio::test]
+    async fn try_push_inbound_applies_byte_capacity_independently_of_chunk_capacity() {
+        let (_connection, bridge) = ByteConnection::new(ByteConnectionConfig {
+            inbound_capacity: 2,
+            outbound_capacity: 1,
+        });
+
+        bridge
+            .try_push_inbound(vec![0; DEFAULT_INBOUND_BYTE_CAPACITY])
+            .unwrap();
+        match bridge.try_push_inbound(vec![1]).unwrap_err() {
+            ByteBridgeError::Full(bytes) => assert_eq!(bytes, vec![1]),
+            err => panic!("expected Full, got {err:?}"),
+        }
+
+        match bridge
+            .try_push_inbound(vec![2; DEFAULT_INBOUND_BYTE_CAPACITY + 1])
+            .unwrap_err()
+        {
+            ByteBridgeError::Full(bytes) => {
+                assert_eq!(bytes.len(), DEFAULT_INBOUND_BYTE_CAPACITY + 1)
+            }
+            err => panic!("expected Full, got {err:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn push_inbound_waits_for_byte_capacity_until_parser_releases_bytes() {
+        let (connection, bridge) = ByteConnection::new(ByteConnectionConfig {
+            inbound_capacity: 2,
+            outbound_capacity: 1,
+        });
+
+        bridge
+            .push_inbound(vec![0; DEFAULT_INBOUND_BYTE_CAPACITY])
+            .await
+            .unwrap();
+
+        let pending_bridge = bridge.clone();
+        let push_task = tokio::spawn(async move { pending_bridge.push_inbound(vec![1]).await });
+
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        assert!(!push_task.is_finished());
+
+        let err = connection.try_recv().await.unwrap_err();
+        assert!(
+            matches!(err, mavlink::error::MessageReadError::Io(io) if io.kind() == std::io::ErrorKind::WouldBlock)
+        );
+
+        tokio::time::timeout(Duration::from_millis(250), push_task)
+            .await
+            .expect("pending push should finish after parser releases bytes")
+            .expect("push task should not panic")
+            .expect("push should succeed after byte capacity is released");
     }
 
     #[tokio::test]
@@ -631,5 +894,62 @@ mod tests {
             .expect("send task should not panic");
 
         assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn aborted_send_waiting_for_capacity_does_not_consume_sequence() {
+        let (connection, bridge) = ByteConnection::new(ByteConnectionConfig {
+            inbound_capacity: 1,
+            outbound_capacity: 1,
+        });
+        let connection = Arc::new(connection);
+
+        connection
+            .send(
+                &MavHeader {
+                    sequence: 99,
+                    system_id: 255,
+                    component_id: 190,
+                },
+                &heartbeat(),
+            )
+            .await
+            .unwrap();
+
+        let pending_connection = connection.clone();
+        let send_task = tokio::spawn(async move {
+            pending_connection
+                .send(
+                    &MavHeader {
+                        sequence: 99,
+                        system_id: 255,
+                        component_id: 190,
+                    },
+                    &heartbeat(),
+                )
+                .await
+        });
+
+        tokio::time::sleep(Duration::from_millis(10)).await;
+        send_task.abort();
+        assert!(send_task.await.unwrap_err().is_cancelled());
+
+        let first = bridge.next_outbound().await.unwrap();
+        assert_eq!(outbound_sequence(&first), 0);
+
+        connection
+            .send(
+                &MavHeader {
+                    sequence: 99,
+                    system_id: 255,
+                    component_id: 190,
+                },
+                &heartbeat(),
+            )
+            .await
+            .unwrap();
+        let second = bridge.next_outbound().await.unwrap();
+
+        assert_eq!(outbound_sequence(&second), 1);
     }
 }

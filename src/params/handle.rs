@@ -46,16 +46,17 @@ impl<'a> ParamsHandle<'a> {
             .and_then(|store| store.get(name).cloned())
     }
 
-    /// Returns the most recently observed parameter state, or `None` if no update has arrived.
+    /// Returns the current cached parameter state.
+    ///
+    /// The parameter domain publishes its default cache immediately; default `store`/`sync` values
+    /// mean no vehicle-confirmed parameter store is cached yet.
     pub fn latest(&self) -> Option<ParamState> {
         self.inner.params.state().latest()
     }
 
-    /// Returns the current cached parameter state immediately when one is already available;
-    /// otherwise waits for the first parameter state observed after the call.
+    /// Returns the current cached parameter state immediately.
     ///
-    /// Returns the default state if the vehicle disconnects before any parameter state becomes
-    /// available.
+    /// The default cache represents no vehicle-confirmed parameter data yet.
     pub async fn wait(&self) -> ParamState {
         self.inner.params.state().wait().await.unwrap_or_default()
     }
@@ -63,10 +64,10 @@ impl<'a> ParamsHandle<'a> {
     /// Like [`wait`](Self::wait), but returns the current cached parameter state immediately when
     /// one is already available.
     ///
-    /// If no parameter state is cached yet, this waits for the first observed parameter state and
-    /// returns [`VehicleError::Timeout`] if it does not arrive within `timeout`. Returns
-    /// [`VehicleError::Disconnected`] if the vehicle disconnects before any parameter state
-    /// becomes available.
+    /// Because the parameter domain publishes a default cache at construction, this normally
+    /// returns immediately. [`VehicleError::Timeout`] or [`VehicleError::Disconnected`] are only
+    /// expected if the observation channel has no cached value due to future semantic changes or
+    /// teardown.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<ParamState, VehicleError> {
         self.inner.params.state().wait_timeout(timeout).await
     }

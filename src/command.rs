@@ -22,38 +22,46 @@ pub(crate) enum Command {
     Arm {
         force: bool,
         reply: oneshot::Sender<Result<(), VehicleError>>,
+        cancel: CancellationToken,
     },
     Disarm {
         force: bool,
         reply: oneshot::Sender<Result<(), VehicleError>>,
+        cancel: CancellationToken,
     },
     SetMode {
         custom_mode: u32,
         reply: oneshot::Sender<Result<(), VehicleError>>,
+        cancel: CancellationToken,
     },
     Long {
         command: MavCmd,
         params: [f32; 7],
         reply: oneshot::Sender<Result<(), VehicleError>>,
+        cancel: CancellationToken,
     },
     LongRaw {
         command_id: u16,
         params: [f32; 7],
         reply: oneshot::Sender<Result<(), VehicleError>>,
+        cancel: CancellationToken,
     },
     RawCommandLong {
         command: MavCmd,
         params: [f32; 7],
         reply: oneshot::Sender<Result<(), VehicleError>>,
+        cancel: CancellationToken,
     },
     RawCommandLongAck {
         command: MavCmd,
         params: [f32; 7],
         reply: oneshot::Sender<Result<CommandAck, VehicleError>>,
+        cancel: CancellationToken,
     },
     RawCommandInt {
         payload: CommandIntPayload,
         reply: oneshot::Sender<Result<CommandAck, VehicleError>>,
+        cancel: CancellationToken,
     },
     RawSend {
         message: Box<dialect::MavMessage>,
@@ -110,8 +118,16 @@ pub(crate) async fn send_command_int_ack(
     payload: CommandIntPayload,
 ) -> Result<CommandAck, VehicleError> {
     let (tx, rx) = oneshot::channel();
+    let cancel = CancellationToken::new();
+    let _cancel_on_drop = CommandCancelOnDrop {
+        cancel: cancel.clone(),
+    };
     command_tx
-        .send(Command::RawCommandInt { payload, reply: tx })
+        .send(Command::RawCommandInt {
+            payload,
+            reply: tx,
+            cancel: cancel.clone(),
+        })
         .await
         .map_err(|_| VehicleError::Disconnected)?;
 
@@ -123,4 +139,14 @@ pub(crate) async fn send_typed_command_int(
     payload: CommandIntPayload,
 ) -> Result<(), VehicleError> {
     send_command_int_ack(command_tx, payload).await.map(|_| ())
+}
+
+struct CommandCancelOnDrop {
+    cancel: CancellationToken,
+}
+
+impl Drop for CommandCancelOnDrop {
+    fn drop(&mut self) {
+        self.cancel.cancel();
+    }
 }

@@ -44,6 +44,19 @@ async fn subscribe_terminates_when_writer_closed() {
 }
 
 #[tokio::test]
+async fn unpublished_watch_subscription_terminates_when_closed_later() {
+    let (writer, handle) = watch_fixture();
+    let mut sub = handle.subscribe();
+
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        writer.close();
+    });
+
+    assert_eq!(sub.recv().await, None);
+}
+
+#[tokio::test]
 async fn wait_timeout() {
     let (_writer, handle) = watch_fixture();
     let result = handle.wait_timeout(Duration::from_millis(20)).await;

@@ -62,11 +62,14 @@ impl<S: StoredPlanState> StoredPlanDomain<S> {
         Ok(reservation)
     }
 
-    pub(crate) fn finish_operation(&self, scope: &MissionProtocolScope, op_id: u64) {
-        scope.finish_operation(op_id);
-        self.update_state(|state| {
-            state.set_active_op(None);
-        });
+    pub(crate) fn finish_operation(&self, scope: &MissionProtocolScope, op_id: u64) -> bool {
+        let finished = scope.finish_operation(op_id);
+        if finished {
+            self.update_state(|state| {
+                state.set_active_op(None);
+            });
+        }
+        finished
     }
 
     pub(crate) fn note_operation_error(&self) {
@@ -165,22 +168,24 @@ where
 
     /// Returns the capability-support observation for this domain.
     ///
-    /// Seeds derived state from the current vehicle identity before returning so the caller
-    /// gets a non-stale initial value even before the event loop has had a chance to push
-    /// an update.
+    /// The observation remains unpublished until capability evidence exists or init reaches a
+    /// terminal inconclusive state.
     pub fn support(&self) -> ObservationHandle<SupportState> {
         S::support(self.inner)
     }
 
-    /// Returns the most recently observed state, or `None` if no update has arrived yet.
+    /// Returns the current cached state.
+    ///
+    /// Stored-plan domains publish their default cache immediately, so this normally returns
+    /// `Some(S::default())` before any vehicle-confirmed plan has been uploaded or downloaded.
     pub fn latest(&self) -> Option<S> {
         S::domain(self.inner).state().latest()
     }
 
-    /// Returns the current cached state immediately when one is already available; otherwise waits
-    /// for the first state observed after the call.
+    /// Returns the current cached state immediately.
     ///
-    /// Returns the default state if the vehicle disconnects before any state becomes available.
+    /// The default cache represents "no vehicle-confirmed data yet"; a successful upload,
+    /// download, or clear operation updates the plan and sync marker.
     pub async fn wait(&self) -> S {
         S::domain(self.inner)
             .state()
@@ -192,10 +197,9 @@ where
     /// Like [`wait`](Self::wait), but returns the current cached state immediately when one is
     /// already available.
     ///
-    /// If no state is cached yet, this waits for the first observed state and returns
-    /// [`VehicleError::Timeout`] if it does not arrive within `timeout`. Returns
-    /// [`VehicleError::Disconnected`] if the vehicle disconnects before any state becomes
-    /// available.
+    /// Because stored-plan domains publish a default cache at construction, this normally returns
+    /// immediately. [`VehicleError::Timeout`] or [`VehicleError::Disconnected`] are only expected
+    /// if the observation channel has no cached value due to future semantic changes or teardown.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<S, VehicleError> {
         S::domain(self.inner).state().wait_timeout(timeout).await
     }
@@ -365,7 +369,7 @@ mod tests {
     #[test]
     fn begin_operation_succeeds_and_sets_active_op() {
         let domain = StoredPlanDomain::<TestState>::new();
-        let scope = MissionProtocolScope::new();
+        let scope = MissionProtocolScope::detached_for_test();
 
         let reservation = domain
             .begin_operation(&scope, "mission", "upload", "upload")
@@ -380,7 +384,7 @@ mod tests {
     #[test]
     fn finish_operation_clears_active_op() {
         let domain = StoredPlanDomain::<TestState>::new();
-        let scope = MissionProtocolScope::new();
+        let scope = MissionProtocolScope::detached_for_test();
 
         let reservation = domain
             .begin_operation(&scope, "mission", "download", "download")
@@ -392,8 +396,32 @@ mod tests {
     }
 
     #[test]
+    fn stale_finish_operation_does_not_clear_active_op() {
+        let domain = StoredPlanDomain::<TestState>::new();
+        let scope = MissionProtocolScope::detached_for_test();
+
+        let reservation = domain
+            .begin_operation(&scope, "mission", "download", "download")
+            .unwrap();
+        assert!(!domain.finish_operation(&scope, reservation.id + 1));
+
+        let state = domain.state().latest().unwrap();
+        assert_eq!(state.active_op, Some("download"));
+
+        assert!(domain.finish_operation(&scope, reservation.id));
+    }
+
+    #[tokio::test]
+    async fn new_domain_immediately_publishes_default_cache() {
+        let domain = StoredPlanDomain::<TestState>::new();
+
+        assert_eq!(domain.state().latest(), Some(TestState::default()));
+        assert_eq!(domain.state().wait().await.unwrap(), TestState::default());
+    }
+
+    #[test]
     fn begin_operation_conflicts_when_scope_is_held_by_other_domain() {
-        let scope = MissionProtocolScope::new();
+        let scope = MissionProtocolScope::detached_for_test();
         let mission_domain = StoredPlanDomain::<TestState>::new();
         let fence_domain = StoredPlanDomain::<TestState>::new();
 

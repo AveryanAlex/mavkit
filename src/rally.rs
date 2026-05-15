@@ -24,6 +24,9 @@ pub struct RallyPlan {
 }
 
 /// Cached rally-domain state plus sync and active-operation markers.
+///
+/// The default value is published immediately and means no vehicle-confirmed rally plan is cached
+/// yet.
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RallyState {
     pub plan: Option<RallyPlan>,
@@ -109,22 +112,23 @@ impl<'a> RallyHandle<'a> {
 
     /// Returns a capability-support observation for the rally domain.
     ///
-    /// The initial value is seeded from the current vehicle identity so callers get a non-stale
-    /// result even before the event loop has pushed an update.
+    /// The observation remains unpublished until `AUTOPILOT_VERSION` provides capability evidence
+    /// or init reaches a terminal inconclusive state.
     pub fn support(&self) -> ObservationHandle<SupportState> {
         self.handle.support()
     }
 
-    /// Returns the most recently observed rally state, or `None` if no update has arrived yet.
+    /// Returns the current cached rally state.
+    ///
+    /// The rally domain publishes its default cache immediately; default `plan`/`sync` values mean
+    /// no vehicle-confirmed rally plan is cached yet.
     pub fn latest(&self) -> Option<RallyState> {
         self.handle.latest()
     }
 
-    /// Returns the current cached rally state immediately when one is already available;
-    /// otherwise waits for the first rally state observed after the call.
+    /// Returns the current cached rally state immediately.
     ///
-    /// Returns the default state if the vehicle disconnects before any rally state becomes
-    /// available.
+    /// The default cache represents no vehicle-confirmed rally data yet.
     pub async fn wait(&self) -> RallyState {
         self.handle.wait().await
     }
@@ -132,10 +136,9 @@ impl<'a> RallyHandle<'a> {
     /// Like [`wait`](Self::wait), but returns the current cached rally state immediately when one
     /// is already available.
     ///
-    /// If no rally state is cached yet, this waits for the first observed rally state and returns
-    /// [`VehicleError::Timeout`] if it does not arrive within `timeout`. Returns
-    /// [`VehicleError::Disconnected`] if the vehicle disconnects before any rally state becomes
-    /// available.
+    /// Because the rally domain publishes a default cache at construction, this normally returns
+    /// immediately. [`VehicleError::Timeout`] or [`VehicleError::Disconnected`] are only expected
+    /// if the observation channel has no cached value due to future semantic changes or teardown.
     pub async fn wait_timeout(&self, timeout: Duration) -> Result<RallyState, VehicleError> {
         self.handle.wait_timeout(timeout).await
     }
@@ -364,7 +367,7 @@ mod tests {
 
     #[test]
     fn mission_upload_conflicts_with_rally_download() {
-        let mission_protocol = MissionProtocolScope::new();
+        let mission_protocol = MissionProtocolScope::detached_for_test();
         let mission = MissionDomain::new();
         let rally = RallyDomain::new();
 

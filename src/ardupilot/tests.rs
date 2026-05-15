@@ -1188,6 +1188,8 @@ async fn ardupilot_set_servo_sends_expected_command_long_shape() {
             .is_ok()
     );
 
+    tokio::time::sleep(Duration::from_millis(20)).await;
+
     let last_boundary = {
         let vehicle = vehicle.clone();
         tokio::spawn(async move {
