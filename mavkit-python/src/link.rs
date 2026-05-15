@@ -155,6 +155,8 @@ mod tests {
 
     #[test]
     fn poisoned_last_error_cache_returns_python_error() {
+        pyo3::Python::initialize();
+
         let cache = Mutex::new(None::<String>);
         let _ = catch_unwind(AssertUnwindSafe(|| {
             let _guard = cache.lock().unwrap();
