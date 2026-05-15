@@ -5,8 +5,6 @@ use mavkit::{AutopilotType, Vehicle, VehicleConfig, VehicleIdentity, VehicleType
 use mavlink::{MavHeader, MavlinkVersion, write_versioned_msg};
 use wasm_bindgen_test::wasm_bindgen_test;
 
-wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
-
 fn fast_config() -> VehicleConfig {
     VehicleConfig {
         connect_timeout: std::time::Duration::from_millis(150),

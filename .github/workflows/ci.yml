@@ -115,11 +115,18 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Install wasm-bindgen test runner
+        uses: taiki-e/install-action@v2
+        with:
+          tool: wasm-bindgen-cli@0.2.121
+
       - name: Wasm feature build check
         run: cargo check -p mavkit --target wasm32-unknown-unknown --no-default-features --features wasm
 
-      - name: Compile wasm browser test artifact
-        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features wasm --test wasm_byte_connection --no-run
+      - name: Wasm unit tests
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features wasm --test wasm_byte_connection
 
   sitl:
     needs: rust
