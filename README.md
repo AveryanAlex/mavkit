@@ -156,9 +156,12 @@ Requires Docker + ArduPilot SITL:
 ```bash
 make test-sitl        # start fresh TCP SITL, run integration tests, cleanup
 make test-sitl-strict # same with MAVKIT_SITL_STRICT=1
+make test-wasm-sitl   # start SITL + WebSocket bridge, run browser wasm integration test
 ```
 
 Each `make test-sitl` invocation gets its own Docker container and random localhost TCP port, so parallel invocations do not contend on UDP `14550`. Keep in-process SITL test threads at the default `1` for stateful tests; parallelize by running separate `make test-sitl` invocations. For a specific test binary, run `MAVKIT_SITL_CARGO_TEST_ARGS="--test sitl_roundtrip" make test-sitl`.
+
+Wasm SITL tests also require `wasm-bindgen-test-runner` plus a browser WebDriver such as ChromeDriver or GeckoDriver on `PATH`. The wasm harness connects browser WebSocket bytes to SITL TCP through `scripts/ws_tcp_proxy.py` and compiles the proxy URL into the test with `MAVKIT_WASM_SITL_WS_URL`.
 
 ## License
 

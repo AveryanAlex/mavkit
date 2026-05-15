@@ -1,4 +1,4 @@
-.PHONY: bridge-up bridge-down test-sitl test-sitl-strict
+.PHONY: bridge-up bridge-down test-sitl test-sitl-strict test-wasm-sitl test-wasm-sitl-strict
 
 SITL_NAME ?= ardupilot-sitl
 SITL_IMAGE ?= radarku/ardupilot-sitl:eff32c1f98152ac3d1dc09a1e475733b73ce569f
@@ -22,6 +22,12 @@ test-sitl:
 
 test-sitl-strict:
 	MAVKIT_SITL_IMAGE=$(SITL_IMAGE) $(PYTHON) scripts/run_sitl_tests.py --strict
+
+test-wasm-sitl:
+	MAVKIT_SITL_IMAGE=$(SITL_IMAGE) $(PYTHON) scripts/run_wasm_sitl_tests.py
+
+test-wasm-sitl-strict:
+	MAVKIT_SITL_IMAGE=$(SITL_IMAGE) $(PYTHON) scripts/run_wasm_sitl_tests.py --strict
 
 bridge-down:
 	docker rm -f $(SITL_NAME) >/dev/null 2>&1 || true
