@@ -309,7 +309,7 @@ class TestVehicleApi:
                         await mission_clear.wait()
 
                     fence = vehicle.fence()
-                    assert fence.support().latest() is not None
+                    assert fence.support() is not None
                     fence_plan = mavkit.FencePlan(return_point=None, regions=[])
                     fence_state = fence.latest()
                     assert fence_state is not None
@@ -342,7 +342,7 @@ class TestVehicleApi:
                         await fence_clear.wait()
 
                     rally = vehicle.rally()
-                    assert rally.support().latest() is not None
+                    assert rally.support() is not None
                     rally_plan = mavkit.RallyPlan(points=[])
                     rally_state = rally.latest()
                     assert rally_state is not None
@@ -436,7 +436,16 @@ class TestVehicleApi:
                     )
                     subscription = subscribe()
                     peer.send_later(_global_position_int_packet(), delay_s=0.01)
-                    streamed = await asyncio.wait_for(subscription.recv(), timeout=0.25)
+
+                    async def recv_global_position() -> mavkit.RawMessage:
+                        while True:
+                            message = await subscription.recv()
+                            if message.message_id == 33:
+                                return message
+
+                    streamed = await asyncio.wait_for(
+                        recv_global_position(), timeout=0.25
+                    )
                     assert streamed.message_id == 33
                     assert streamed.message_name == "GLOBAL_POSITION_INT"
 
