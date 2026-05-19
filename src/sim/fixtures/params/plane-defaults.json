@@ -1,0 +1,7204 @@
+{
+  "schema_version": 1,
+  "vehicle_family": "plane",
+  "vehicle_preset": "airplane",
+  "source": {
+    "kind": "sitl_param_download",
+    "autopilot": "ArduPlane",
+    "sitl_image": "radarku/ardupilot-sitl:eff32c1f98152ac3d1dc09a1e475733b73ce569f",
+    "defaults": "/ardupilot/Tools/autotest/models/plane.parm",
+    "generated_at": "2026-05-11T19:43:06Z"
+  },
+  "params": [
+    {
+      "name": "ACRO_LOCKING",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "ACRO_PITCH_RATE",
+      "value": 180,
+      "param_type": "int16"
+    },
+    {
+      "name": "ACRO_ROLL_RATE",
+      "value": 180,
+      "param_type": "int16"
+    },
+    {
+      "name": "ACRO_YAW_RATE",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "ADSB_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "AFS_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "AHRS_COMP_BETA",
+      "value": 0.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "AHRS_EKF_TYPE",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "AHRS_GPS_GAIN",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "AHRS_GPS_MINSATS",
+      "value": 6,
+      "param_type": "int8"
+    },
+    {
+      "name": "AHRS_GPS_USE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "AHRS_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "AHRS_ORIENTATION",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "AHRS_RP_P",
+      "value": 0.2,
+      "param_type": "real32"
+    },
+    {
+      "name": "AHRS_TRIM_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "AHRS_TRIM_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "AHRS_TRIM_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "AHRS_WIND_MAX",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "AHRS_YAW_P",
+      "value": 0.2,
+      "param_type": "real32"
+    },
+    {
+      "name": "AIRSPEED_CRUISE",
+      "value": 22,
+      "param_type": "real32"
+    },
+    {
+      "name": "AIRSPEED_MAX",
+      "value": 30,
+      "param_type": "int16"
+    },
+    {
+      "name": "AIRSPEED_MIN",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "ALT_OFFSET",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "ARMING_ACCTHRESH",
+      "value": 0.75,
+      "param_type": "real32"
+    },
+    {
+      "name": "ARMING_CHECK",
+      "value": 1,
+      "param_type": "int32"
+    },
+    {
+      "name": "ARMING_MAGTHRESH",
+      "value": 100,
+      "param_type": "int16"
+    },
+    {
+      "name": "ARMING_MIS_ITEMS",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "ARMING_OPTIONS",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "ARMING_REQUIRE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARMING_RUDDER",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_AUTOCAL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_BUS",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_DEVID",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "ARSPD_OFFSET",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "ARSPD_OFF_PCNT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_OPTIONS",
+      "value": 11,
+      "param_type": "int32"
+    },
+    {
+      "name": "ARSPD_PIN",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_PRIMARY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_PSI_RANGE",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "ARSPD_RATIO",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "ARSPD_SKIP_CAL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_TUBE_ORDR",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_TYPE",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_USE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "ARSPD_WIND_GATE",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "ARSPD_WIND_MAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "ARSPD_WIND_WARN",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "AUTOTUNE_AXES",
+      "value": 7,
+      "param_type": "int8"
+    },
+    {
+      "name": "AUTOTUNE_LEVEL",
+      "value": 6,
+      "param_type": "int8"
+    },
+    {
+      "name": "AUTOTUNE_OPTIONS",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "AVD_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BARO1_DEVID",
+      "value": 65540,
+      "param_type": "int32"
+    },
+    {
+      "name": "BARO1_GND_PRESS",
+      "value": 101157.11,
+      "param_type": "real32"
+    },
+    {
+      "name": "BARO1_WCF_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BARO2_DEVID",
+      "value": 65796,
+      "param_type": "int32"
+    },
+    {
+      "name": "BARO2_GND_PRESS",
+      "value": 101156.9,
+      "param_type": "real32"
+    },
+    {
+      "name": "BARO2_WCF_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BARO3_DEVID",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "BARO3_GND_PRESS",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BARO3_WCF_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BARO_ALTERR_MAX",
+      "value": 2000,
+      "param_type": "real32"
+    },
+    {
+      "name": "BARO_ALT_OFFSET",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BARO_EXT_BUS",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "BARO_FIELD_ELV",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BARO_FLTR_RNG",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BARO_GND_TEMP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BARO_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "BARO_PRIMARY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BARO_PROBE_EXT",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "BATT2_MONITOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT3_MONITOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT4_MONITOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT5_MONITOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT6_MONITOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT7_MONITOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT8_MONITOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT9_MONITOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT_AMP_OFFSET",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_AMP_PERVLT",
+      "value": 17,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_ARM_MAH",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "BATT_ARM_VOLT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_CAPACITY",
+      "value": 3300,
+      "param_type": "int32"
+    },
+    {
+      "name": "BATT_CRT_MAH",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_CRT_VOLT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_CURR_PIN",
+      "value": 12,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT_FS_CRT_ACT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT_FS_LOW_ACT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT_FS_VOLTSRC",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT_LOW_MAH",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_LOW_TIMER",
+      "value": 10,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT_LOW_VOLT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_MONITOR",
+      "value": 4,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT_OPTIONS",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "BATT_SERIAL_NUM",
+      "value": -1,
+      "param_type": "int32"
+    },
+    {
+      "name": "BATT_VLT_OFFSET",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_VOLT_MULT",
+      "value": 10.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "BATT_VOLT_PIN",
+      "value": 13,
+      "param_type": "int8"
+    },
+    {
+      "name": "BATT_WATT_MAX",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "BRD_BOOT_DELAY",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "BRD_OPTIONS",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "BRD_RTC_TYPES",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "BRD_RTC_TZ_MIN",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "BRD_SAFETYOPTION",
+      "value": 3,
+      "param_type": "int16"
+    },
+    {
+      "name": "BRD_SAFETY_DEFLT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "BRD_SAFETY_MASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "BRD_SD_FENCE",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "BRD_SD_MISSION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "BRD_SERIAL_NUM",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "BRD_VBUS_MIN",
+      "value": 4.3,
+      "param_type": "real32"
+    },
+    {
+      "name": "BRD_VSERVO_MIN",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "BTN_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAM1_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAM2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAM_AUTO_ONLY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAM_MAX_ROLL",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "CAM_RC_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAN_D1_PROTOCOL",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAN_D1_PROTOCOL2",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAN_D2_PROTOCOL",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAN_D2_PROTOCOL2",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAN_LOGLEVEL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAN_P1_DRIVER",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CAN_P2_DRIVER",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CHUTE_ENABLED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_AUTODEC",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_AUTO_ROT",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_CAL_FIT",
+      "value": 16,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DEC",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DEV_ID",
+      "value": 97539,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_DEV_ID2",
+      "value": 131874,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_DEV_ID3",
+      "value": 263178,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_DEV_ID4",
+      "value": 97283,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_DEV_ID5",
+      "value": 97795,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_DEV_ID6",
+      "value": 98051,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_DEV_ID7",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_DEV_ID8",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_DIA2_X",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DIA2_Y",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DIA2_Z",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DIA3_X",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DIA3_Y",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DIA3_Z",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DIA_X",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DIA_Y",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DIA_Z",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_DISBLMSK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_ENABLE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_EXTERN2",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_EXTERN3",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_EXTERNAL",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_FLTR_RNG",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_LEARN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_MOT2_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_MOT2_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_MOT2_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_MOT3_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_MOT3_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_MOT3_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_MOTCT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_MOT_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_MOT_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_MOT_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI2_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI2_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI2_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI3_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI3_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI3_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_ODI_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFFS_MAX",
+      "value": 1800,
+      "param_type": "int16"
+    },
+    {
+      "name": "COMPASS_OFS2_X",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFS2_Y",
+      "value": 13,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFS2_Z",
+      "value": -18,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFS3_X",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFS3_Y",
+      "value": 13,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFS3_Z",
+      "value": -18,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFS_X",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFS_Y",
+      "value": 13,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OFS_Z",
+      "value": -18,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "COMPASS_ORIENT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_ORIENT2",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_ORIENT3",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_PMOT_EN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_PRIO1_ID",
+      "value": 97539,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_PRIO2_ID",
+      "value": 131874,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_PRIO3_ID",
+      "value": 263178,
+      "param_type": "int32"
+    },
+    {
+      "name": "COMPASS_SCALE",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_SCALE2",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_SCALE3",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "COMPASS_USE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_USE2",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "COMPASS_USE3",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "CRASH_ACC_THRESH",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CRASH_DETECT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "CRUISE_ALT_FLOOR",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "CUST_ROT_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "DID_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "DSPOILER_AILMTCH",
+      "value": 100,
+      "param_type": "int8"
+    },
+    {
+      "name": "DSPOILER_CROW_W1",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "DSPOILER_CROW_W2",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "DSPOILER_OPTS",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "DSPOILR_RUD_RATE",
+      "value": 100,
+      "param_type": "int16"
+    },
+    {
+      "name": "EAHRS_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EFI_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_ABIAS_P_NSE",
+      "value": 0.005,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_ACC_P_NSE",
+      "value": 0.6,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_ALT_M_NSE",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_ALT_SOURCE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_BCN_DELAY",
+      "value": 50,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_BCN_I_GTE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_BCN_M_NSE",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_CHECK_SCALE",
+      "value": 150,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_EAS_I_GATE",
+      "value": 400,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_EAS_M_NSE",
+      "value": 1.4,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_ENABLE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_FLOW_DELAY",
+      "value": 10,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_FLOW_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_FLOW_M_NSE",
+      "value": 0.15,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_FLOW_USE",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_GBIAS_P_NSE",
+      "value": 0.0001,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_GLITCH_RAD",
+      "value": 25,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_GPS_CHECK",
+      "value": 31,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_GPS_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_GSCL_P_NSE",
+      "value": 0.0005,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_GSF_RST_MAX",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_GSF_RUN_MASK",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_GSF_USE_MASK",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_GYRO_P_NSE",
+      "value": 0.03,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_HGT_DELAY",
+      "value": 60,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_HGT_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_HRT_FILT",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_IMU_MASK",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_MAGB_P_NSE",
+      "value": 0.0001,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_MAGE_P_NSE",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_MAG_CAL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_MAG_EF_LIM",
+      "value": 50,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_MAG_I_GATE",
+      "value": 300,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_MAG_MASK",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_MAG_M_NSE",
+      "value": 0.05,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_MAX_FLOW",
+      "value": 2.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_NOAID_M_NSE",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_OGN_HGT_MASK",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_POSNE_M_NSE",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_POS_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_RNG_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_RNG_M_NSE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_RNG_USE_HGT",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_RNG_USE_SPD",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_TAU_OUTPUT",
+      "value": 25,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK2_TERR_GRAD",
+      "value": 0.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_VELD_M_NSE",
+      "value": 0.7,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_VELNE_M_NSE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_VEL_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_WIND_PSCALE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_WIND_P_NSE",
+      "value": 0.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK2_YAW_I_GATE",
+      "value": 300,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK2_YAW_M_NSE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_ABIAS_P_NSE",
+      "value": 0.02,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_ACC_BIAS_LIM",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_ACC_P_NSE",
+      "value": 0.35,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_AFFINITY",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "EK3_ALT_M_NSE",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_BCN_DELAY",
+      "value": 50,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_BCN_I_GTE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_BCN_M_NSE",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_BETA_MASK",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_CHECK_SCALE",
+      "value": 150,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_DRAG_BCOEF_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_DRAG_BCOEF_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_DRAG_MCOEF",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_DRAG_M_NSE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_EAS_I_GATE",
+      "value": 400,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_EAS_M_NSE",
+      "value": 1.4,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_ENABLE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_ERR_THRESH",
+      "value": 0.2,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_FLOW_DELAY",
+      "value": 10,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_FLOW_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_FLOW_M_NSE",
+      "value": 0.15,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_FLOW_USE",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_GBIAS_P_NSE",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_GLITCH_RAD",
+      "value": 25,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_GND_EFF_DZ",
+      "value": 4,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_GPS_CHECK",
+      "value": 31,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_GPS_VACC_MAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_GSF_RST_MAX",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_GSF_RUN_MASK",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_GSF_USE_MASK",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_GYRO_P_NSE",
+      "value": 0.015,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_HGT_DELAY",
+      "value": 60,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_HGT_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_HRT_FILT",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_IMU_MASK",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_LOG_LEVEL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_MAGB_P_NSE",
+      "value": 0.0001,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_MAGE_P_NSE",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_MAG_CAL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_MAG_EF_LIM",
+      "value": 50,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_MAG_I_GATE",
+      "value": 300,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_MAG_MASK",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_MAG_M_NSE",
+      "value": 0.05,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_MAX_FLOW",
+      "value": 2.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_NOAID_M_NSE",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_OGNM_TEST_SF",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_OGN_HGT_MASK",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_POSNE_M_NSE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_POS_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_PRIMARY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_RNG_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_RNG_M_NSE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_RNG_USE_HGT",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_RNG_USE_SPD",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_SRC1_POSXY",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC1_POSZ",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC1_VELXY",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC1_VELZ",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC1_YAW",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC2_POSXY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC2_POSZ",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC2_VELXY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC2_VELZ",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC2_YAW",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC3_POSXY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC3_POSZ",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC3_VELXY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC3_VELZ",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC3_YAW",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_SRC_OPTIONS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_TAU_OUTPUT",
+      "value": 25,
+      "param_type": "int8"
+    },
+    {
+      "name": "EK3_TERR_GRAD",
+      "value": 0.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_VELD_M_NSE",
+      "value": 0.7,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_VELNE_M_NSE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_VEL_I_GATE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_VIS_VERR_MAX",
+      "value": 0.9,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_VIS_VERR_MIN",
+      "value": 0.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_WENC_VERR",
+      "value": 0.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_WIND_PSCALE",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_WIND_P_NSE",
+      "value": 0.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "EK3_YAW_I_GATE",
+      "value": 300,
+      "param_type": "int16"
+    },
+    {
+      "name": "EK3_YAW_M_NSE",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "ESC_TLM_MAV_OFS",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FBWB_CLIMB_RATE",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "FBWB_ELEV_REV",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FENCE_ACTION",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "FENCE_ALT_MAX",
+      "value": 100,
+      "param_type": "real32"
+    },
+    {
+      "name": "FENCE_ALT_MIN",
+      "value": -10,
+      "param_type": "real32"
+    },
+    {
+      "name": "FENCE_AUTOENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FENCE_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FENCE_MARGIN",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "FENCE_OPTIONS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "FENCE_RADIUS",
+      "value": 300,
+      "param_type": "real32"
+    },
+    {
+      "name": "FENCE_RET_ALT",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "FENCE_RET_RALLY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FENCE_TOTAL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FENCE_TYPE",
+      "value": 4,
+      "param_type": "int8"
+    },
+    {
+      "name": "FFT_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FILT1_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FILT2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FILT3_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FILT4_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FILT5_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FILT6_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FILT7_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FILT8_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLAP_1_PERCNT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLAP_1_SPEED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLAP_2_PERCNT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLAP_2_SPEED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLAP_SLEWRATE",
+      "value": 75,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLIGHT_OPTIONS",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "FLOW_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLTMODE1",
+      "value": 10,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLTMODE2",
+      "value": 11,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLTMODE3",
+      "value": 12,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLTMODE4",
+      "value": 5,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLTMODE5",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLTMODE6",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLTMODE_CH",
+      "value": 8,
+      "param_type": "int8"
+    },
+    {
+      "name": "FLTMODE_GCSBLOCK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "FOLL_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FORMAT_VERSION",
+      "value": 13,
+      "param_type": "int16"
+    },
+    {
+      "name": "FRSKY_DNLINK1_ID",
+      "value": 20,
+      "param_type": "int8"
+    },
+    {
+      "name": "FRSKY_DNLINK2_ID",
+      "value": 7,
+      "param_type": "int8"
+    },
+    {
+      "name": "FRSKY_DNLINK_ID",
+      "value": 27,
+      "param_type": "int8"
+    },
+    {
+      "name": "FRSKY_OPTIONS",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FRSKY_UPLINK_ID",
+      "value": 13,
+      "param_type": "int8"
+    },
+    {
+      "name": "FS_EKF_THRESH",
+      "value": 0.8,
+      "param_type": "real32"
+    },
+    {
+      "name": "FS_GCS_ENABL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FS_LONG_ACTN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FS_LONG_TIMEOUT",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "FS_SHORT_ACTN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FS_SHORT_TIMEOUT",
+      "value": 1.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "FWD_BAT_IDX",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "FWD_BAT_VOLT_MAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "FWD_BAT_VOLT_MIN",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GCS_PID_MASK",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "GEN_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GLIDE_SLOPE_MIN",
+      "value": 15,
+      "param_type": "int16"
+    },
+    {
+      "name": "GLIDE_SLOPE_THR",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "GPS1_CAN_OVRIDE",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "GPS2_CAN_OVRIDE",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "GPS_AUTO_CONFIG",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_AUTO_SWITCH",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_BLEND_MASK",
+      "value": 5,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_CAN_NODEID1",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "GPS_CAN_NODEID2",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "GPS_COM_PORT",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_COM_PORT2",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_DELAY_MS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "GPS_DELAY_MS2",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "GPS_DRV_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "GPS_GNSS_MODE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_GNSS_MODE2",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_INJECT_TO",
+      "value": 127,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_MB1_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_MB2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_MIN_DGPS",
+      "value": 100,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_MIN_ELEV",
+      "value": -100,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_NAVFILTER",
+      "value": 8,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_POS1_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GPS_POS1_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GPS_POS1_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GPS_POS2_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GPS_POS2_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GPS_POS2_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GPS_PRIMARY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_RATE_MS",
+      "value": 200,
+      "param_type": "int16"
+    },
+    {
+      "name": "GPS_RATE_MS2",
+      "value": 200,
+      "param_type": "int16"
+    },
+    {
+      "name": "GPS_RAW_DATA",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_SAVE_CFG",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_SBAS_MODE",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_SBP_LOGMASK",
+      "value": -256,
+      "param_type": "int16"
+    },
+    {
+      "name": "GPS_TYPE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "GPS_TYPE2",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GRIP_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GROUND_STEER_ALT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GROUND_STEER_DPS",
+      "value": 90,
+      "param_type": "int16"
+    },
+    {
+      "name": "GUIDED_D",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_D_FF",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_FF",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_FLTD",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_FLTE",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_FLTT",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_I",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_IMAX",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_NEF",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GUIDED_NTF",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "GUIDED_P",
+      "value": 5000,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_PDMX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "GUIDED_SMAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "HOME_RESET_ALT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "ICE_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INITIAL_MODE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_ACC1_CALTEMP",
+      "value": -300,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC2OFFS_X",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC2OFFS_Y",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC2OFFS_Z",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC2SCAL_X",
+      "value": 1.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC2SCAL_Y",
+      "value": 1.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC2SCAL_Z",
+      "value": 1.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC2_CALTEMP",
+      "value": -300,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC2_ID",
+      "value": 2753036,
+      "param_type": "int32"
+    },
+    {
+      "name": "INS_ACC3OFFS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC3OFFS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC3OFFS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC3SCAL_X",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC3SCAL_Y",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC3SCAL_Z",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC3_CALTEMP",
+      "value": -300,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC3_ID",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "INS_ACCEL_FILTER",
+      "value": 20,
+      "param_type": "int16"
+    },
+    {
+      "name": "INS_ACCOFFS_X",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACCOFFS_Y",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACCOFFS_Z",
+      "value": 0.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACCSCAL_X",
+      "value": 1.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACCSCAL_Y",
+      "value": 1.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACCSCAL_Z",
+      "value": 1.001,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_ACC_BODYFIX",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_ACC_ID",
+      "value": 2753028,
+      "param_type": "int32"
+    },
+    {
+      "name": "INS_ENABLE_MASK",
+      "value": 127,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_FAST_SAMPLE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_GYR1_CALTEMP",
+      "value": -300,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR2OFFS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR2OFFS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR2OFFS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR2_CALTEMP",
+      "value": -300,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR2_ID",
+      "value": 2752780,
+      "param_type": "int32"
+    },
+    {
+      "name": "INS_GYR3OFFS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR3OFFS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR3OFFS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR3_CALTEMP",
+      "value": -300,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYR3_ID",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "INS_GYROFFS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYROFFS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYROFFS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_GYRO_FILTER",
+      "value": 20,
+      "param_type": "int16"
+    },
+    {
+      "name": "INS_GYRO_RATE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_GYR_CAL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_GYR_ID",
+      "value": 2752772,
+      "param_type": "int32"
+    },
+    {
+      "name": "INS_HNTC2_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_HNTCH_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_LOG_BAT_CNT",
+      "value": 1024,
+      "param_type": "int16"
+    },
+    {
+      "name": "INS_LOG_BAT_LGCT",
+      "value": 32,
+      "param_type": "int16"
+    },
+    {
+      "name": "INS_LOG_BAT_LGIN",
+      "value": 20,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_LOG_BAT_MASK",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_LOG_BAT_OPT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_POS1_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_POS1_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_POS1_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_POS2_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_POS2_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_POS2_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_POS3_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_POS3_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_POS3_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_RAW_LOG_OPT",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "INS_STILL_THRESH",
+      "value": 0.05,
+      "param_type": "real32"
+    },
+    {
+      "name": "INS_TCAL1_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_TCAL2_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_TCAL3_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_TCAL_OPTIONS",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "INS_TRIM_OPTION",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_USE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_USE2",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "INS_USE3",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "KDE_NPOLE",
+      "value": 14,
+      "param_type": "int8"
+    },
+    {
+      "name": "KFF_RDDRMIX",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "KFF_THR2PTCH",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_ABORT_DEG",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_ABORT_THR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "LAND_DISARMDELAY",
+      "value": 20,
+      "param_type": "int8"
+    },
+    {
+      "name": "LAND_FLAP_PERCNT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "LAND_FLARE_AIM",
+      "value": 50,
+      "param_type": "int8"
+    },
+    {
+      "name": "LAND_FLARE_ALT",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_FLARE_SEC",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "LAND_PF_ALT",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_PF_ARSPD",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_PF_SEC",
+      "value": 6,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_PITCH_DEG",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_SLOPE_RCALC",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "LAND_THEN_NEUTRL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "LAND_THR_SLEW",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "LAND_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "LAND_WIND_COMP",
+      "value": 50,
+      "param_type": "real32"
+    },
+    {
+      "name": "LEVEL_ROLL_LIMIT",
+      "value": 5,
+      "param_type": "int8"
+    },
+    {
+      "name": "LGR_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "LOG_BACKEND_TYPE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "LOG_BITMASK",
+      "value": 65535,
+      "param_type": "int32"
+    },
+    {
+      "name": "LOG_BLK_RATEMAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "LOG_DARM_RATEMAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "LOG_DISARMED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "LOG_FILE_BUFSIZE",
+      "value": 200,
+      "param_type": "int16"
+    },
+    {
+      "name": "LOG_FILE_DSRMROT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "LOG_FILE_MB_FREE",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "LOG_FILE_RATEMAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "LOG_FILE_TIMEOUT",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "LOG_MAV_BUFSIZE",
+      "value": 8,
+      "param_type": "int8"
+    },
+    {
+      "name": "LOG_MAV_RATEMAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "LOG_MAX_FILES",
+      "value": 500,
+      "param_type": "int16"
+    },
+    {
+      "name": "LOG_REPLAY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "MANUAL_RCMASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "MAN_EXPO_PITCH",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "MAN_EXPO_ROLL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "MAN_EXPO_RUDDER",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "MIN_GROUNDSPEED",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "MIS_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "MIS_RESTART",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "MIS_TOTAL",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "MIXING_GAIN",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "MIXING_OFFSET",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "MNT1_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "MNT2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "MSP_OPTIONS",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "MSP_OSD_NCELLS",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "NAVL1_DAMPING",
+      "value": 0.75,
+      "param_type": "real32"
+    },
+    {
+      "name": "NAVL1_LIM_BANK",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "NAVL1_PERIOD",
+      "value": 15,
+      "param_type": "real32"
+    },
+    {
+      "name": "NAVL1_XTRACK_I",
+      "value": 0.02,
+      "param_type": "real32"
+    },
+    {
+      "name": "NET_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "NET_P1_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "NET_P2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "NET_P3_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "NET_P4_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "NMEA_MSG_EN",
+      "value": 3,
+      "param_type": "int16"
+    },
+    {
+      "name": "NMEA_RATE_MS",
+      "value": 100,
+      "param_type": "int16"
+    },
+    {
+      "name": "NTF_BUZZ_ON_LVL",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "NTF_BUZZ_PIN",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "NTF_BUZZ_TYPES",
+      "value": 5,
+      "param_type": "int8"
+    },
+    {
+      "name": "NTF_BUZZ_VOLUME",
+      "value": 100,
+      "param_type": "int8"
+    },
+    {
+      "name": "NTF_DISPLAY_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "NTF_LED_BRIGHT",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "NTF_LED_LEN",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "NTF_LED_OVERRIDE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "NTF_LED_TYPES",
+      "value": 123079,
+      "param_type": "int32"
+    },
+    {
+      "name": "ONESHOT_MASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "OSD_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "PLND_ENABLED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "PTCH2SRV_RLL",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH2SRV_RMAX_DN",
+      "value": 90,
+      "param_type": "int16"
+    },
+    {
+      "name": "PTCH2SRV_RMAX_UP",
+      "value": 90,
+      "param_type": "int16"
+    },
+    {
+      "name": "PTCH2SRV_TCONST",
+      "value": 0.25,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_LIM_MAX_DEG",
+      "value": 25,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_LIM_MIN_DEG",
+      "value": -20,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_D",
+      "value": 0.007265,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_D_FF",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_FF",
+      "value": 0.595723,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_FLTD",
+      "value": 12,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_FLTE",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_FLTT",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_I",
+      "value": 0.11,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_IMAX",
+      "value": 0.666,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_NEF",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "PTCH_RATE_NTF",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "PTCH_RATE_P",
+      "value": 0.15,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_PDMX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_RATE_SMAX",
+      "value": 150,
+      "param_type": "real32"
+    },
+    {
+      "name": "PTCH_TRIM_DEG",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "Q_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RALLY_INCL_HOME",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RALLY_LIMIT_KM",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "RALLY_TOTAL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC10_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC10_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC10_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC10_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC10_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC10_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC11_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC11_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC11_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC11_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC11_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC11_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC12_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC12_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC12_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC12_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC12_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC12_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC13_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC13_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC13_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC13_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC13_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC13_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC14_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC14_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC14_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC14_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC14_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC14_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC15_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC15_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC15_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC15_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC15_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC15_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC16_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC16_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC16_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC16_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC16_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC16_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC1_DZ",
+      "value": 30,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC1_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC1_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC1_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC1_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC1_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC2_DZ",
+      "value": 30,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC2_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC2_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC2_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC2_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC2_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC3_DZ",
+      "value": 30,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC3_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC3_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC3_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC3_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC3_TRIM",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC4_DZ",
+      "value": 30,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC4_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC4_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC4_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC4_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC4_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC5_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC5_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC5_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC5_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC5_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC5_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC6_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC6_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC6_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC6_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC6_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC6_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC7_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC7_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC7_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC7_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC7_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC7_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC8_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC8_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC8_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC8_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC8_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC8_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC9_DZ",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC9_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC9_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC9_OPTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RC9_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC9_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "RCMAP_PITCH",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "RCMAP_ROLL",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "RCMAP_THROTTLE",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "RCMAP_YAW",
+      "value": 4,
+      "param_type": "int8"
+    },
+    {
+      "name": "RC_OPTIONS",
+      "value": 32,
+      "param_type": "int32"
+    },
+    {
+      "name": "RC_OVERRIDE_TIME",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "RC_PROTOCOLS",
+      "value": 1,
+      "param_type": "int32"
+    },
+    {
+      "name": "RELAY1_DEFAULT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RELAY1_FUNCTION",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "RELAY1_PIN",
+      "value": 13,
+      "param_type": "int16"
+    },
+    {
+      "name": "RELAY2_FUNCTION",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RELAY3_FUNCTION",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RELAY4_FUNCTION",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RELAY5_FUNCTION",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RELAY6_FUNCTION",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RLL2SRV_RMAX",
+      "value": 90,
+      "param_type": "int16"
+    },
+    {
+      "name": "RLL2SRV_TCONST",
+      "value": 0.25,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_D",
+      "value": 0.01743,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_D_FF",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_FF",
+      "value": 0.237212,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_FLTD",
+      "value": 12,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_FLTE",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_FLTT",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_I",
+      "value": 0.25,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_IMAX",
+      "value": 0.666,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_NEF",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RLL_RATE_NTF",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RLL_RATE_P",
+      "value": 0.3,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_PDMX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "RLL_RATE_SMAX",
+      "value": 150,
+      "param_type": "real32"
+    },
+    {
+      "name": "RNGFND1_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND3_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND4_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND5_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND6_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND7_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND8_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND9_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFNDA_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RNGFND_LANDING",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "ROLL_LIMIT_DEG",
+      "value": 65,
+      "param_type": "real32"
+    },
+    {
+      "name": "RPM1_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RPM2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RSSI_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RTL_ALTITUDE",
+      "value": 100,
+      "param_type": "real32"
+    },
+    {
+      "name": "RTL_AUTOLAND",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RTL_CLIMB_MIN",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RTL_RADIUS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "RUDDER_ONLY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "RUDD_DT_GAIN",
+      "value": 10,
+      "param_type": "int8"
+    },
+    {
+      "name": "SCALING_SPEED",
+      "value": 15,
+      "param_type": "real32"
+    },
+    {
+      "name": "SCHED_DEBUG",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SCHED_LOOP_RATE",
+      "value": 50,
+      "param_type": "int16"
+    },
+    {
+      "name": "SCHED_OPTIONS",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SCR_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL0_BAUD",
+      "value": 115,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERIAL0_PROTOCOL",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL1_BAUD",
+      "value": 57,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERIAL1_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERIAL1_PROTOCOL",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL2_BAUD",
+      "value": 57,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERIAL2_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERIAL2_PROTOCOL",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL3_BAUD",
+      "value": 230,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERIAL3_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERIAL3_PROTOCOL",
+      "value": 5,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL4_BAUD",
+      "value": 230,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERIAL4_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERIAL4_PROTOCOL",
+      "value": 5,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL5_BAUD",
+      "value": 57,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERIAL5_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERIAL5_PROTOCOL",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL6_BAUD",
+      "value": 57,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERIAL6_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERIAL6_PROTOCOL",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL7_BAUD",
+      "value": 57,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERIAL7_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERIAL7_PROTOCOL",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL_PASS1",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL_PASS2",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERIAL_PASSTIMO",
+      "value": 15,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO10_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO10_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO10_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO10_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO10_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO11_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO11_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO11_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO11_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO11_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO12_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO12_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO12_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO12_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO12_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO13_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO13_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO13_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO13_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO13_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO14_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO14_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO14_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO14_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO14_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO15_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO15_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO15_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO15_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO15_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO16_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO16_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO16_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO16_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO16_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO1_FUNCTION",
+      "value": 4,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO1_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO1_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO1_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO1_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO2_FUNCTION",
+      "value": 19,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO2_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO2_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO2_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO2_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO3_FUNCTION",
+      "value": 70,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO3_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO3_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO3_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO3_TRIM",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO4_FUNCTION",
+      "value": 21,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO4_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO4_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO4_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO4_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO5_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO5_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO5_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO5_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO5_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO6_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO6_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO6_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO6_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO6_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO7_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO7_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO7_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO7_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO7_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO8_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO8_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO8_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO8_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO8_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO9_FUNCTION",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO9_MAX",
+      "value": 1900,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO9_MIN",
+      "value": 1100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO9_REVERSED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO9_TRIM",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO_32_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO_AUTO_TRIM",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO_DSHOT_ESC",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO_DSHOT_RATE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO_FTW_MASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERVO_FTW_POLES",
+      "value": 14,
+      "param_type": "int8"
+    },
+    {
+      "name": "SERVO_FTW_RVMASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERVO_GPIO_MASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERVO_RATE",
+      "value": 50,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO_RC_FS_MSK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERVO_ROB_POSMAX",
+      "value": 4095,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERVO_ROB_POSMIN",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SERVO_SBUS_RATE",
+      "value": 50,
+      "param_type": "int16"
+    },
+    {
+      "name": "SERVO_VOLZ_MASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_ACC1_BIAS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC1_BIAS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC1_BIAS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC1_RND",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC1_SCAL_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC1_SCAL_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC1_SCAL_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC2_BIAS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC2_BIAS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC2_BIAS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC2_RND",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC2_SCAL_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC2_SCAL_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC2_SCAL_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC3_BIAS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC3_BIAS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC3_BIAS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC3_RND",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC3_SCAL_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC3_SCAL_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC3_SCAL_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACCEL1_FAIL",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACCEL2_FAIL",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACCEL3_FAIL",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC_FAIL_MSK",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_ACC_FILE_RW",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_ACC_TRIM_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC_TRIM_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ACC_TRIM_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ADSB_ALT",
+      "value": 1000,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ADSB_COUNT",
+      "value": -1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_ADSB_RADIUS",
+      "value": 10000,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ADSB_TX",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_ADSB_TYPES",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_ARSPD2_FAIL",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD2_FAILP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD2_OFS",
+      "value": 2013,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD2_PITOT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD2_RATIO",
+      "value": 1.99,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD2_RND",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD2_SIGN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_ARSPD_FAIL",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD_FAILP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD_OFS",
+      "value": 2013,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD_PITOT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD_RATIO",
+      "value": 1.99,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD_RND",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ARSPD_SIGN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_BAR2_DELAY",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_BAR2_DISABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_BAR2_DRIFT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR2_FREEZE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_BAR2_GLITCH",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR2_RND",
+      "value": 0.2,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR2_WCF_BAK",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR2_WCF_DN",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR2_WCF_FWD",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR2_WCF_LFT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR2_WCF_RGT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR2_WCF_UP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_DELAY",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_BAR3_DISABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_BAR3_DRIFT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_FREEZE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_BAR3_GLITCH",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_RND",
+      "value": 0.2,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_WCF_BAK",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_WCF_DN",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_WCF_FWD",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_WCF_LFT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_WCF_RGT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAR3_WCF_UP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_COUNT",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_BARO_DELAY",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_BARO_DISABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_BARO_DRIFT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_FREEZE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_BARO_GLITCH",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_RND",
+      "value": 0.2,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_WCF_BAK",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_WCF_DN",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_WCF_FWD",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_WCF_LFT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_WCF_RGT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BARO_WCF_UP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BATT_CAP_AH",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BATT_VOLTAGE",
+      "value": 12.6,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_BAUDLIMIT_EN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_CAN_SRV_MSK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_CAN_TYPE1",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_CAN_TYPE2",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_DRIFT_SPEED",
+      "value": 0.05,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_DRIFT_TIME",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_EFI_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_ENGINE_FAIL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_ENGINE_MUL",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ESC_ARM_RPM",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_ESC_TELEM",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_FLOAT_EXCEPT",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_FLOW_DELAY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_FLOW_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_FLOW_POS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_FLOW_POS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_FLOW_POS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_FLOW_RATE",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_FLOW_RND",
+      "value": 0.05,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_FTOWESC_ENA",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_FTOWESC_POW",
+      "value": 4095,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_GND_BEHAV",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS2_ACC",
+      "value": 0.3,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_ALT_OFS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GPS2_BYTELOS",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_DISABLE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS2_DRFTALT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_GLTCH_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_GLTCH_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_GLTCH_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_HDG",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS2_HZ",
+      "value": 5,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS2_JAM",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS2_LAG_MS",
+      "value": 100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GPS2_LCKTIME",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GPS2_NOISE",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_NUMSATS",
+      "value": 10,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS2_POS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_POS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_POS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_TYPE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS2_VERR_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_VERR_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS2_VERR_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_ACC",
+      "value": 0.3,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_ALT_OFS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GPS_BYTELOSS",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_DISABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS_DRIFTALT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_GLITCH_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_GLITCH_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_GLITCH_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_HDG",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS_HZ",
+      "value": 5,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS_JAM",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS_LAG_MS",
+      "value": 100,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GPS_LOCKTIME",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GPS_LOG_NUM",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GPS_NOISE",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_NUMSATS",
+      "value": 10,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS_POS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_POS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_POS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_TYPE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GPS_VERR_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_VERR_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GPS_VERR_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GRPE_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GRPE_PIN",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GRPS_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GRPS_GRAB",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GRPS_PIN",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GRPS_RELEASE",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_GRPS_REVERSE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GYR1_BIAS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR1_BIAS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR1_BIAS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR1_RND",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR1_SCALE_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR1_SCALE_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR1_SCALE_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR2_BIAS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR2_BIAS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR2_BIAS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR2_RND",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR2_SCALE_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR2_SCALE_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR2_SCALE_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR3_BIAS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR3_BIAS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR3_BIAS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR3_RND",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR3_SCALE_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR3_SCALE_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR3_SCALE_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_GYR_FAIL_MSK",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_GYR_FILE_RW",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_IE24_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_IE24_ERROR",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_IE24_STATE",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_IMUT1_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_IMUT2_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_IMUT3_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_IMUT_END",
+      "value": 45,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_IMUT_FIXED",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_IMUT_START",
+      "value": 25,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_IMUT_TCONST",
+      "value": 300,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_IMU_COUNT",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_IMU_POS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_IMU_POS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_IMU_POS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_INIT_ALT_OFS",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_INIT_LAT_OFS",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_INIT_LON_OFS",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_INS_THR_MIN",
+      "value": 0.1,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_JSON_MASTER",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_LED_LAYOUT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_LOOP_DELAY",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG1_DEVID",
+      "value": 97539,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG1_DIA_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_DIA_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_DIA_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_FAIL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_MAG1_ODI_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_ODI_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_ODI_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_OFS_X",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_OFS_Y",
+      "value": 13,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_OFS_Z",
+      "value": -18,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG1_ORIENT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_MAG1_SCALING",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_DEVID",
+      "value": 131874,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG2_DIA_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_DIA_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_DIA_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_FAIL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_MAG2_ODI_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_ODI_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_ODI_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_OFS_X",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_OFS_Y",
+      "value": 13,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_OFS_Z",
+      "value": -18,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG2_ORIENT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_MAG2_SCALING",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_DEVID",
+      "value": 263178,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG3_DIA_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_DIA_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_DIA_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_FAIL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_MAG3_ODI_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_ODI_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_ODI_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_OFS_X",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_OFS_Y",
+      "value": 13,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_OFS_Z",
+      "value": -18,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG3_ORIENT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_MAG3_SCALING",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG4_DEVID",
+      "value": 97283,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG5_DEVID",
+      "value": 97795,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG6_DEVID",
+      "value": 98051,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG7_DEVID",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG8_DEVID",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_MAG_ALY_HGT",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG_ALY_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG_ALY_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG_ALY_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG_DELAY",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_MAG_MOT_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG_MOT_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG_MOT_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG_RND",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_MAG_SAVE_IDS",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_ODOM_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_OH_MASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_OH_RELAY_MSK",
+      "value": -1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_OPOS_ALT",
+      "value": 584,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_OPOS_HDG",
+      "value": 353,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_OPOS_LAT",
+      "value": -35.363262,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_OPOS_LNG",
+      "value": 149.16524,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_PARA_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_PARA_PIN",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_PIN_MASK",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_PLD_ALT_LMT",
+      "value": 15,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_PLD_DIST_LMT",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_PLD_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_PLD_HEIGHT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_PLD_LAT",
+      "value": 42.389797,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_PLD_LON",
+      "value": -71.1476,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_PLD_OPTIONS",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_PLD_ORIENT",
+      "value": 24,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_PLD_RATE",
+      "value": 100,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_PLD_SHIP",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_PLD_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_PLD_YAW",
+      "value": 270,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_RATE_HZ",
+      "value": 1200,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_RC_CHANCOUNT",
+      "value": 16,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_RC_FAIL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_RICH_CTRL",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_RICH_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_SERVO_SPEED",
+      "value": 0.14,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHIP_DSIZE",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHIP_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_SHIP_OFS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHIP_OFS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHIP_OFS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHIP_PSIZE",
+      "value": 1000,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHIP_SPEED",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHIP_SYSID",
+      "value": 17,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_SHOVE_TIME",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_SHOVE_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHOVE_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SHOVE_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SONAR_GLITCH",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SONAR_POS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SONAR_POS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SONAR_POS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SONAR_RND",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SONAR_ROT",
+      "value": 25,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_SONAR_SCALE",
+      "value": 12.1212,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SPEEDUP",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_SPR_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_SPR_PUMP",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_SPR_SPIN",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_TA_ENABLE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_TEMP_BFACTOR",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_TEMP_BRD_OFF",
+      "value": 20,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_TEMP_START",
+      "value": 25,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_TEMP_TCONST",
+      "value": 30,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_TERRAIN",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_THML_SCENARI",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_TIDE_DIR",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_TIDE_SPEED",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_TIME_JITTER",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_TWIST_TIME",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_TWIST_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_TWIST_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_TWIST_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_UART_LOSS",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VIB_FREQ_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VIB_FREQ_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VIB_FREQ_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VIB_MOT_HMNC",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_VIB_MOT_MASK",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "SIM_VIB_MOT_MAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VIB_MOT_MULT",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_FAIL",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_VICON_GLIT_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_GLIT_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_GLIT_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_POS_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_POS_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_POS_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_TMASK",
+      "value": 3,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_VICON_VGLI_X",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_VGLI_Y",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_VGLI_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_VICON_YAW",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_VICON_YAWERR",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "SIM_WAVE_AMP",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WAVE_DIR",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WAVE_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_WAVE_LENGTH",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WAVE_SPEED",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WIND_DIR",
+      "value": 180,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WIND_DIR_Z",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WIND_SPD",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WIND_T",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SIM_WIND_TURB",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WIND_T_ALT",
+      "value": 60,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WIND_T_COEF",
+      "value": 0.01,
+      "param_type": "real32"
+    },
+    {
+      "name": "SIM_WOW_PIN",
+      "value": -1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SOAR_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SR0_ADSB",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_EXTRA1",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_EXTRA2",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_EXTRA3",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_EXT_STAT",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_PARAMS",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_POSITION",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_RAW_CTRL",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_RAW_SENS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR0_RC_CHAN",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_ADSB",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_EXTRA1",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_EXTRA2",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_EXTRA3",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_EXT_STAT",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_PARAMS",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_POSITION",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_RAW_CTRL",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_RAW_SENS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR1_RC_CHAN",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_ADSB",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_EXTRA1",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_EXTRA2",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_EXTRA3",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_EXT_STAT",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_PARAMS",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_POSITION",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_RAW_CTRL",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_RAW_SENS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR2_RC_CHAN",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_ADSB",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_EXTRA1",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_EXTRA2",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_EXTRA3",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_EXT_STAT",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_PARAMS",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_POSITION",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_RAW_CTRL",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_RAW_SENS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR3_RC_CHAN",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_ADSB",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_EXTRA1",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_EXTRA2",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_EXTRA3",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_EXT_STAT",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_PARAMS",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_POSITION",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_RAW_CTRL",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_RAW_SENS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR4_RC_CHAN",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_ADSB",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_EXTRA1",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_EXTRA2",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_EXTRA3",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_EXT_STAT",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_PARAMS",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_POSITION",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_RAW_CTRL",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_RAW_SENS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR5_RC_CHAN",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_ADSB",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_EXTRA1",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_EXTRA2",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_EXTRA3",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_EXT_STAT",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_PARAMS",
+      "value": 10,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_POSITION",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_RAW_CTRL",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_RAW_SENS",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "SR6_RC_CHAN",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "STAB_PITCH_DOWN",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "STALL_PREVENTION",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "STAT_BOOTCNT",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "STAT_FLTTIME",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "STAT_RESET",
+      "value": 1,
+      "param_type": "int32"
+    },
+    {
+      "name": "STAT_RUNTIME",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "STEER2SRV_D",
+      "value": 0.005,
+      "param_type": "real32"
+    },
+    {
+      "name": "STEER2SRV_DRTFCT",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "STEER2SRV_DRTMIN",
+      "value": 4500,
+      "param_type": "real32"
+    },
+    {
+      "name": "STEER2SRV_DRTSPD",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "STEER2SRV_FF",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "STEER2SRV_I",
+      "value": 0.2,
+      "param_type": "real32"
+    },
+    {
+      "name": "STEER2SRV_IMAX",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "STEER2SRV_MINSPD",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "STEER2SRV_P",
+      "value": 1.8,
+      "param_type": "real32"
+    },
+    {
+      "name": "STEER2SRV_TCONST",
+      "value": 0.75,
+      "param_type": "real32"
+    },
+    {
+      "name": "STICK_MIXING",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "SYSID_ENFORCE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "SYSID_MYGCS",
+      "value": 255,
+      "param_type": "int16"
+    },
+    {
+      "name": "SYSID_THISMAV",
+      "value": 1,
+      "param_type": "int16"
+    },
+    {
+      "name": "TECS_APPR_SMAX",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_CLMB_MAX",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_FLARE_HGT",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_HDEM_TCONST",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_HGT_OMEGA",
+      "value": 3,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_INTEG_GAIN",
+      "value": 0.3,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_ARSPD",
+      "value": -1,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_DAMP",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_IGAIN",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_PDAMP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_PMAX",
+      "value": 10,
+      "param_type": "int8"
+    },
+    {
+      "name": "TECS_LAND_SINK",
+      "value": 0.25,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_SPDWGT",
+      "value": -1,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_SRC",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_TCONST",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_TDAMP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_LAND_THR",
+      "value": -1,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_OPTIONS",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "TECS_PITCH_MAX",
+      "value": 15,
+      "param_type": "int8"
+    },
+    {
+      "name": "TECS_PITCH_MIN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TECS_PTCH_DAMP",
+      "value": 0.3,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_PTCH_FF_K",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_PTCH_FF_V0",
+      "value": 12,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_RLL2THR",
+      "value": 10,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_SINK_MAX",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_SINK_MIN",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_SPDWEIGHT",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_SPD_OMEGA",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_SYNAIRSPEED",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TECS_THR_DAMP",
+      "value": 0.5,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_TIME_CONST",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_TKOFF_IGAIN",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TECS_VERT_ACC",
+      "value": 7,
+      "param_type": "real32"
+    },
+    {
+      "name": "TELEM_DELAY",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TEMP1_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TEMP2_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TEMP3_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TEMP_LOG",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TERRAIN_ENABLE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "TERRAIN_FOLLOW",
+      "value": 0,
+      "param_type": "int32"
+    },
+    {
+      "name": "TERRAIN_LOOKAHD",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "TERRAIN_MARGIN",
+      "value": 0.05,
+      "param_type": "real32"
+    },
+    {
+      "name": "TERRAIN_OFS_MAX",
+      "value": 30,
+      "param_type": "real32"
+    },
+    {
+      "name": "TERRAIN_OPTIONS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "TERRAIN_SPACING",
+      "value": 100,
+      "param_type": "int16"
+    },
+    {
+      "name": "THROTTLE_NUDGE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "THR_FAILSAFE",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "THR_FS_VALUE",
+      "value": 950,
+      "param_type": "int16"
+    },
+    {
+      "name": "THR_MAX",
+      "value": 100,
+      "param_type": "int8"
+    },
+    {
+      "name": "THR_MIN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "THR_PASS_STAB",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "THR_SLEWRATE",
+      "value": 100,
+      "param_type": "int8"
+    },
+    {
+      "name": "THR_SUPP_MAN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TKOFF_ACCEL_CNT",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "TKOFF_ALT",
+      "value": 50,
+      "param_type": "int16"
+    },
+    {
+      "name": "TKOFF_DIST",
+      "value": 200,
+      "param_type": "int16"
+    },
+    {
+      "name": "TKOFF_FLAP_PCNT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TKOFF_GND_PITCH",
+      "value": 5,
+      "param_type": "real32"
+    },
+    {
+      "name": "TKOFF_LVL_ALT",
+      "value": 5,
+      "param_type": "int16"
+    },
+    {
+      "name": "TKOFF_LVL_PITCH",
+      "value": 15,
+      "param_type": "int8"
+    },
+    {
+      "name": "TKOFF_PLIM_SEC",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "TKOFF_ROTATE_SPD",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TKOFF_TDRAG_ELEV",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TKOFF_TDRAG_SPD1",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TKOFF_THR_DELAY",
+      "value": 2,
+      "param_type": "int8"
+    },
+    {
+      "name": "TKOFF_THR_MAX",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TKOFF_THR_MAX_T",
+      "value": 4,
+      "param_type": "real32"
+    },
+    {
+      "name": "TKOFF_THR_MINACC",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TKOFF_THR_MINSPD",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "TKOFF_THR_SLEW",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TKOFF_TIMEOUT",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TRIM_THROTTLE",
+      "value": 50,
+      "param_type": "int8"
+    },
+    {
+      "name": "TUNE_CHAN",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "TUNE_CHAN_MAX",
+      "value": 2000,
+      "param_type": "int16"
+    },
+    {
+      "name": "TUNE_CHAN_MIN",
+      "value": 1000,
+      "param_type": "int16"
+    },
+    {
+      "name": "TUNE_ERR_THRESH",
+      "value": 0.15,
+      "param_type": "real32"
+    },
+    {
+      "name": "TUNE_MODE_REVERT",
+      "value": 1,
+      "param_type": "int8"
+    },
+    {
+      "name": "TUNE_PARAM",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "TUNE_RANGE",
+      "value": 2,
+      "param_type": "real32"
+    },
+    {
+      "name": "TUNE_SELECTOR",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "USE_REV_THRUST",
+      "value": 2,
+      "param_type": "int32"
+    },
+    {
+      "name": "VISO_TYPE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "VTX_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    },
+    {
+      "name": "WP_LOITER_RAD",
+      "value": 80,
+      "param_type": "int16"
+    },
+    {
+      "name": "WP_MAX_RADIUS",
+      "value": 0,
+      "param_type": "int16"
+    },
+    {
+      "name": "WP_RADIUS",
+      "value": 50,
+      "param_type": "int16"
+    },
+    {
+      "name": "YAW2SRV_DAMP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "YAW2SRV_IMAX",
+      "value": 1500,
+      "param_type": "int16"
+    },
+    {
+      "name": "YAW2SRV_INT",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "YAW2SRV_RLL",
+      "value": 1,
+      "param_type": "real32"
+    },
+    {
+      "name": "YAW2SRV_SLIP",
+      "value": 0,
+      "param_type": "real32"
+    },
+    {
+      "name": "YAW_RATE_ENABLE",
+      "value": 0,
+      "param_type": "int8"
+    }
+  ]
+}

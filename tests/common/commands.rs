@@ -1,6 +1,5 @@
-#[allow(dead_code)]
-mod common;
-
+use crate::common::wait::{wait_for_armed, wait_for_mode};
+use crate::{TestTarget, disconnect, setup_backend_vehicle};
 use mavkit::{LinkState, SupportState, Vehicle};
 use std::time::Duration;
 
@@ -13,53 +12,73 @@ async fn wait_for_home_position(vehicle: &Vehicle, timeout: Duration) {
         .expect("timed out waiting for home position");
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_set_mode_by_name() {
-    let vehicle = common::setup_sitl_vehicle().await;
-    let result: Result<(), String> = async {
-        vehicle
-            .set_mode_by_name("GUIDED")
-            .await
-            .map_err(|e| e.to_string())?;
-        common::wait_for_mode_name(&vehicle, "GUIDED", Duration::from_secs(10)).await?;
+pub async fn arm_with_retries(
+    vehicle: &Vehicle,
+    force: bool,
+    timeout: Duration,
+) -> Result<(), String> {
+    let deadline = tokio::time::Instant::now() + timeout;
+    let mut last_err = String::from("arm timed out");
+    loop {
+        if tokio::time::Instant::now() > deadline {
+            return Err(last_err);
+        }
+        match if force {
+            vehicle.force_arm().await
+        } else {
+            vehicle.arm().await
+        } {
+            Ok(()) => return Ok(()),
+            Err(err) => {
+                last_err = err.to_string();
+                tokio::time::sleep(Duration::from_secs(1)).await;
+            }
+        }
+    }
+}
 
-        vehicle
-            .set_mode_by_name("LOITER")
-            .await
-            .map_err(|e| e.to_string())?;
-        common::wait_for_mode_name(&vehicle, "LOITER", Duration::from_secs(10)).await?;
+pub async fn force_arm_disarm_cycle_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
+
+    let result: Result<(), String> = async {
+        vehicle.set_mode(0).await.map_err(|err| err.to_string())?;
+        wait_for_mode(vehicle, 0, Duration::from_secs(10)).await;
+
+        arm_with_retries(vehicle, false, Duration::from_secs(30)).await?;
+        wait_for_armed(vehicle, true, Duration::from_secs(10)).await;
+
+        vehicle.disarm().await.map_err(|err| err.to_string())?;
+        wait_for_armed(vehicle, false, Duration::from_secs(10)).await;
 
         Ok(())
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_home_position_watch_populates() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn home_position_watch_populates_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
-        wait_for_home_position(&vehicle, Duration::from_secs(20)).await;
+        wait_for_home_position(vehicle, Duration::from_secs(20)).await;
         Ok(())
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_support_discovery_reports_ardupilot() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn support_discovery_reports_ardupilot_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let ardupilot_support = vehicle
             .support()
@@ -91,18 +110,17 @@ async fn sitl_support_discovery_reports_ardupilot() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_set_home_current_updates_home() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn set_home_current_updates_home_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
-        wait_for_home_position(&vehicle, Duration::from_secs(20)).await;
+        wait_for_home_position(vehicle, Duration::from_secs(20)).await;
 
         let original = vehicle
             .telemetry()
@@ -139,16 +157,15 @@ async fn sitl_set_home_current_updates_home() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_disconnect_transitions_link_state() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn disconnect_transitions_link_state_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let state = vehicle
             .link()
@@ -176,7 +193,6 @@ async fn sitl_disconnect_transitions_link_state() {
     }
     .await;
 
-    // Vehicle already disconnected inside the test body.
     if let Err(err) = result {
         panic!("{err}");
     }

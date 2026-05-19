@@ -1,15 +1,11 @@
-#[allow(dead_code)]
-mod common;
-
+use crate::{TestTarget, disconnect, setup_backend_vehicle};
 use std::time::Duration;
 use tokio_stream::StreamExt;
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_raw_subscribe_receives_heartbeats() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn raw_subscribe_receives_heartbeats_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
-        // HEARTBEAT message ID = 0
         let stream = vehicle.raw().subscribe_filtered(0);
         tokio::pin!(stream);
 
@@ -32,18 +28,16 @@ async fn sitl_raw_subscribe_receives_heartbeats() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_raw_request_message_autopilot_version() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn raw_request_message_autopilot_version_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
-        // AUTOPILOT_VERSION message ID = 148
         let msg = vehicle
             .raw()
             .request_message(148, Duration::from_secs(5))
@@ -58,16 +52,15 @@ async fn sitl_raw_request_message_autopilot_version() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_raw_subscribe_unfiltered_receives_multiple_types() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn raw_subscribe_unfiltered_receives_multiple_types_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let stream = vehicle.raw().subscribe();
         tokio::pin!(stream);
@@ -99,7 +92,7 @@ async fn sitl_raw_subscribe_unfiltered_receives_multiple_types() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }

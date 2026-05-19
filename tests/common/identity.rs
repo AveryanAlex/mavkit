@@ -1,13 +1,10 @@
-#[allow(dead_code)]
-mod common;
-
+use crate::{TestTarget, disconnect, setup_backend_vehicle};
 use mavkit::{AutopilotType, LinkState};
 use std::time::Duration;
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_vehicle_identity_is_ardupilot() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn vehicle_identity_is_ardupilot_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let identity = vehicle.identity();
 
@@ -26,16 +23,15 @@ async fn sitl_vehicle_identity_is_ardupilot() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_firmware_info_populates() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn firmware_info_populates_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let firmware = vehicle
             .info()
@@ -54,16 +50,15 @@ async fn sitl_firmware_info_populates() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_link_state_connected_after_setup() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn link_state_connected_after_setup_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let state = vehicle
             .link()
@@ -79,16 +74,15 @@ async fn sitl_link_state_connected_after_setup() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_persistent_identity_resolves() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn persistent_identity_resolves_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let _identity = vehicle
             .info()
@@ -101,7 +95,7 @@ async fn sitl_persistent_identity_resolves() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }

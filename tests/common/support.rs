@@ -1,13 +1,10 @@
-#[allow(dead_code)]
-mod common;
-
+use crate::{TestTarget, disconnect, setup_backend_vehicle};
 use mavkit::SupportState;
 use std::time::Duration;
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_support_command_int_resolves() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn sitl_support_command_int_resolves() {
+    let backend = setup_backend_vehicle(TestTarget::SITL_COPTER).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let state = vehicle
             .support()
@@ -24,16 +21,15 @@ async fn sitl_support_command_int_resolves() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_support_mission_fence_resolves() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn sitl_support_mission_fence_resolves() {
+    let backend = setup_backend_vehicle(TestTarget::SITL_COPTER).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let state = vehicle
             .support()
@@ -42,24 +38,21 @@ async fn sitl_support_mission_fence_resolves() {
             .await
             .map_err(|e| e.to_string())?;
 
-        // Fence support may legitimately stay Unknown on some SITL images;
-        // just verify the observation emits a value without timing out.
         let _ = state;
 
         Ok(())
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_support_mission_rally_resolves() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn sitl_support_mission_rally_resolves() {
+    let backend = setup_backend_vehicle(TestTarget::SITL_COPTER).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let state = vehicle
             .support()
@@ -76,16 +69,15 @@ async fn sitl_support_mission_rally_resolves() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_support_terrain_resolves() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn sitl_support_terrain_resolves() {
+    let backend = setup_backend_vehicle(TestTarget::SITL_COPTER).await;
+    let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
         let state = vehicle
             .support()
@@ -94,15 +86,13 @@ async fn sitl_support_terrain_resolves() {
             .await
             .map_err(|e| e.to_string())?;
 
-        // Terrain support may legitimately stay Unknown on some SITL images;
-        // just verify the observation emits a value without timing out.
         let _ = state;
 
         Ok(())
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }

@@ -41,6 +41,7 @@ serial = ["mavlink/transport-direct-serial"]
 ardupilot = []
 stream = ["async-trait"]
 byte-connection = ["async-trait"]
+sim = ["async-trait", "dep:serde_json"]
 wasm = ["byte-connection"]
 tlog = ["tokio/fs", "tokio/io-util"]
 
@@ -56,6 +57,7 @@ tracing = "0.1"
 serde = { version = "1", features = ["derive"] }
 async-trait = { version = "0.1", optional = true }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
+serde_json = { version = "1", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1", default-features = false, features = ["sync", "time", "rt", "macros"] }
@@ -94,3 +96,8 @@ required-features = ["tcp"]
 [[example]]
 name = "tlog_record"
 required-features = ["tlog", "udp"]
+
+[[bin]]
+name = "export_sim_params"
+path = "src/bin/export_sim_params.rs"
+required-features = ["sim"]

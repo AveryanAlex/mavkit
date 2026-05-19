@@ -1,32 +1,29 @@
-#[allow(dead_code)]
-mod common;
-
-use mavkit::{ParamOperationProgress, Vehicle};
+use crate::{TestTarget, disconnect, setup_backend_vehicle};
+use mavkit::{ParamOperationProgress, ParamStore, Vehicle};
 use std::time::Duration;
 
-async fn download_all(vehicle: &Vehicle) -> Result<mavkit::ParamStore, String> {
+async fn download_all_params(vehicle: &Vehicle) -> Result<ParamStore, String> {
     vehicle
         .params()
         .download_all()
-        .map_err(|e| e.to_string())?
+        .map_err(|err| err.to_string())?
         .wait()
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|err| err.to_string())
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_param_download_all() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn param_download_all_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
 
     let result: Result<(), String> = async {
-        let store = download_all(&vehicle).await?;
+        let store = download_all_params(vehicle).await?;
 
         if store.params.is_empty() {
-            return Err("expected non-empty param store".into());
+            return Err(String::from("expected non-empty param store"));
         }
         if store.expected_count == 0 {
-            return Err("expected non-zero expected_count".into());
+            return Err(String::from("expected non-zero expected_count"));
         }
         if store.params.len() != store.expected_count as usize {
             return Err(format!(
@@ -35,33 +32,31 @@ async fn sitl_param_download_all() {
                 store.expected_count
             ));
         }
-
         if !store.params.contains_key("SYSID_THISMAV") {
-            return Err("missing SYSID_THISMAV in downloaded params".into());
+            return Err(String::from("missing SYSID_THISMAV in downloaded params"));
         }
 
         Ok(())
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_param_write_and_readback() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn param_write_and_readback_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
 
     let result: Result<(), String> = async {
-        let store = download_all(&vehicle).await?;
+        let store = download_all_params(vehicle).await?;
 
         let original = store
             .params
             .get("SR0_EXTRA1")
-            .ok_or("SR0_EXTRA1 not found in params")?
+            .ok_or_else(|| String::from("SR0_EXTRA1 not found in params"))?
             .value;
 
         let new_value = if (original - 4.0).abs() < 0.01 {
@@ -74,10 +69,12 @@ async fn sitl_param_write_and_readback() {
             .params()
             .write("SR0_EXTRA1", new_value)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|err| err.to_string())?;
 
         if !confirmed.success {
-            return Err("single-parameter write did not report success".into());
+            return Err(String::from(
+                "single-parameter write did not report success",
+            ));
         }
         if (confirmed.confirmed_value - new_value).abs() > 0.01 {
             return Err(format!(
@@ -86,11 +83,11 @@ async fn sitl_param_write_and_readback() {
             ));
         }
 
-        let store = download_all(&vehicle).await?;
+        let store = download_all_params(vehicle).await?;
         let readback = store
             .params
             .get("SR0_EXTRA1")
-            .ok_or("SR0_EXTRA1 missing after write")?
+            .ok_or_else(|| String::from("SR0_EXTRA1 missing after write"))?
             .value;
 
         if (readback - new_value).abs() > 0.01 {
@@ -103,25 +100,80 @@ async fn sitl_param_write_and_readback() {
             .params()
             .write("SR0_EXTRA1", original)
             .await
-            .map_err(|e| e.to_string())?;
+            .map_err(|err| err.to_string())?;
 
         Ok(())
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_param_write_batch_and_readback() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn param_progress_during_download_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
 
     let result: Result<(), String> = async {
-        let store = download_all(&vehicle).await?;
+        let op = vehicle
+            .params()
+            .download_all()
+            .map_err(|err| err.to_string())?;
+
+        if !op
+            .latest()
+            .is_some_and(|progress| matches!(progress, ParamOperationProgress::Downloading { .. }))
+        {
+            let mut progress_stream = op.subscribe();
+            let deadline = tokio::time::sleep(Duration::from_secs(10));
+            tokio::pin!(deadline);
+            loop {
+                tokio::select! {
+                    _ = &mut deadline => {
+                        return Err(String::from("timed out waiting for param download progress"));
+                    }
+                    observed = progress_stream.recv() => {
+                        let progress = observed.ok_or_else(|| String::from("param progress stream closed before download progress"))?;
+                        if matches!(progress, ParamOperationProgress::Downloading { .. }) {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        let store = op.wait().await.map_err(|err| err.to_string())?;
+        if store.expected_count == 0 {
+            return Err(String::from(
+                "expected non-zero expected count in downloaded store",
+            ));
+        }
+
+        let progress = op.latest();
+        if !matches!(progress, Some(ParamOperationProgress::Completed)) {
+            return Err(format!(
+                "expected completed param progress after download, got {progress:?}"
+            ));
+        }
+
+        Ok(())
+    }
+    .await;
+
+    disconnect(backend).await;
+    if let Err(err) = result {
+        panic!("{err}");
+    }
+}
+
+pub async fn param_write_batch_and_readback_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
+
+    let result: Result<(), String> = async {
+        let store = download_all_params(vehicle).await?;
 
         let params_to_write: Vec<(&str, f32)> = vec![
             ("SR0_EXTRA1", 2.0),
@@ -174,7 +226,7 @@ async fn sitl_param_write_batch_and_readback() {
             }
         }
 
-        let store = download_all(&vehicle).await?;
+        let store = download_all_params(vehicle).await?;
         for (name, expected) in &params_to_write {
             let actual = store
                 .params
@@ -200,74 +252,18 @@ async fn sitl_param_write_batch_and_readback() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_param_progress_during_download() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn param_store_watch_updates_on_write_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
 
     let result: Result<(), String> = async {
-        let op = vehicle
-            .params()
-            .download_all()
-            .map_err(|e| e.to_string())?;
-
-        if !op
-            .latest()
-            .is_some_and(|progress| matches!(progress, ParamOperationProgress::Downloading { .. }))
-        {
-            let mut progress_stream = op.subscribe();
-            let deadline = tokio::time::sleep(Duration::from_secs(10));
-            tokio::pin!(deadline);
-            loop {
-                tokio::select! {
-                    _ = &mut deadline => {
-                        return Err(String::from("timed out waiting for param download progress"));
-                    }
-                    observed = progress_stream.recv() => {
-                        let progress = observed.ok_or("param progress stream closed before download progress")?;
-                        if matches!(progress, ParamOperationProgress::Downloading { .. }) {
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        let store = op.wait().await.map_err(|e| e.to_string())?;
-        if store.expected_count == 0 {
-            return Err("expected non-zero expected count in downloaded store".into());
-        }
-
-        let progress = op.latest();
-        if !matches!(progress, Some(ParamOperationProgress::Completed)) {
-            return Err(format!(
-                "expected completed param progress after download, got {progress:?}"
-            ));
-        }
-
-        Ok(())
-    }
-    .await;
-
-    let _ = vehicle.disconnect().await;
-    if let Err(err) = result {
-        panic!("{err}");
-    }
-}
-
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_param_store_watch_updates_on_write() {
-    let vehicle = common::setup_sitl_vehicle().await;
-
-    let result: Result<(), String> = async {
-        download_all(&vehicle).await?;
+        download_all_params(vehicle).await?;
 
         let original_store = vehicle
             .params()
@@ -321,20 +317,19 @@ async fn sitl_param_store_watch_updates_on_write() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_param_download_twice_is_consistent() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn param_download_twice_is_consistent_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
 
     let result: Result<(), String> = async {
-        let first = download_all(&vehicle).await?;
-        let second = download_all(&vehicle).await?;
+        let first = download_all_params(vehicle).await?;
+        let second = download_all_params(vehicle).await?;
 
         if first.expected_count != second.expected_count {
             return Err(format!(
@@ -368,28 +363,22 @@ async fn sitl_param_download_twice_is_consistent() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_param_write_nonexistent_returns_error() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn param_write_nonexistent_returns_error_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
 
     let result: Result<(), String> = async {
-        download_all(&vehicle).await?;
+        download_all_params(vehicle).await?;
 
-        match vehicle.params().write("ZZZZ_NONEXISTENT_PARAM", 42.0).await {
-            Ok(confirmed) => {
-                if confirmed.success {
-                    return Err("write to nonexistent param unexpectedly reported success".into());
-                }
-            }
-            Err(_) => {
-                // Also acceptable — the vehicle may reject outright.
+        if let Ok(confirmed) = vehicle.params().write("ZZZZ_NONEXISTENT_PARAM", 42.0).await {
+            if confirmed.success {
+                return Err("write to nonexistent param unexpectedly reported success".into());
             }
         }
 
@@ -397,16 +386,15 @@ async fn sitl_param_write_nonexistent_returns_error() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }
 }
 
-#[tokio::test]
-#[ignore = "requires ArduPilot SITL endpoint"]
-async fn sitl_param_subscribe_emits_on_download() {
-    let vehicle = common::setup_sitl_vehicle().await;
+pub async fn param_subscribe_emits_on_download_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
 
     let result: Result<(), String> = async {
         let mut sub = vehicle.params().subscribe();
@@ -421,7 +409,6 @@ async fn sitl_param_subscribe_emits_on_download() {
             item = sub.recv() => item.is_some(),
         };
 
-        // Ensure the download completes regardless of subscription outcome.
         let _ = op.wait().await;
 
         if !received {
@@ -432,7 +419,7 @@ async fn sitl_param_subscribe_emits_on_download() {
     }
     .await;
 
-    let _ = vehicle.disconnect().await;
+    disconnect(backend).await;
     if let Err(err) = result {
         panic!("{err}");
     }

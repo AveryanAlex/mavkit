@@ -21,6 +21,8 @@ pub mod rally;
 pub mod raw;
 pub(crate) mod runtime;
 mod shared_state;
+#[cfg(feature = "sim")]
+pub mod sim;
 mod state;
 mod stored_plan;
 #[cfg(feature = "stream")]

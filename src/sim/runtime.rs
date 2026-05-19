@@ -1,0 +1,141 @@
+use std::time::Duration;
+
+use tokio::sync::{mpsc, watch};
+
+use crate::error::VehicleError;
+
+use super::api::{DemoClock, DemoVehicleSnapshot};
+use super::state::{ControlMessage, DemoVehicleConfig, SimulatorCore};
+use super::transport::SimulatorEndpoints;
+
+pub(crate) async fn run_simulator(
+    config: DemoVehicleConfig,
+    mut endpoints: SimulatorEndpoints,
+    mut control_rx: mpsc::Receiver<ControlMessage>,
+    snapshot_tx: watch::Sender<DemoVehicleSnapshot>,
+    initial_snapshot: DemoVehicleSnapshot,
+) {
+    let mut simulator = SimulatorCore::new(
+        config.clone(),
+        endpoints.to_sdk_tx,
+        snapshot_tx,
+        initial_snapshot,
+    );
+    let _ = simulator.emit_bootstrap().await;
+
+    match config.clock {
+        DemoClock::RealTime => {
+            let tick_period = Duration::from_secs_f64(1.0 / f64::from(config.tick_hz));
+            let mut interval = tokio::time::interval(tick_period);
+            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+            interval.tick().await;
+
+            loop {
+                tokio::select! {
+                    maybe_message = endpoints.from_sdk_rx.recv() => {
+                        match maybe_message {
+                            Some((_header, message)) => {
+                                if simulator.handle_inbound_message(message).await.is_err() {
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
+                    maybe_control = control_rx.recv() => {
+                        match maybe_control {
+                            Some(control) => {
+                                if handle_control(&mut simulator, control).await {
+                                    break;
+                                }
+                            }
+                            None => break,
+                        }
+                    }
+                    _ = interval.tick() => {
+                        if simulator.advance_one_tick().await.is_err() {
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        DemoClock::Manual => loop {
+            tokio::select! {
+                maybe_message = endpoints.from_sdk_rx.recv() => {
+                    match maybe_message {
+                        Some((_header, message)) => {
+                            if simulator.handle_inbound_message(message).await.is_err() {
+                                break;
+                            }
+                        }
+                        None => break,
+                    }
+                }
+                maybe_control = control_rx.recv() => {
+                    match maybe_control {
+                        Some(control) => {
+                            if handle_control(&mut simulator, control).await {
+                                break;
+                            }
+                        }
+                        None => break,
+                    }
+                }
+            }
+        },
+    }
+}
+
+async fn handle_control(simulator: &mut SimulatorCore, control: ControlMessage) -> bool {
+    match control {
+        ControlMessage::Step { reply } => {
+            let result = simulator
+                .advance_one_tick()
+                .await
+                .map(|_| simulator.snapshot.clone());
+            let _ = reply.send(result);
+            false
+        }
+        ControlMessage::Shutdown { reply } => {
+            let _ = reply.send(Ok(()));
+            true
+        }
+    }
+}
+
+impl SimulatorCore {
+    pub(crate) async fn emit_bootstrap(&mut self) -> Result<(), VehicleError> {
+        self.emit_heartbeat().await?;
+        self.emit_current_mode().await?;
+        self.emit_home_and_origin().await?;
+        self.emit_telemetry_burst().await
+    }
+
+    pub(crate) async fn advance_one_tick(&mut self) -> Result<(), VehicleError> {
+        self.snapshot.time_boot_ms = self
+            .snapshot
+            .time_boot_ms
+            .saturating_add((1000 / self.config.tick_hz).max(1));
+        self.drive_mission_state().await?;
+        self.advance_navigation();
+        self.advance_power_model();
+        self.snapshot.roll_rad = (self.snapshot.time_boot_ms as f32 / 3000.0).sin() * 0.03;
+        self.snapshot.pitch_rad = (self.snapshot.time_boot_ms as f32 / 5000.0).cos() * 0.02;
+        self.publish_snapshot();
+
+        self.emit_heartbeat().await?;
+        self.emit_telemetry_burst().await?;
+        self.emit_configured_streams().await
+    }
+
+    async fn emit_configured_streams(&mut self) -> Result<(), VehicleError> {
+        let configured = self.stream_intervals_us.clone();
+        for (message_id, interval_us) in configured {
+            if interval_us > 0 {
+                self.emit_message_by_id(message_id).await?;
+            }
+        }
+        Ok(())
+    }
+}
