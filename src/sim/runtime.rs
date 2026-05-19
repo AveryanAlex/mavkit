@@ -125,16 +125,29 @@ impl SimulatorCore {
         self.publish_snapshot();
 
         self.emit_heartbeat().await?;
-        self.emit_telemetry_burst().await?;
+        self.emit_default_telemetry_burst().await?;
         self.emit_configured_streams().await
     }
 
     async fn emit_configured_streams(&mut self) -> Result<(), VehicleError> {
-        let configured = self.stream_intervals_us.clone();
-        for (message_id, interval_us) in configured {
-            if interval_us > 0 {
-                self.emit_message_by_id(message_id).await?;
+        let tick_elapsed_us = u64::from((1000 / self.config.tick_hz).max(1)) * 1000;
+        let mut due_message_ids = Vec::new();
+
+        for (message_id, schedule) in &mut self.stream_schedules {
+            if !schedule.is_enabled() {
+                continue;
             }
+
+            schedule.elapsed_us = schedule.elapsed_us.saturating_add(tick_elapsed_us);
+            let interval_us = schedule.interval_us as u64;
+            if schedule.elapsed_us >= interval_us {
+                schedule.elapsed_us %= interval_us;
+                due_message_ids.push(*message_id);
+            }
+        }
+
+        for message_id in due_message_ids {
+            self.emit_message_by_id(message_id).await?;
         }
         Ok(())
     }

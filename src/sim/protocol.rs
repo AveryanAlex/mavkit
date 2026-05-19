@@ -10,9 +10,24 @@ use super::dynamics::{
 use super::state::{
     ACCEPTANCE_RADIUS_M, AUTOPILOT_VERSION_MESSAGE_ID, AVAILABLE_MODES_MESSAGE_ID,
     DEFAULT_COMPONENT_ID, DEFAULT_SYSTEM_ID, GPS_GLOBAL_ORIGIN_MESSAGE_ID,
-    HOME_POSITION_MESSAGE_ID, NavSource, NavTarget, SimulatorCore, auto_mode, guided_mode,
-    health_sensors, profile_modes, profile_vehicle_type,
+    HOME_POSITION_MESSAGE_ID, NavSource, NavTarget, SimulatorCore, StreamSchedule, auto_mode,
+    guided_mode, health_sensors, profile_modes, profile_vehicle_type,
 };
+
+const DEFAULT_TELEMETRY_MESSAGE_IDS: [u32; 12] = [
+    33,
+    24,
+    30,
+    74,
+    1,
+    147,
+    65,
+    36,
+    62,
+    HOME_POSITION_MESSAGE_ID,
+    GPS_GLOBAL_ORIGIN_MESSAGE_ID,
+    42,
+];
 
 impl SimulatorCore {
     #[allow(
@@ -111,8 +126,8 @@ impl SimulatorCore {
             }
             dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL => {
                 let message_id = data.param1.max(0.0) as u32;
-                self.stream_intervals_us
-                    .insert(message_id, data.param2 as i32);
+                self.stream_schedules
+                    .insert(message_id, StreamSchedule::new(data.param2 as i64));
                 self.send_command_ack(data.command, dialect::MavResult::MAV_RESULT_ACCEPTED)
                     .await
             }
@@ -283,17 +298,19 @@ impl SimulatorCore {
     }
 
     pub(crate) async fn emit_telemetry_burst(&mut self) -> Result<(), VehicleError> {
-        self.emit_global_position_int().await?;
-        self.emit_gps_raw_int().await?;
-        self.emit_attitude().await?;
-        self.emit_vfr_hud().await?;
-        self.emit_sys_status().await?;
-        self.emit_battery_status().await?;
-        self.emit_rc_channels().await?;
-        self.emit_servo_output_raw().await?;
-        self.emit_nav_controller_output().await?;
-        self.emit_home_and_origin().await?;
-        self.emit_mission_current().await
+        for message_id in DEFAULT_TELEMETRY_MESSAGE_IDS {
+            self.emit_message_by_id(message_id).await?;
+        }
+        Ok(())
+    }
+
+    pub(crate) async fn emit_default_telemetry_burst(&mut self) -> Result<(), VehicleError> {
+        for message_id in DEFAULT_TELEMETRY_MESSAGE_IDS {
+            if !self.stream_schedules.contains_key(&message_id) {
+                self.emit_message_by_id(message_id).await?;
+            }
+        }
+        Ok(())
     }
 
     async fn emit_global_position_int(&mut self) -> Result<(), VehicleError> {
@@ -645,7 +662,9 @@ mod tests {
     use crate::sim::state::{DemoVehicleConfig, default_mode};
     use crate::sim::{DemoClock, DemoProfile, DemoVehicleSnapshot};
 
-    fn sim_core() -> (
+    fn sim_core_with_tick_hz(
+        tick_hz: u32,
+    ) -> (
         SimulatorCore,
         mpsc::Receiver<(MavHeader, dialect::MavMessage)>,
     ) {
@@ -669,13 +688,13 @@ mod tests {
             mission_current_wire_seq: 0,
             mission_total_wire_items: 0,
         };
-        let (outbound_tx, outbound_rx) = mpsc::channel(16);
+        let (outbound_tx, outbound_rx) = mpsc::channel(128);
         let (snapshot_tx, _snapshot_rx) = watch::channel(snapshot.clone());
         let sim = SimulatorCore::new(
             DemoVehicleConfig {
                 profile: DemoProfile::ArduCopter,
                 clock: DemoClock::Manual,
-                tick_hz: 1,
+                tick_hz,
                 home,
             },
             outbound_tx,
@@ -684,6 +703,46 @@ mod tests {
         );
 
         (sim, outbound_rx)
+    }
+
+    fn sim_core() -> (
+        SimulatorCore,
+        mpsc::Receiver<(MavHeader, dialect::MavMessage)>,
+    ) {
+        sim_core_with_tick_hz(1)
+    }
+
+    fn command_long(command: dialect::MavCmd, param1: f32, param2: f32) -> dialect::MavMessage {
+        dialect::MavMessage::COMMAND_LONG(dialect::COMMAND_LONG_DATA {
+            target_system: DEFAULT_SYSTEM_ID,
+            target_component: DEFAULT_COMPONENT_ID,
+            command,
+            confirmation: 0,
+            param1,
+            param2,
+            param3: 0.0,
+            param4: 0.0,
+            param5: 0.0,
+            param6: 0.0,
+            param7: 0.0,
+        })
+    }
+
+    fn drain_message_ids(
+        outbound_rx: &mut mpsc::Receiver<(MavHeader, dialect::MavMessage)>,
+    ) -> Vec<u32> {
+        let mut message_ids = Vec::new();
+        while let Ok((_header, message)) = outbound_rx.try_recv() {
+            message_ids.push(message.message_id());
+        }
+        message_ids
+    }
+
+    fn count_message_id(message_ids: &[u32], expected: u32) -> usize {
+        message_ids
+            .iter()
+            .filter(|message_id| **message_id == expected)
+            .count()
     }
 
     #[tokio::test]
@@ -735,5 +794,88 @@ mod tests {
         assert!(seen.contains(&147));
         assert!(seen.contains(&65));
         assert!(seen.contains(&36));
+    }
+
+    #[tokio::test]
+    async fn configured_stream_emits_on_tick_cadence() {
+        let (mut sim, mut outbound_rx) = sim_core_with_tick_hz(10);
+
+        sim.handle_inbound_message(command_long(
+            dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
+            AUTOPILOT_VERSION_MESSAGE_ID as f32,
+            300_000.0,
+        ))
+        .await
+        .unwrap();
+        drain_message_ids(&mut outbound_rx);
+
+        let mut autopilot_version_counts = Vec::new();
+        for _ in 0..6 {
+            sim.advance_one_tick().await.unwrap();
+            let message_ids = drain_message_ids(&mut outbound_rx);
+            autopilot_version_counts
+                .push(count_message_id(&message_ids, AUTOPILOT_VERSION_MESSAGE_ID));
+        }
+
+        assert_eq!(autopilot_version_counts, vec![0, 0, 1, 0, 0, 1]);
+    }
+
+    #[tokio::test]
+    async fn disabled_configured_default_stream_is_not_emitted_on_ticks() {
+        let (mut sim, mut outbound_rx) = sim_core();
+
+        sim.handle_inbound_message(command_long(
+            dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
+            30.0,
+            1_000.0,
+        ))
+        .await
+        .unwrap();
+        drain_message_ids(&mut outbound_rx);
+        sim.advance_one_tick().await.unwrap();
+        let enabled_tick_ids = drain_message_ids(&mut outbound_rx);
+        assert_eq!(count_message_id(&enabled_tick_ids, 30), 1);
+
+        sim.handle_inbound_message(command_long(
+            dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
+            30.0,
+            0.0,
+        ))
+        .await
+        .unwrap();
+        drain_message_ids(&mut outbound_rx);
+        sim.advance_one_tick().await.unwrap();
+        let disabled_tick_ids = drain_message_ids(&mut outbound_rx);
+
+        assert_eq!(count_message_id(&disabled_tick_ids, 30), 0);
+        assert!(disabled_tick_ids.contains(&33));
+    }
+
+    #[tokio::test]
+    async fn request_message_emits_immediately_even_when_stream_disabled() {
+        let (mut sim, mut outbound_rx) = sim_core();
+
+        sim.handle_inbound_message(command_long(
+            dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
+            AUTOPILOT_VERSION_MESSAGE_ID as f32,
+            -1.0,
+        ))
+        .await
+        .unwrap();
+        drain_message_ids(&mut outbound_rx);
+
+        sim.handle_inbound_message(command_long(
+            dialect::MavCmd::MAV_CMD_REQUEST_MESSAGE,
+            AUTOPILOT_VERSION_MESSAGE_ID as f32,
+            0.0,
+        ))
+        .await
+        .unwrap();
+        let message_ids = drain_message_ids(&mut outbound_rx);
+
+        assert_eq!(
+            count_message_id(&message_ids, AUTOPILOT_VERSION_MESSAGE_ID),
+            1
+        );
     }
 }

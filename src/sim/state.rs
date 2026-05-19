@@ -95,7 +95,7 @@ pub(crate) struct SimulatorCore {
     pub(crate) outbound_tx: mpsc::Sender<(MavHeader, dialect::MavMessage)>,
     pub(crate) snapshot_tx: watch::Sender<DemoVehicleSnapshot>,
     pub(crate) header_sequence: u8,
-    pub(crate) stream_intervals_us: BTreeMap<u32, i32>,
+    pub(crate) stream_schedules: BTreeMap<u32, StreamSchedule>,
     pub(crate) params: Vec<SimParam>,
     pub(crate) missions: MissionStores,
     pub(crate) pending_upload: Option<PendingMissionUpload>,
@@ -105,6 +105,25 @@ pub(crate) struct SimulatorCore {
     pub(crate) mission_completed: bool,
     pub(crate) pending_reached_wire_seq: Option<u16>,
     pub(crate) mission_speed_override_mps: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct StreamSchedule {
+    pub(crate) interval_us: i64,
+    pub(crate) elapsed_us: u64,
+}
+
+impl StreamSchedule {
+    pub(crate) fn new(interval_us: i64) -> Self {
+        Self {
+            interval_us,
+            elapsed_us: 0,
+        }
+    }
+
+    pub(crate) fn is_enabled(self) -> bool {
+        self.interval_us > 0
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -128,7 +147,7 @@ impl SimulatorCore {
             outbound_tx,
             snapshot_tx,
             header_sequence: 0,
-            stream_intervals_us: BTreeMap::new(),
+            stream_schedules: BTreeMap::new(),
             params: seeded_params(profile),
             missions: MissionStores {
                 mission: Vec::new(),
