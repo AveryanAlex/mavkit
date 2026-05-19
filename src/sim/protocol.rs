@@ -191,19 +191,42 @@ impl SimulatorCore {
             return Ok(());
         }
 
-        if data.command == dialect::MavCmd::MAV_CMD_DO_SET_HOME {
-            self.snapshot.home.latitude_deg = f64::from(data.x) / 1e7;
-            self.snapshot.home.longitude_deg = f64::from(data.y) / 1e7;
-            self.snapshot.home.altitude_m = f64::from(data.z);
-            self.snapshot.relative_alt_m =
-                self.snapshot.altitude_msl_m - self.snapshot.home.altitude_m;
-            self.publish_snapshot();
-            self.send_command_ack(data.command, dialect::MavResult::MAV_RESULT_ACCEPTED)
-                .await?;
-            self.emit_home_and_origin().await
-        } else {
-            self.send_command_ack(data.command, dialect::MavResult::MAV_RESULT_UNSUPPORTED)
-                .await
+        match data.command {
+            dialect::MavCmd::MAV_CMD_DO_SET_HOME => {
+                self.snapshot.home.latitude_deg = f64::from(data.x) / 1e7;
+                self.snapshot.home.longitude_deg = f64::from(data.y) / 1e7;
+                self.snapshot.home.altitude_m = f64::from(data.z);
+                self.snapshot.relative_alt_m =
+                    self.snapshot.altitude_msl_m - self.snapshot.home.altitude_m;
+                self.publish_snapshot();
+                self.send_command_ack(data.command, dialect::MavResult::MAV_RESULT_ACCEPTED)
+                    .await?;
+                self.emit_home_and_origin().await
+            }
+            dialect::MavCmd::MAV_CMD_DO_REPOSITION => {
+                let altitude_msl_m = match data.frame {
+                    dialect::MavFrame::MAV_FRAME_GLOBAL_RELATIVE_ALT => {
+                        self.snapshot.home.altitude_m + f64::from(data.z)
+                    }
+                    _ => f64::from(data.z),
+                };
+
+                self.nav_target = Some(NavTarget {
+                    source: NavSource::Guided,
+                    latitude_deg: f64::from(data.x) / 1e7,
+                    longitude_deg: f64::from(data.y) / 1e7,
+                    altitude_msl_m,
+                    acceptance_radius_m: ACCEPTANCE_RADIUS_M,
+                    wire_seq: None,
+                    disarm_on_reach: false,
+                });
+                self.send_command_ack(data.command, dialect::MavResult::MAV_RESULT_ACCEPTED)
+                    .await
+            }
+            _ => {
+                self.send_command_ack(data.command, dialect::MavResult::MAV_RESULT_UNSUPPORTED)
+                    .await
+            }
         }
     }
 
