@@ -138,11 +138,28 @@ impl SimulatorCore {
         );
         let up_m = target.altitude_msl_m - self.snapshot.altitude_msl_m;
         let horizontal_distance_m = (north_m * north_m + east_m * east_m).sqrt();
+        let altitude_acceptance_m = target.acceptance_radius_m.max(TAKEOFF_ALT_MARGIN_M);
 
         if horizontal_distance_m <= target.acceptance_radius_m
-            && up_m.abs() <= target.acceptance_radius_m.max(TAKEOFF_ALT_MARGIN_M)
+            && up_m.abs() <= altitude_acceptance_m
         {
             self.finish_nav_target(target);
+            return;
+        }
+
+        if horizontal_distance_m <= target.acceptance_radius_m {
+            let step_up_m = self.clamped_vertical_step(up_m, dt_s);
+            self.snapshot.altitude_msl_m += step_up_m;
+            self.snapshot.relative_alt_m =
+                self.snapshot.altitude_msl_m - self.snapshot.home.altitude_m;
+            self.velocity = VelocityNed {
+                north_mps: 0.0,
+                east_mps: 0.0,
+                down_mps: -step_up_m / dt_s,
+            };
+            if (up_m - step_up_m).abs() <= altitude_acceptance_m {
+                self.finish_nav_target(target);
+            }
             return;
         }
 
@@ -153,8 +170,15 @@ impl SimulatorCore {
         self.snapshot.yaw_rad = wrap_angle(self.snapshot.yaw_rad + yaw_step);
 
         let speed_mps = self.cruise_speed_mps(Some(target));
-        let step_north_m = f64::from(self.snapshot.yaw_rad.cos()) * speed_mps * dt_s;
-        let step_east_m = f64::from(self.snapshot.yaw_rad.sin()) * speed_mps * dt_s;
+        let horizontal_step_limit_m = speed_mps * dt_s;
+        let (step_north_m, step_east_m) = if horizontal_distance_m <= horizontal_step_limit_m {
+            (north_m, east_m)
+        } else {
+            (
+                f64::from(self.snapshot.yaw_rad.cos()) * horizontal_step_limit_m,
+                f64::from(self.snapshot.yaw_rad.sin()) * horizontal_step_limit_m,
+            )
+        };
         let step_up_m = self.clamped_vertical_step(up_m, dt_s);
 
         apply_horizontal_step(
@@ -170,6 +194,20 @@ impl SimulatorCore {
             east_mps: step_east_m / dt_s,
             down_mps: -step_up_m / dt_s,
         };
+
+        let (remaining_north_m, remaining_east_m) = lat_lon_delta_m(
+            self.snapshot.latitude_deg,
+            self.snapshot.longitude_deg,
+            target.latitude_deg,
+            target.longitude_deg,
+        );
+        let remaining_horizontal_m =
+            (remaining_north_m * remaining_north_m + remaining_east_m * remaining_east_m).sqrt();
+        if remaining_horizontal_m <= target.acceptance_radius_m
+            && (up_m - step_up_m).abs() <= altitude_acceptance_m
+        {
+            self.finish_nav_target(target);
+        }
     }
 
     fn finish_nav_target(&mut self, target: NavTarget) {
@@ -516,6 +554,71 @@ mod tests {
         assert!(sim.snapshot.yaw_rad < std::f32::consts::FRAC_PI_2);
         assert!(sim.snapshot.latitude_deg > sim.snapshot.home.latitude_deg);
         assert!(sim.snapshot.longitude_deg > sim.snapshot.home.longitude_deg);
+    }
+
+    #[test]
+    fn plane_close_guided_target_completes_without_overshoot() {
+        let mut sim = sim_core(DemoProfile::ArduPlane);
+        sim.snapshot.armed = true;
+        sim.snapshot.custom_mode = guided_mode(sim.config.profile);
+        sim.nav_target = Some(NavTarget {
+            source: NavSource::Guided,
+            latitude_deg: 42.000_005,
+            longitude_deg: -71.0,
+            altitude_msl_m: 100.0,
+            acceptance_radius_m: 0.2,
+            wire_seq: None,
+            disarm_on_reach: false,
+        });
+
+        sim.advance_navigation();
+
+        assert!((sim.snapshot.latitude_deg - 42.000_005).abs() < 1e-12);
+        assert_eq!(sim.snapshot.longitude_deg, -71.0);
+        assert_eq!(horizontal_speed_mps(sim.velocity), 0.0);
+    }
+
+    #[test]
+    fn quadplane_close_guided_target_completes_without_overshoot() {
+        let mut sim = sim_core(DemoProfile::ArduQuadPlane);
+        sim.snapshot.armed = true;
+        sim.snapshot.custom_mode = guided_mode(sim.config.profile);
+        sim.nav_target = Some(NavTarget {
+            source: NavSource::Guided,
+            latitude_deg: 42.000_005,
+            longitude_deg: -71.0,
+            altitude_msl_m: 100.0,
+            acceptance_radius_m: 0.2,
+            wire_seq: None,
+            disarm_on_reach: false,
+        });
+
+        sim.advance_navigation();
+
+        assert!((sim.snapshot.latitude_deg - 42.000_005).abs() < 1e-12);
+        assert_eq!(sim.snapshot.longitude_deg, -71.0);
+        assert_eq!(horizontal_speed_mps(sim.velocity), 0.0);
+    }
+
+    #[test]
+    fn close_plane_mission_target_sets_pending_reached_sequence() {
+        let mut sim = sim_core(DemoProfile::ArduPlane);
+        sim.snapshot.armed = true;
+        sim.snapshot.custom_mode = auto_mode(sim.config.profile);
+        sim.nav_target = Some(NavTarget {
+            source: NavSource::Mission,
+            latitude_deg: 42.000_005,
+            longitude_deg: -71.0,
+            altitude_msl_m: 100.0,
+            acceptance_radius_m: 0.2,
+            wire_seq: Some(7),
+            disarm_on_reach: false,
+        });
+
+        sim.advance_navigation();
+
+        assert_eq!(sim.pending_reached_wire_seq, Some(7));
+        assert!(sim.nav_target.is_none());
     }
 
     #[test]
