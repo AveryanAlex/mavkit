@@ -1,5 +1,6 @@
 use super::*;
 use crate::dialect;
+use crate::modes::catalog::static_catalog;
 use crate::state::{AutopilotType, VehicleState, VehicleType};
 
 #[test]
@@ -132,6 +133,29 @@ fn mode_name_unknown_ardupilot_uses_mode_fallback() {
     assert_eq!(
         mode_name(AutopilotType::ArduPilotMega, VehicleType::Quadrotor, 999),
         "MODE(999)"
+    );
+}
+
+#[test]
+fn fixed_wing_static_catalog_does_not_expose_quadplane_q_modes() {
+    let catalog = static_catalog(AutopilotType::ArduPilotMega, VehicleType::FixedWing);
+
+    assert!(!catalog.iter().any(|mode| mode.name.starts_with('Q')));
+}
+
+#[test]
+fn vtol_static_catalog_exposes_quadplane_q_modes() {
+    let catalog = static_catalog(AutopilotType::ArduPilotMega, VehicleType::Vtol);
+
+    assert!(
+        catalog
+            .iter()
+            .any(|mode| mode.custom_mode == 17 && mode.name == "QSTABILIZE")
+    );
+    assert!(
+        catalog
+            .iter()
+            .any(|mode| mode.custom_mode == 19 && mode.name == "QLOITER")
     );
 }
 

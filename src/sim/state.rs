@@ -229,7 +229,22 @@ pub(crate) fn profile_modes(profile: DemoProfile) -> &'static [(u32, &'static st
             (21, "SMART_RTL"),
             (27, "AUTO_RTL"),
         ],
-        DemoProfile::ArduPlane | DemoProfile::ArduQuadPlane => &[
+        DemoProfile::ArduPlane => &[
+            (0, "MANUAL"),
+            (1, "CIRCLE"),
+            (2, "STABILIZE"),
+            (3, "TRAINING"),
+            (4, "ACRO"),
+            (5, "FLY_BY_WIRE_A"),
+            (6, "FLY_BY_WIRE_B"),
+            (7, "CRUISE"),
+            (8, "AUTOTUNE"),
+            (10, "AUTO"),
+            (11, "RTL"),
+            (12, "LOITER"),
+            (15, "GUIDED"),
+        ],
+        DemoProfile::ArduQuadPlane => &[
             (0, "MANUAL"),
             (1, "CIRCLE"),
             (2, "STABILIZE"),
@@ -250,6 +265,12 @@ pub(crate) fn profile_modes(profile: DemoProfile) -> &'static [(u32, &'static st
             (21, "QRTL"),
         ],
     }
+}
+
+pub(crate) fn is_supported_custom_mode(profile: DemoProfile, custom_mode: u32) -> bool {
+    profile_modes(profile)
+        .iter()
+        .any(|(mode, _name)| *mode == custom_mode)
 }
 
 pub(crate) fn profile_vehicle_type(profile: DemoProfile) -> dialect::MavType {
@@ -316,6 +337,37 @@ mod tests {
                 dialect::MavMissionType::MAV_MISSION_TYPE_ALL,
             ),
             MissionType::Mission
+        );
+    }
+
+    #[test]
+    fn plane_catalog_does_not_expose_quadplane_q_modes() {
+        let plane_modes = profile_modes(DemoProfile::ArduPlane);
+
+        assert!(
+            !plane_modes
+                .iter()
+                .any(|(_mode, name)| name.starts_with('Q'))
+        );
+        assert!(!is_supported_custom_mode(
+            DemoProfile::ArduPlane,
+            QUADPLANE_QLOITER_MODE
+        ));
+    }
+
+    #[test]
+    fn quadplane_catalog_exposes_q_modes() {
+        let quadplane_modes = profile_modes(DemoProfile::ArduQuadPlane);
+
+        assert!(
+            quadplane_modes.iter().any(|(mode, name)| {
+                *mode == QUADPLANE_QSTABILIZE_MODE && *name == "QSTABILIZE"
+            })
+        );
+        assert!(
+            quadplane_modes
+                .iter()
+                .any(|(mode, name)| *mode == QUADPLANE_QLOITER_MODE && *name == "QLOITER")
         );
     }
 }

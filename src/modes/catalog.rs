@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 pub(super) enum VehicleClass {
     Copter,
     Plane,
+    QuadPlane,
     Rover,
     Unknown,
 }
@@ -19,7 +20,8 @@ pub(super) fn vehicle_class(vehicle_type: VehicleType) -> VehicleClass {
         | VehicleType::Tricopter
         | VehicleType::Coaxial
         | VehicleType::Helicopter => VehicleClass::Copter,
-        VehicleType::FixedWing | VehicleType::Vtol => VehicleClass::Plane,
+        VehicleType::FixedWing => VehicleClass::Plane,
+        VehicleType::Vtol => VehicleClass::QuadPlane,
         VehicleType::GroundRover => VehicleClass::Rover,
         _ => VehicleClass::Unknown,
     }
@@ -45,6 +47,22 @@ pub(super) const COPTER_MODES: &[(u32, &str)] = &[
 ];
 
 pub(super) const PLANE_MODES: &[(u32, &str)] = &[
+    (0, "MANUAL"),
+    (1, "CIRCLE"),
+    (2, "STABILIZE"),
+    (3, "TRAINING"),
+    (4, "ACRO"),
+    (5, "FLY_BY_WIRE_A"),
+    (6, "FLY_BY_WIRE_B"),
+    (7, "CRUISE"),
+    (8, "AUTOTUNE"),
+    (10, "AUTO"),
+    (11, "RTL"),
+    (12, "LOITER"),
+    (15, "GUIDED"),
+];
+
+pub(super) const QUADPLANE_MODES: &[(u32, &str)] = &[
     (0, "MANUAL"),
     (1, "CIRCLE"),
     (2, "STABILIZE"),
@@ -90,6 +108,7 @@ pub(super) fn mode_table(
     match vehicle_class(vehicle_type) {
         VehicleClass::Copter | VehicleClass::Unknown => COPTER_MODES,
         VehicleClass::Plane => PLANE_MODES,
+        VehicleClass::QuadPlane => QUADPLANE_MODES,
         VehicleClass::Rover => ROVER_MODES,
     }
 }

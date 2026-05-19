@@ -11,7 +11,7 @@ use super::state::{
     ACCEPTANCE_RADIUS_M, AUTOPILOT_VERSION_MESSAGE_ID, AVAILABLE_MODES_MESSAGE_ID,
     DEFAULT_COMPONENT_ID, DEFAULT_SYSTEM_ID, GPS_GLOBAL_ORIGIN_MESSAGE_ID,
     HOME_POSITION_MESSAGE_ID, NavSource, NavTarget, SimulatorCore, StreamSchedule, auto_mode,
-    guided_mode, health_sensors, profile_modes, profile_vehicle_type,
+    guided_mode, health_sensors, is_supported_custom_mode, profile_modes, profile_vehicle_type,
 };
 
 const DEFAULT_TELEMETRY_MESSAGE_IDS: [u32; 12] = [
@@ -102,7 +102,14 @@ impl SimulatorCore {
                 self.emit_heartbeat().await
             }
             dialect::MavCmd::MAV_CMD_DO_SET_MODE => {
-                self.snapshot.custom_mode = data.param2.max(0.0) as u32;
+                let custom_mode = data.param2.max(0.0) as u32;
+                if !is_supported_custom_mode(self.config.profile, custom_mode) {
+                    return self
+                        .send_command_ack(data.command, dialect::MavResult::MAV_RESULT_DENIED)
+                        .await;
+                }
+
+                self.snapshot.custom_mode = custom_mode;
                 if self.snapshot.custom_mode != guided_mode(self.config.profile)
                     && self
                         .nav_target
@@ -659,10 +666,13 @@ mod tests {
 
     use super::*;
     use crate::mission::HomePosition;
-    use crate::sim::state::{DemoVehicleConfig, default_mode};
+    use crate::sim::state::{
+        COPTER_GUIDED_MODE, DemoVehicleConfig, QUADPLANE_QLOITER_MODE, default_mode,
+    };
     use crate::sim::{DemoClock, DemoProfile, DemoVehicleSnapshot};
 
     fn sim_core_with_tick_hz(
+        profile: DemoProfile,
         tick_hz: u32,
     ) -> (
         SimulatorCore,
@@ -676,7 +686,7 @@ mod tests {
         let snapshot = DemoVehicleSnapshot {
             time_boot_ms: 0,
             armed: false,
-            custom_mode: default_mode(DemoProfile::ArduCopter),
+            custom_mode: default_mode(profile),
             home: home.clone(),
             latitude_deg: home.latitude_deg,
             longitude_deg: home.longitude_deg,
@@ -692,7 +702,7 @@ mod tests {
         let (snapshot_tx, _snapshot_rx) = watch::channel(snapshot.clone());
         let sim = SimulatorCore::new(
             DemoVehicleConfig {
-                profile: DemoProfile::ArduCopter,
+                profile,
                 clock: DemoClock::Manual,
                 tick_hz,
                 home,
@@ -709,7 +719,7 @@ mod tests {
         SimulatorCore,
         mpsc::Receiver<(MavHeader, dialect::MavMessage)>,
     ) {
-        sim_core_with_tick_hz(1)
+        sim_core_with_tick_hz(DemoProfile::ArduCopter, 1)
     }
 
     fn command_long(command: dialect::MavCmd, param1: f32, param2: f32) -> dialect::MavMessage {
@@ -743,6 +753,70 @@ mod tests {
             .iter()
             .filter(|message_id| **message_id == expected)
             .count()
+    }
+
+    #[tokio::test]
+    async fn do_set_mode_rejects_unsupported_custom_mode_without_state_change() {
+        let (mut sim, mut outbound_rx) = sim_core();
+        let original_mode = sim.snapshot.custom_mode;
+
+        sim.handle_inbound_message(command_long(
+            dialect::MavCmd::MAV_CMD_DO_SET_MODE,
+            1.0,
+            999.0,
+        ))
+        .await
+        .unwrap();
+
+        let ack = match outbound_rx.recv().await.unwrap().1 {
+            dialect::MavMessage::COMMAND_ACK(data) => data,
+            message => panic!("expected COMMAND_ACK, got {message:?}"),
+        };
+        assert_eq!(ack.command, dialect::MavCmd::MAV_CMD_DO_SET_MODE);
+        assert_eq!(ack.result, dialect::MavResult::MAV_RESULT_DENIED);
+        assert_eq!(sim.snapshot.custom_mode, original_mode);
+        assert!(outbound_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn plane_do_set_mode_rejects_quadplane_q_mode_without_state_change() {
+        let (mut sim, mut outbound_rx) = sim_core_with_tick_hz(DemoProfile::ArduPlane, 1);
+        let original_mode = sim.snapshot.custom_mode;
+
+        sim.handle_inbound_message(command_long(
+            dialect::MavCmd::MAV_CMD_DO_SET_MODE,
+            1.0,
+            QUADPLANE_QLOITER_MODE as f32,
+        ))
+        .await
+        .unwrap();
+
+        let ack = match outbound_rx.recv().await.unwrap().1 {
+            dialect::MavMessage::COMMAND_ACK(data) => data,
+            message => panic!("expected COMMAND_ACK, got {message:?}"),
+        };
+        assert_eq!(ack.result, dialect::MavResult::MAV_RESULT_DENIED);
+        assert_eq!(sim.snapshot.custom_mode, original_mode);
+    }
+
+    #[tokio::test]
+    async fn do_set_mode_accepts_supported_custom_mode() {
+        let (mut sim, mut outbound_rx) = sim_core();
+
+        sim.handle_inbound_message(command_long(
+            dialect::MavCmd::MAV_CMD_DO_SET_MODE,
+            1.0,
+            COPTER_GUIDED_MODE as f32,
+        ))
+        .await
+        .unwrap();
+
+        let ack = match outbound_rx.recv().await.unwrap().1 {
+            dialect::MavMessage::COMMAND_ACK(data) => data,
+            message => panic!("expected COMMAND_ACK, got {message:?}"),
+        };
+        assert_eq!(ack.result, dialect::MavResult::MAV_RESULT_ACCEPTED);
+        assert_eq!(sim.snapshot.custom_mode, COPTER_GUIDED_MODE);
     }
 
     #[tokio::test]
@@ -798,7 +872,7 @@ mod tests {
 
     #[tokio::test]
     async fn configured_stream_emits_on_tick_cadence() {
-        let (mut sim, mut outbound_rx) = sim_core_with_tick_hz(10);
+        let (mut sim, mut outbound_rx) = sim_core_with_tick_hz(DemoProfile::ArduCopter, 10);
 
         sim.handle_inbound_message(command_long(
             dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,

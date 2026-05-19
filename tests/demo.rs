@@ -6,8 +6,10 @@ use common::backend::BackendVehicle;
 use common::fixtures::sample_plan_mission;
 use common::wait::wait_for_telemetry;
 use mavkit::VehicleConfig;
+use mavkit::dialect;
 use mavkit::sim::DemoProfile;
 use mavkit::sim::{DemoClock, DemoVehicle};
+use mavkit::{CommandResult, VehicleError};
 use std::time::Duration;
 use tokio_stream::StreamExt;
 
@@ -107,6 +109,25 @@ async fn setup_backend_vehicle(target: TestTarget) -> BackendVehicle {
 
 async fn disconnect(backend: BackendVehicle) {
     common::backend::disconnect(backend).await;
+}
+
+async fn mode_catalog_names(target: TestTarget) -> Vec<String> {
+    let backend = setup_backend_vehicle(target).await;
+    let result = backend
+        .vehicle
+        .available_modes()
+        .catalog()
+        .wait_timeout(Duration::from_secs(10))
+        .await
+        .map(|catalog| {
+            catalog
+                .into_iter()
+                .map(|mode| mode.name)
+                .collect::<Vec<_>>()
+        });
+
+    disconnect(backend).await;
+    result.expect("mode catalog should be available")
 }
 
 macro_rules! demo_case {
@@ -338,6 +359,69 @@ demo_case!(
     common::modes::set_flight_mode_case,
     TestTarget::SIM_COPTER
 );
+
+#[tokio::test]
+async fn demo_set_invalid_custom_mode_rejected_without_state_change() {
+    let backend = setup_backend_vehicle(TestTarget::SIM_COPTER).await;
+    let vehicle = &backend.vehicle;
+    let result: Result<(), String> = async {
+        let demo_handle = backend
+            .demo_handle
+            .as_ref()
+            .ok_or_else(|| String::from("demo handle unavailable"))?;
+        let before = demo_handle.snapshot().custom_mode;
+        let err = vehicle
+            .set_mode(999)
+            .await
+            .expect_err("invalid custom mode should be rejected");
+
+        match err {
+            VehicleError::CommandRejected { command, result } => {
+                if command != dialect::MavCmd::MAV_CMD_DO_SET_MODE as u16 {
+                    return Err(format!(
+                        "expected DO_SET_MODE rejection, got command {command}"
+                    ));
+                }
+                if result != CommandResult::Denied {
+                    return Err(format!("expected denied result, got {result}"));
+                }
+            }
+            other => return Err(format!("expected command rejection, got {other}")),
+        }
+
+        let after = demo_handle.snapshot().custom_mode;
+        if after != before {
+            return Err(format!(
+                "invalid mode changed simulator custom_mode from {before} to {after}"
+            ));
+        }
+
+        Ok(())
+    }
+    .await;
+
+    disconnect(backend).await;
+    if let Err(err) = result {
+        panic!("{err}");
+    }
+}
+
+#[tokio::test]
+async fn demo_plane_and_quadplane_mode_catalogs_are_profile_specific() {
+    let plane_modes = mode_catalog_names(TestTarget::SIM_PLANE).await;
+    let quadplane_modes = mode_catalog_names(TestTarget::SIM_QUADPLANE).await;
+
+    for q_mode in ["QSTABILIZE", "QHOVER", "QLOITER", "QLAND", "QRTL"] {
+        assert!(
+            !plane_modes.iter().any(|mode| mode == q_mode),
+            "plane catalog unexpectedly exposed {q_mode}"
+        );
+        assert!(
+            quadplane_modes.iter().any(|mode| mode == q_mode),
+            "quadplane catalog did not expose {q_mode}"
+        );
+    }
+}
 
 demo_case!(
     demo_param_download_all,
