@@ -426,7 +426,14 @@ pub(crate) fn seeded_params(profile: DemoProfile) -> Vec<SimParam> {
 }
 
 impl SimulatorCore {
-    pub(crate) async fn handle_param_request_list(&mut self) -> Result<(), VehicleError> {
+    pub(crate) async fn handle_param_request_list(
+        &mut self,
+        data: dialect::PARAM_REQUEST_LIST_DATA,
+    ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         let param_values: Vec<_> = (0..self.params.len())
             .map(|index| param_value_message(&self.params, index))
             .collect();
@@ -442,6 +449,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::PARAM_REQUEST_READ_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         let selected = match data.param_id.to_str() {
             Ok(requested_name) if !requested_name.is_empty() => {
                 param_index_by_name(&self.params, requested_name)
@@ -464,6 +475,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::PARAM_SET_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         let requested_name = data.param_id.to_str().unwrap_or("");
         if let Some(index) =
             set_param_value_by_name(&mut self.params, requested_name, data.param_value)
@@ -480,7 +495,66 @@ impl SimulatorCore {
 
 #[cfg(test)]
 mod tests {
+    use mavlink::MavHeader;
+    use tokio::sync::{mpsc, watch};
+
     use super::*;
+    use crate::mission::HomePosition;
+    use crate::sim::state::{DEFAULT_COMPONENT_ID, DemoVehicleConfig, default_mode};
+    use crate::sim::{DemoClock, DemoVehicleSnapshot};
+
+    fn sim_core() -> (
+        SimulatorCore,
+        mpsc::Receiver<(MavHeader, dialect::MavMessage)>,
+    ) {
+        let home = HomePosition {
+            latitude_deg: 42.0,
+            longitude_deg: -71.0,
+            altitude_m: 100.0,
+        };
+        let snapshot = DemoVehicleSnapshot {
+            time_boot_ms: 0,
+            armed: false,
+            custom_mode: default_mode(DemoProfile::ArduCopter),
+            home: home.clone(),
+            latitude_deg: home.latitude_deg,
+            longitude_deg: home.longitude_deg,
+            altitude_msl_m: home.altitude_m,
+            relative_alt_m: 0.0,
+            roll_rad: 0.0,
+            pitch_rad: 0.0,
+            yaw_rad: 0.0,
+            mission_current_wire_seq: 0,
+            mission_total_wire_items: 0,
+        };
+        let (outbound_tx, outbound_rx) = mpsc::channel(8);
+        let (snapshot_tx, _snapshot_rx) = watch::channel(snapshot.clone());
+
+        (
+            SimulatorCore::new(
+                DemoVehicleConfig {
+                    profile: DemoProfile::ArduCopter,
+                    clock: DemoClock::Manual,
+                    tick_hz: 1,
+                    home,
+                },
+                outbound_tx,
+                snapshot_tx,
+                snapshot,
+            ),
+            outbound_rx,
+        )
+    }
+
+    fn param_set(target_system: u8, value: f32) -> dialect::PARAM_SET_DATA {
+        dialect::PARAM_SET_DATA {
+            target_system,
+            target_component: DEFAULT_COMPONENT_ID,
+            param_id: "SYSID_THISMAV".into(),
+            param_value: value,
+            param_type: dialect::MavParamType::MAV_PARAM_TYPE_REAL32,
+        }
+    }
 
     fn param_names(params: &[SimParam]) -> Vec<&str> {
         params.iter().map(|param| param.name.as_str()).collect()
@@ -624,6 +698,36 @@ mod tests {
         assert_eq!(updated_index, canonical_index);
         assert_eq!(params[canonical_index].name, "RTL_ALTITUDE");
         assert_eq!(params[canonical_index].value, 12_345.0);
+    }
+
+    #[tokio::test]
+    async fn param_set_for_wrong_target_is_ignored_without_response_or_state_change() {
+        let (mut sim, mut outbound_rx) = sim_core();
+        let index = param_index_by_name(&sim.params, "SYSID_THISMAV").expect("SYSID_THISMAV");
+        let original_value = sim.params[index].value;
+
+        sim.handle_param_set(param_set(DEFAULT_SYSTEM_ID + 1, 42.0))
+            .await
+            .unwrap();
+
+        assert_eq!(sim.params[index].value, original_value);
+        assert!(outbound_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn param_set_for_valid_target_updates_and_responds() {
+        let (mut sim, mut outbound_rx) = sim_core();
+
+        sim.handle_param_set(param_set(DEFAULT_SYSTEM_ID, 42.0))
+            .await
+            .unwrap();
+
+        let response = match outbound_rx.try_recv().unwrap().1 {
+            dialect::MavMessage::PARAM_VALUE(data) => data,
+            message => panic!("expected PARAM_VALUE, got {message:?}"),
+        };
+        assert_eq!(response.param_id.to_str().unwrap(), "SYSID_THISMAV");
+        assert_eq!(response.param_value, 42.0);
     }
 
     #[test]

@@ -34,8 +34,8 @@ pub(crate) async fn run_simulator(
                 tokio::select! {
                     maybe_message = endpoints.from_sdk_rx.recv() => {
                         match maybe_message {
-                            Some((_header, message)) => {
-                                if simulator.handle_inbound_message(message).await.is_err() {
+                            Some((header, message)) => {
+                                if simulator.handle_inbound_frame(header, message).await.is_err() {
                                     break;
                                 }
                             }
@@ -64,8 +64,8 @@ pub(crate) async fn run_simulator(
             tokio::select! {
                 maybe_message = endpoints.from_sdk_rx.recv() => {
                     match maybe_message {
-                        Some((_header, message)) => {
-                            if simulator.handle_inbound_message(message).await.is_err() {
+                        Some((header, message)) => {
+                            if simulator.handle_inbound_frame(header, message).await.is_err() {
                                 break;
                             }
                         }

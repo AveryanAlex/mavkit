@@ -13,6 +13,7 @@ use super::power::PowerState;
 
 pub(crate) const DEFAULT_SYSTEM_ID: u8 = 1;
 pub(crate) const DEFAULT_COMPONENT_ID: u8 = 1;
+pub(crate) const BROADCAST_ID: u8 = 0;
 pub(crate) const DEFAULT_TICK_HZ: u32 = 2;
 pub(crate) const DEFAULT_HOME_LAT_DEG: f64 = 42.3898;
 pub(crate) const DEFAULT_HOME_LON_DEG: f64 = -71.1476;
@@ -95,6 +96,8 @@ pub(crate) struct SimulatorCore {
     pub(crate) outbound_tx: mpsc::Sender<(MavHeader, dialect::MavMessage)>,
     pub(crate) snapshot_tx: watch::Sender<DemoVehicleSnapshot>,
     pub(crate) header_sequence: u8,
+    pub(crate) reply_target_system_id: u8,
+    pub(crate) reply_target_component_id: u8,
     pub(crate) stream_schedules: BTreeMap<u32, StreamSchedule>,
     pub(crate) params: Vec<SimParam>,
     pub(crate) missions: MissionStores,
@@ -147,6 +150,8 @@ impl SimulatorCore {
             outbound_tx,
             snapshot_tx,
             header_sequence: 0,
+            reply_target_system_id: BROADCAST_ID,
+            reply_target_component_id: BROADCAST_ID,
             stream_schedules: BTreeMap::new(),
             params: seeded_params(profile),
             missions: MissionStores {
@@ -203,6 +208,20 @@ impl SimulatorCore {
             }
             self.publish_snapshot();
         }
+    }
+
+    pub(crate) fn set_reply_target(&mut self, header: MavHeader) {
+        self.reply_target_system_id = header.system_id;
+        self.reply_target_component_id = header.component_id;
+    }
+
+    pub(crate) fn targets_this_system(target_system: u8) -> bool {
+        target_system == BROADCAST_ID || target_system == DEFAULT_SYSTEM_ID
+    }
+
+    pub(crate) fn targets_this_vehicle(target_system: u8, target_component: u8) -> bool {
+        Self::targets_this_system(target_system)
+            && (target_component == BROADCAST_ID || target_component == DEFAULT_COMPONENT_ID)
     }
 }
 

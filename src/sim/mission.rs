@@ -2,10 +2,7 @@ use crate::dialect;
 use crate::error::VehicleError;
 use crate::mission::MissionType;
 
-use super::state::{
-    DEFAULT_COMPONENT_ID, DEFAULT_SYSTEM_ID, NavSource, PendingMissionUpload, SimulatorCore,
-    auto_mode,
-};
+use super::state::{NavSource, PendingMissionUpload, SimulatorCore, auto_mode};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) enum RuntimeMissionItem {
@@ -64,6 +61,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_COUNT_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         if data.count == 0 {
             self.replace_mission_items(from_mav_mission_type(data.mission_type), Vec::new());
             return self
@@ -83,8 +84,8 @@ impl SimulatorCore {
         self.send_message(dialect::MavMessage::MISSION_REQUEST_INT(
             dialect::MISSION_REQUEST_INT_DATA {
                 seq: 0,
-                target_system: DEFAULT_SYSTEM_ID,
-                target_component: DEFAULT_COMPONENT_ID,
+                target_system: self.reply_target_system_id,
+                target_component: self.reply_target_component_id,
                 mission_type: data.mission_type,
             },
         ))
@@ -95,6 +96,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_ITEM_INT_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         let Some(pending) = self.pending_upload.as_ref() else {
             return self
                 .send_mission_ack(
@@ -137,8 +142,8 @@ impl SimulatorCore {
             self.send_message(dialect::MavMessage::MISSION_REQUEST_INT(
                 dialect::MISSION_REQUEST_INT_DATA {
                     seq: next_seq,
-                    target_system: DEFAULT_SYSTEM_ID,
-                    target_component: DEFAULT_COMPONENT_ID,
+                    target_system: self.reply_target_system_id,
+                    target_component: self.reply_target_component_id,
                     mission_type,
                 },
             ))
@@ -162,12 +167,16 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_REQUEST_LIST_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         let items = self.mission_items(from_mav_mission_type(data.mission_type));
         self.send_message(dialect::MavMessage::MISSION_COUNT(
             dialect::MISSION_COUNT_DATA {
                 count: items.len() as u16,
-                target_system: DEFAULT_SYSTEM_ID,
-                target_component: DEFAULT_COMPONENT_ID,
+                target_system: self.reply_target_system_id,
+                target_component: self.reply_target_component_id,
                 mission_type: data.mission_type,
                 opaque_id: 0,
             },
@@ -179,6 +188,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_REQUEST_INT_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         self.send_requested_mission_item(data.seq, data.mission_type)
             .await
     }
@@ -191,6 +204,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_REQUEST_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         self.send_requested_mission_item(data.seq, data.mission_type)
             .await
     }
@@ -199,6 +216,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_CLEAR_ALL_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         if data.mission_type == dialect::MavMissionType::MAV_MISSION_TYPE_ALL {
             self.replace_mission_items(MissionType::Mission, Vec::new());
             self.replace_mission_items(MissionType::Fence, Vec::new());
@@ -227,7 +248,9 @@ impl SimulatorCore {
             .get(seq as usize)
             .cloned();
 
-        if let Some(item) = item {
+        if let Some(mut item) = item {
+            item.target_system = self.reply_target_system_id;
+            item.target_component = self.reply_target_component_id;
             self.send_message(dialect::MavMessage::MISSION_ITEM_INT(item))
                 .await
         } else {
@@ -352,7 +375,8 @@ mod tests {
     use super::*;
     use crate::mission::HomePosition;
     use crate::sim::state::{
-        ACCEPTANCE_RADIUS_M, DemoVehicleConfig, NavTarget, profile_vehicle_type,
+        ACCEPTANCE_RADIUS_M, DEFAULT_COMPONENT_ID, DEFAULT_SYSTEM_ID, DemoVehicleConfig, NavTarget,
+        profile_vehicle_type,
     };
     use crate::sim::{DemoClock, DemoProfile, DemoVehicleSnapshot};
 
@@ -483,6 +507,43 @@ mod tests {
         assert!(sim.pending_upload.is_none());
         assert_eq!(sim.missions.mission.len(), 2);
         assert_eq!(sim.missions.mission[1].seq, 1);
+    }
+
+    #[tokio::test]
+    async fn mission_count_for_wrong_target_is_ignored_without_response_or_state_change() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+        let mut count = mission_count(1, dialect::MavMissionType::MAV_MISSION_TYPE_MISSION);
+        count.target_system = DEFAULT_SYSTEM_ID + 1;
+
+        sim.handle_mission_count(count).await.unwrap();
+
+        assert!(sim.pending_upload.is_none());
+        assert!(sim.missions.mission.is_empty());
+        assert!(outbound_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn mission_item_for_wrong_target_does_not_advance_upload_or_respond() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+        sim.handle_mission_count(mission_count(
+            1,
+            dialect::MavMissionType::MAV_MISSION_TYPE_MISSION,
+        ))
+        .await
+        .unwrap();
+        let _ = recv_mission_request(&mut outbound_rx);
+
+        let mut item = mission_item(0, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT);
+        item.target_component = DEFAULT_COMPONENT_ID + 1;
+        sim.handle_mission_item_int(item).await.unwrap();
+
+        let pending = sim
+            .pending_upload
+            .as_ref()
+            .expect("upload should remain pending");
+        assert!(pending.items.is_empty());
+        assert!(sim.missions.mission.is_empty());
+        assert!(outbound_rx.try_recv().is_err());
     }
 
     #[tokio::test]

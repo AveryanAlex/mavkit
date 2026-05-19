@@ -38,11 +38,32 @@ impl SimulatorCore {
         &mut self,
         message: dialect::MavMessage,
     ) -> Result<(), VehicleError> {
+        self.handle_inbound_frame(
+            MavHeader {
+                system_id: 0,
+                component_id: 0,
+                sequence: 0,
+            },
+            message,
+        )
+        .await
+    }
+
+    #[allow(
+        deprecated,
+        reason = "the demo simulator still accepts legacy MAVLink messages used by existing MAVKit paths"
+    )]
+    pub(crate) async fn handle_inbound_frame(
+        &mut self,
+        header: MavHeader,
+        message: dialect::MavMessage,
+    ) -> Result<(), VehicleError> {
+        self.set_reply_target(header);
         match message {
             dialect::MavMessage::COMMAND_LONG(data) => self.handle_command_long(data).await,
             dialect::MavMessage::COMMAND_INT(data) => self.handle_command_int(data).await,
-            dialect::MavMessage::PARAM_REQUEST_LIST(_data) => {
-                self.handle_param_request_list().await
+            dialect::MavMessage::PARAM_REQUEST_LIST(data) => {
+                self.handle_param_request_list(data).await
             }
             dialect::MavMessage::PARAM_REQUEST_READ(data) => {
                 self.handle_param_request_read(data).await
@@ -65,6 +86,9 @@ impl SimulatorCore {
             }
             dialect::MavMessage::MISSION_ACK(_data) => Ok(()),
             dialect::MavMessage::SET_GPS_GLOBAL_ORIGIN(data) => {
+                if !Self::targets_this_system(data.target_system) {
+                    return Ok(());
+                }
                 self.snapshot.home.latitude_deg = f64::from(data.latitude) / 1e7;
                 self.snapshot.home.longitude_deg = f64::from(data.longitude) / 1e7;
                 self.snapshot.home.altitude_m = f64::from(data.altitude) / 1000.0;
@@ -85,6 +109,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::COMMAND_LONG_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         match data.command {
             dialect::MavCmd::MAV_CMD_COMPONENT_ARM_DISARM => {
                 self.snapshot.armed = data.param1 >= 0.5;
@@ -178,6 +206,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::COMMAND_INT_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         if data.command == dialect::MavCmd::MAV_CMD_DO_SET_HOME {
             self.snapshot.home.latitude_deg = f64::from(data.x) / 1e7;
             self.snapshot.home.longitude_deg = f64::from(data.y) / 1e7;
@@ -202,6 +234,10 @@ impl SimulatorCore {
         &mut self,
         data: dialect::SET_POSITION_TARGET_GLOBAL_INT_DATA,
     ) -> Result<(), VehicleError> {
+        if !Self::targets_this_vehicle(data.target_system, data.target_component) {
+            return Ok(());
+        }
+
         let altitude_msl_m = match data.coordinate_frame {
             dialect::MavFrame::MAV_FRAME_GLOBAL_RELATIVE_ALT
             | dialect::MavFrame::MAV_FRAME_GLOBAL_RELATIVE_ALT_INT => {
@@ -618,8 +654,8 @@ impl SimulatorCore {
                 result,
                 progress: 0,
                 result_param2: 0,
-                target_system: 0,
-                target_component: 0,
+                target_system: self.reply_target_system_id,
+                target_component: self.reply_target_component_id,
             },
         ))
         .await
@@ -632,8 +668,8 @@ impl SimulatorCore {
     ) -> Result<(), VehicleError> {
         self.send_message(dialect::MavMessage::MISSION_ACK(
             dialect::MISSION_ACK_DATA {
-                target_system: 0,
-                target_component: 0,
+                target_system: self.reply_target_system_id,
+                target_component: self.reply_target_component_id,
                 mavtype: result,
                 mission_type,
                 opaque_id: 0,
@@ -738,6 +774,23 @@ mod tests {
         })
     }
 
+    fn gcs_header() -> MavHeader {
+        MavHeader {
+            system_id: 42,
+            component_id: 200,
+            sequence: 7,
+        }
+    }
+
+    fn recv_command_ack(
+        outbound_rx: &mut mpsc::Receiver<(MavHeader, dialect::MavMessage)>,
+    ) -> dialect::COMMAND_ACK_DATA {
+        match outbound_rx.try_recv().unwrap().1 {
+            dialect::MavMessage::COMMAND_ACK(data) => data,
+            message => panic!("expected COMMAND_ACK, got {message:?}"),
+        }
+    }
+
     fn drain_message_ids(
         outbound_rx: &mut mpsc::Receiver<(MavHeader, dialect::MavMessage)>,
     ) -> Vec<u32> {
@@ -817,6 +870,39 @@ mod tests {
         };
         assert_eq!(ack.result, dialect::MavResult::MAV_RESULT_ACCEPTED);
         assert_eq!(sim.snapshot.custom_mode, COPTER_GUIDED_MODE);
+    }
+
+    #[tokio::test]
+    async fn command_for_wrong_target_is_ignored_without_ack_or_state_change() {
+        let (mut sim, mut outbound_rx) = sim_core();
+        let mut message = command_long(dialect::MavCmd::MAV_CMD_COMPONENT_ARM_DISARM, 1.0, 0.0);
+        let dialect::MavMessage::COMMAND_LONG(data) = &mut message else {
+            panic!("expected COMMAND_LONG");
+        };
+        data.target_system = DEFAULT_SYSTEM_ID + 1;
+
+        sim.handle_inbound_message(message).await.unwrap();
+
+        assert!(!sim.snapshot.armed);
+        assert!(outbound_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn valid_target_command_mutates_and_acks_sender() {
+        let (mut sim, mut outbound_rx) = sim_core();
+
+        sim.handle_inbound_frame(
+            gcs_header(),
+            command_long(dialect::MavCmd::MAV_CMD_COMPONENT_ARM_DISARM, 1.0, 0.0),
+        )
+        .await
+        .unwrap();
+
+        let ack = recv_command_ack(&mut outbound_rx);
+        assert_eq!(ack.result, dialect::MavResult::MAV_RESULT_ACCEPTED);
+        assert_eq!(ack.target_system, gcs_header().system_id);
+        assert_eq!(ack.target_component, gcs_header().component_id);
+        assert!(sim.snapshot.armed);
     }
 
     #[tokio::test]
