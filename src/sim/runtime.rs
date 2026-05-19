@@ -8,6 +8,9 @@ use super::api::{DemoClock, DemoVehicleSnapshot};
 use super::state::{ControlMessage, DemoVehicleConfig, SimulatorCore};
 use super::transport::SimulatorEndpoints;
 
+const MICROS_PER_SECOND: u64 = 1_000_000;
+const MICROS_PER_MILLISECOND: u64 = 1_000;
+
 pub(crate) async fn run_simulator(
     config: DemoVehicleConfig,
     mut endpoints: SimulatorEndpoints,
@@ -113,10 +116,7 @@ impl SimulatorCore {
     }
 
     pub(crate) async fn advance_one_tick(&mut self) -> Result<(), VehicleError> {
-        self.snapshot.time_boot_ms = self
-            .snapshot
-            .time_boot_ms
-            .saturating_add((1000 / self.config.tick_hz).max(1));
+        let tick_elapsed_us = self.advance_boot_time();
         self.drive_mission_state().await?;
         self.advance_navigation();
         self.advance_power_model();
@@ -126,11 +126,21 @@ impl SimulatorCore {
 
         self.emit_heartbeat().await?;
         self.emit_default_telemetry_burst().await?;
-        self.emit_configured_streams().await
+        self.emit_configured_streams(tick_elapsed_us).await
     }
 
-    async fn emit_configured_streams(&mut self) -> Result<(), VehicleError> {
-        let tick_elapsed_us = u64::from((1000 / self.config.tick_hz).max(1)) * 1000;
+    fn advance_boot_time(&mut self) -> u64 {
+        let tick_hz = u64::from(self.config.tick_hz);
+        let tick_numerator = MICROS_PER_SECOND + self.tick_time_remainder;
+        let tick_elapsed_us = tick_numerator / tick_hz;
+        self.tick_time_remainder = tick_numerator % tick_hz;
+        self.boot_time_us = self.boot_time_us.saturating_add(tick_elapsed_us);
+        let boot_time_ms = (self.boot_time_us / MICROS_PER_MILLISECOND).min(u64::from(u32::MAX));
+        self.snapshot.time_boot_ms = boot_time_ms as u32;
+        tick_elapsed_us
+    }
+
+    async fn emit_configured_streams(&mut self, tick_elapsed_us: u64) -> Result<(), VehicleError> {
         let mut due_message_ids = Vec::new();
 
         for (message_id, schedule) in &mut self.stream_schedules {

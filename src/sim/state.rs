@@ -95,6 +95,9 @@ pub(crate) struct SimulatorCore {
     pub(crate) snapshot: DemoVehicleSnapshot,
     pub(crate) outbound_tx: mpsc::Sender<(MavHeader, dialect::MavMessage)>,
     pub(crate) snapshot_tx: watch::Sender<DemoVehicleSnapshot>,
+    pub(crate) boot_time_us: u64,
+    // Carries the fractional tick duration lost when converting tick_hz to microseconds.
+    pub(crate) tick_time_remainder: u64,
     pub(crate) header_sequence: u8,
     pub(crate) reply_target_system_id: u8,
     pub(crate) reply_target_component_id: u8,
@@ -144,11 +147,14 @@ impl SimulatorCore {
         initial_snapshot: DemoVehicleSnapshot,
     ) -> Self {
         let profile = config.profile;
+        let boot_time_us = u64::from(initial_snapshot.time_boot_ms) * 1000;
         Self {
             config,
             snapshot: initial_snapshot,
             outbound_tx,
             snapshot_tx,
+            boot_time_us,
+            tick_time_remainder: 0,
             header_sequence: 0,
             reply_target_system_id: BROADCAST_ID,
             reply_target_component_id: BROADCAST_ID,

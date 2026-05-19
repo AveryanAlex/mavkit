@@ -34,25 +34,6 @@ impl SimulatorCore {
         deprecated,
         reason = "the demo simulator still accepts legacy MAVLink messages used by existing MAVKit paths"
     )]
-    pub(crate) async fn handle_inbound_message(
-        &mut self,
-        message: dialect::MavMessage,
-    ) -> Result<(), VehicleError> {
-        self.handle_inbound_frame(
-            MavHeader {
-                system_id: 0,
-                component_id: 0,
-                sequence: 0,
-            },
-            message,
-        )
-        .await
-    }
-
-    #[allow(
-        deprecated,
-        reason = "the demo simulator still accepts legacy MAVLink messages used by existing MAVKit paths"
-    )]
     pub(crate) async fn handle_inbound_frame(
         &mut self,
         header: MavHeader,
@@ -416,7 +397,7 @@ impl SimulatorCore {
             groundspeed: horizontal_speed_mps(self.velocity) as f32,
             heading: normalized_heading_deg(self.snapshot.yaw_rad),
             throttle: if self.snapshot.armed { 40 } else { 0 },
-            alt: self.snapshot.relative_alt_m as f32,
+            alt: self.snapshot.altitude_msl_m as f32,
             climb: -self.velocity.down_mps as f32,
         }))
         .await
@@ -782,6 +763,14 @@ mod tests {
         }
     }
 
+    fn default_header() -> MavHeader {
+        MavHeader {
+            system_id: 0,
+            component_id: 0,
+            sequence: 0,
+        }
+    }
+
     fn recv_command_ack(
         outbound_rx: &mut mpsc::Receiver<(MavHeader, dialect::MavMessage)>,
     ) -> dialect::COMMAND_ACK_DATA {
@@ -813,11 +802,10 @@ mod tests {
         let (mut sim, mut outbound_rx) = sim_core();
         let original_mode = sim.snapshot.custom_mode;
 
-        sim.handle_inbound_message(command_long(
-            dialect::MavCmd::MAV_CMD_DO_SET_MODE,
-            1.0,
-            999.0,
-        ))
+        sim.handle_inbound_frame(
+            default_header(),
+            command_long(dialect::MavCmd::MAV_CMD_DO_SET_MODE, 1.0, 999.0),
+        )
         .await
         .unwrap();
 
@@ -836,11 +824,14 @@ mod tests {
         let (mut sim, mut outbound_rx) = sim_core_with_tick_hz(DemoProfile::ArduPlane, 1);
         let original_mode = sim.snapshot.custom_mode;
 
-        sim.handle_inbound_message(command_long(
-            dialect::MavCmd::MAV_CMD_DO_SET_MODE,
-            1.0,
-            QUADPLANE_QLOITER_MODE as f32,
-        ))
+        sim.handle_inbound_frame(
+            default_header(),
+            command_long(
+                dialect::MavCmd::MAV_CMD_DO_SET_MODE,
+                1.0,
+                QUADPLANE_QLOITER_MODE as f32,
+            ),
+        )
         .await
         .unwrap();
 
@@ -856,11 +847,14 @@ mod tests {
     async fn do_set_mode_accepts_supported_custom_mode() {
         let (mut sim, mut outbound_rx) = sim_core();
 
-        sim.handle_inbound_message(command_long(
-            dialect::MavCmd::MAV_CMD_DO_SET_MODE,
-            1.0,
-            COPTER_GUIDED_MODE as f32,
-        ))
+        sim.handle_inbound_frame(
+            default_header(),
+            command_long(
+                dialect::MavCmd::MAV_CMD_DO_SET_MODE,
+                1.0,
+                COPTER_GUIDED_MODE as f32,
+            ),
+        )
         .await
         .unwrap();
 
@@ -881,7 +875,9 @@ mod tests {
         };
         data.target_system = DEFAULT_SYSTEM_ID + 1;
 
-        sim.handle_inbound_message(message).await.unwrap();
+        sim.handle_inbound_frame(default_header(), message)
+            .await
+            .unwrap();
 
         assert!(!sim.snapshot.armed);
         assert!(outbound_rx.try_recv().is_err());
@@ -957,14 +953,53 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn vfr_hud_uses_msl_altitude_and_global_position_keeps_relative_altitude() {
+        let (mut sim, mut outbound_rx) = sim_core();
+        sim.snapshot.altitude_msl_m = 125.0;
+        sim.snapshot.relative_alt_m = 25.0;
+
+        sim.emit_message_by_id(74).await.unwrap();
+        let vfr_hud = match outbound_rx.recv().await.unwrap().1 {
+            dialect::MavMessage::VFR_HUD(data) => data,
+            message => panic!("expected VFR_HUD, got {message:?}"),
+        };
+
+        sim.emit_message_by_id(33).await.unwrap();
+        let global_position = match outbound_rx.recv().await.unwrap().1 {
+            dialect::MavMessage::GLOBAL_POSITION_INT(data) => data,
+            message => panic!("expected GLOBAL_POSITION_INT, got {message:?}"),
+        };
+
+        assert_eq!(vfr_hud.alt, 125.0);
+        assert_eq!(global_position.alt, 125_000);
+        assert_eq!(global_position.relative_alt, 25_000);
+    }
+
+    #[tokio::test]
+    async fn non_divisor_tick_time_progression_carries_fractional_milliseconds() {
+        let (mut sim, _outbound_rx) = sim_core_with_tick_hz(DemoProfile::ArduCopter, 3);
+        let mut boot_times = Vec::new();
+
+        for _ in 0..3 {
+            sim.advance_one_tick().await.unwrap();
+            boot_times.push(sim.snapshot.time_boot_ms);
+        }
+
+        assert_eq!(boot_times, vec![333, 666, 1000]);
+    }
+
+    #[tokio::test]
     async fn configured_stream_emits_on_tick_cadence() {
         let (mut sim, mut outbound_rx) = sim_core_with_tick_hz(DemoProfile::ArduCopter, 10);
 
-        sim.handle_inbound_message(command_long(
-            dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
-            AUTOPILOT_VERSION_MESSAGE_ID as f32,
-            300_000.0,
-        ))
+        sim.handle_inbound_frame(
+            default_header(),
+            command_long(
+                dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
+                AUTOPILOT_VERSION_MESSAGE_ID as f32,
+                300_000.0,
+            ),
+        )
         .await
         .unwrap();
         drain_message_ids(&mut outbound_rx);
@@ -984,11 +1019,10 @@ mod tests {
     async fn disabled_configured_default_stream_is_not_emitted_on_ticks() {
         let (mut sim, mut outbound_rx) = sim_core();
 
-        sim.handle_inbound_message(command_long(
-            dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
-            30.0,
-            1_000.0,
-        ))
+        sim.handle_inbound_frame(
+            default_header(),
+            command_long(dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL, 30.0, 1_000.0),
+        )
         .await
         .unwrap();
         drain_message_ids(&mut outbound_rx);
@@ -996,11 +1030,10 @@ mod tests {
         let enabled_tick_ids = drain_message_ids(&mut outbound_rx);
         assert_eq!(count_message_id(&enabled_tick_ids, 30), 1);
 
-        sim.handle_inbound_message(command_long(
-            dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
-            30.0,
-            0.0,
-        ))
+        sim.handle_inbound_frame(
+            default_header(),
+            command_long(dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL, 30.0, 0.0),
+        )
         .await
         .unwrap();
         drain_message_ids(&mut outbound_rx);
@@ -1015,20 +1048,26 @@ mod tests {
     async fn request_message_emits_immediately_even_when_stream_disabled() {
         let (mut sim, mut outbound_rx) = sim_core();
 
-        sim.handle_inbound_message(command_long(
-            dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
-            AUTOPILOT_VERSION_MESSAGE_ID as f32,
-            -1.0,
-        ))
+        sim.handle_inbound_frame(
+            default_header(),
+            command_long(
+                dialect::MavCmd::MAV_CMD_SET_MESSAGE_INTERVAL,
+                AUTOPILOT_VERSION_MESSAGE_ID as f32,
+                -1.0,
+            ),
+        )
         .await
         .unwrap();
         drain_message_ids(&mut outbound_rx);
 
-        sim.handle_inbound_message(command_long(
-            dialect::MavCmd::MAV_CMD_REQUEST_MESSAGE,
-            AUTOPILOT_VERSION_MESSAGE_ID as f32,
-            0.0,
-        ))
+        sim.handle_inbound_frame(
+            default_header(),
+            command_long(
+                dialect::MavCmd::MAV_CMD_REQUEST_MESSAGE,
+                AUTOPILOT_VERSION_MESSAGE_ID as f32,
+                0.0,
+            ),
+        )
         .await
         .unwrap();
         let message_ids = drain_message_ids(&mut outbound_rx);

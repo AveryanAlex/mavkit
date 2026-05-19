@@ -713,6 +713,29 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn mission_ack_targets_sender_from_frame_header() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+        let header = mavlink::MavHeader {
+            system_id: 42,
+            component_id: 200,
+            sequence: 7,
+        };
+
+        sim.handle_inbound_frame(
+            header,
+            dialect::MavMessage::MISSION_CLEAR_ALL(mission_clear_all(
+                dialect::MavMissionType::MAV_MISSION_TYPE_MISSION,
+            )),
+        )
+        .await
+        .unwrap();
+
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(ack.target_system, header.system_id);
+        assert_eq!(ack.target_component, header.component_id);
+    }
+
+    #[tokio::test]
     async fn change_speed_updates_subsequent_auto_motion() {
         let (mut sim, _outbound_rx) = sim_core(DemoProfile::ArduPlane);
         let mut speed = mission_item(1, dialect::MavCmd::MAV_CMD_DO_CHANGE_SPEED);
@@ -742,13 +765,18 @@ mod tests {
         ];
         sim.mission_speed_override_mps = None;
 
-        sim.handle_inbound_message(dialect::MavMessage::COMMAND_LONG(
-            dialect::COMMAND_LONG_DATA {
+        sim.handle_inbound_frame(
+            mavlink::MavHeader {
+                system_id: 0,
+                component_id: 0,
+                sequence: 0,
+            },
+            dialect::MavMessage::COMMAND_LONG(dialect::COMMAND_LONG_DATA {
                 command: dialect::MavCmd::MAV_CMD_DO_SET_MISSION_CURRENT,
                 param1: 2.0,
                 ..dialect::COMMAND_LONG_DATA::default()
-            },
-        ))
+            }),
+        )
         .await
         .unwrap();
 
