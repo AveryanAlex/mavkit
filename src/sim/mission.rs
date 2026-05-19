@@ -199,7 +199,13 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_CLEAR_ALL_DATA,
     ) -> Result<(), VehicleError> {
-        self.replace_mission_items(from_mav_mission_type(data.mission_type), Vec::new());
+        if data.mission_type == dialect::MavMissionType::MAV_MISSION_TYPE_ALL {
+            self.replace_mission_items(MissionType::Mission, Vec::new());
+            self.replace_mission_items(MissionType::Fence, Vec::new());
+            self.replace_mission_items(MissionType::Rally, Vec::new());
+        } else {
+            self.replace_mission_items(from_mav_mission_type(data.mission_type), Vec::new());
+        }
         self.mission_completed = false;
         self.nav_target = None;
         self.pending_reached_wire_seq = None;
@@ -442,6 +448,14 @@ mod tests {
         }
     }
 
+    fn mission_clear_all(mission_type: dialect::MavMissionType) -> dialect::MISSION_CLEAR_ALL_DATA {
+        dialect::MISSION_CLEAR_ALL_DATA {
+            target_system: DEFAULT_SYSTEM_ID,
+            target_component: DEFAULT_COMPONENT_ID,
+            mission_type,
+        }
+    }
+
     #[tokio::test]
     async fn mission_upload_accepts_ordered_items() {
         let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
@@ -561,6 +575,80 @@ mod tests {
         assert_eq!(ack.mavtype, dialect::MavMissionResult::MAV_MISSION_ERROR);
         assert!(sim.pending_upload.is_none());
         assert!(sim.missions.mission.is_empty());
+    }
+
+    #[tokio::test]
+    async fn mission_clear_all_with_all_clears_all_stores_and_runtime_state() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+        sim.missions.mission = vec![mission_item(0, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT)];
+        sim.missions.fence = vec![mission_item(
+            0,
+            dialect::MavCmd::MAV_CMD_NAV_FENCE_POLYGON_VERTEX_INCLUSION,
+        )];
+        sim.missions.rally = vec![mission_item(0, dialect::MavCmd::MAV_CMD_NAV_RALLY_POINT)];
+        sim.snapshot.mission_total_wire_items = 3;
+        sim.snapshot.mission_current_wire_seq = 2;
+        sim.mission_completed = true;
+        sim.nav_target = Some(NavTarget {
+            source: NavSource::Mission,
+            latitude_deg: sim.snapshot.latitude_deg,
+            longitude_deg: sim.snapshot.longitude_deg,
+            altitude_msl_m: sim.snapshot.altitude_msl_m,
+            acceptance_radius_m: ACCEPTANCE_RADIUS_M,
+            wire_seq: Some(2),
+            disarm_on_reach: false,
+        });
+        sim.pending_reached_wire_seq = Some(2);
+        sim.mission_speed_override_mps = Some(12.0);
+
+        sim.handle_mission_clear_all(mission_clear_all(
+            dialect::MavMissionType::MAV_MISSION_TYPE_ALL,
+        ))
+        .await
+        .unwrap();
+
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(ack.mavtype, dialect::MavMissionResult::MAV_MISSION_ACCEPTED);
+        assert_eq!(
+            ack.mission_type,
+            dialect::MavMissionType::MAV_MISSION_TYPE_ALL
+        );
+        assert!(sim.missions.mission.is_empty());
+        assert!(sim.missions.fence.is_empty());
+        assert!(sim.missions.rally.is_empty());
+        assert_eq!(sim.snapshot.mission_total_wire_items, 0);
+        assert_eq!(sim.snapshot.mission_current_wire_seq, 0);
+        assert!(!sim.mission_completed);
+        assert!(sim.nav_target.is_none());
+        assert!(sim.pending_reached_wire_seq.is_none());
+        assert!(sim.mission_speed_override_mps.is_none());
+    }
+
+    #[tokio::test]
+    async fn mission_clear_all_with_specific_type_keeps_other_stores() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+        sim.missions.mission = vec![mission_item(0, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT)];
+        sim.missions.fence = vec![mission_item(
+            0,
+            dialect::MavCmd::MAV_CMD_NAV_FENCE_POLYGON_VERTEX_INCLUSION,
+        )];
+        sim.missions.rally = vec![mission_item(0, dialect::MavCmd::MAV_CMD_NAV_RALLY_POINT)];
+
+        sim.handle_mission_clear_all(mission_clear_all(
+            dialect::MavMissionType::MAV_MISSION_TYPE_FENCE,
+        ))
+        .await
+        .unwrap();
+
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(ack.mavtype, dialect::MavMissionResult::MAV_MISSION_ACCEPTED);
+        assert_eq!(
+            ack.mission_type,
+            dialect::MavMissionType::MAV_MISSION_TYPE_FENCE
+        );
+        assert_eq!(sim.missions.mission.len(), 1);
+        assert!(sim.missions.fence.is_empty());
+        assert_eq!(sim.missions.rally.len(), 1);
     }
 
     #[tokio::test]
