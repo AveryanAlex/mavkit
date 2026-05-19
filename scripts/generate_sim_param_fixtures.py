@@ -79,13 +79,15 @@ class DockerSitl:
         self.container: str | None = None
         self.tcp_addr: str | None = None
 
-    def start(self, variant: Variant, index: int) -> str:
+    def start(self, variant: Variant) -> str:
         if not self.no_pull:
             result = run(["docker", "pull", self.image])
             if result.returncode != 0:
                 raise RuntimeError(f"docker pull failed with exit code {result.returncode}")
 
-        instance = int(os.environ.get("MAVKIT_SIM_PARAM_SITL_INSTANCE", "0")) + index
+        # Each preset runs in a fresh container, so keep ArduPilot on instance 0.
+        # Higher instances can shift the SITL TCP port away from the published 5760/tcp.
+        instance = 0
         self.container = os.environ.get(
             "MAVKIT_SIM_PARAM_SITL_CONTAINER",
             f"mavkit-param-fixture-{os.getpid()}-{variant.preset}-{uuid.uuid4().hex[:8]}",
@@ -258,9 +260,9 @@ def main() -> int:
     signal.signal(signal.SIGTERM, stop_for_signal)
 
     try:
-        for index, variant in enumerate(variants):
+        for variant in variants:
             output = args.output_dir / variant.output
-            runner.start(variant, index)
+            runner.start(variant)
             try:
                 # ArduPlane-family startup can reject early TCP clients; retry the real exporter
                 # instead of probing readiness with a separate socket that may consume the first accept.
