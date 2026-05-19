@@ -64,12 +64,6 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_COUNT_DATA,
     ) -> Result<(), VehicleError> {
-        self.pending_upload = Some(PendingMissionUpload {
-            mission_type: from_mav_mission_type(data.mission_type),
-            expected_count: data.count,
-            items: Vec::with_capacity(data.count as usize),
-        });
-
         if data.count == 0 {
             self.replace_mission_items(from_mav_mission_type(data.mission_type), Vec::new());
             return self
@@ -79,6 +73,12 @@ impl SimulatorCore {
                 )
                 .await;
         }
+
+        self.pending_upload = Some(PendingMissionUpload {
+            mission_type: from_mav_mission_type(data.mission_type),
+            expected_count: data.count,
+            items: Vec::with_capacity(data.count as usize),
+        });
 
         self.send_message(dialect::MavMessage::MISSION_REQUEST_INT(
             dialect::MISSION_REQUEST_INT_DATA {
@@ -95,11 +95,42 @@ impl SimulatorCore {
         &mut self,
         data: dialect::MISSION_ITEM_INT_DATA,
     ) -> Result<(), VehicleError> {
-        let Some(pending) = self.pending_upload.as_mut() else {
-            return Ok(());
+        let Some(pending) = self.pending_upload.as_ref() else {
+            return self
+                .send_mission_ack(
+                    data.mission_type,
+                    dialect::MavMissionResult::MAV_MISSION_ERROR,
+                )
+                .await;
         };
 
-        pending.items.push(data.clone());
+        let mission_type = to_mav_mission_type(pending.mission_type);
+        let next_seq = pending.items.len() as u16;
+        let result = if next_seq >= pending.expected_count {
+            Some(dialect::MavMissionResult::MAV_MISSION_NO_SPACE)
+        } else if data.seq != next_seq {
+            Some(dialect::MavMissionResult::MAV_MISSION_INVALID_SEQUENCE)
+        } else if data.mission_type != mission_type {
+            Some(dialect::MavMissionResult::MAV_MISSION_INVALID)
+        } else {
+            None
+        };
+
+        if let Some(result) = result {
+            self.pending_upload = None;
+            return self.send_mission_ack(mission_type, result).await;
+        }
+
+        let Some(pending) = self.pending_upload.as_mut() else {
+            return self
+                .send_mission_ack(
+                    data.mission_type,
+                    dialect::MavMissionResult::MAV_MISSION_ERROR,
+                )
+                .await;
+        };
+
+        pending.items.push(data);
         if pending.items.len() < pending.expected_count as usize {
             let next_seq = pending.items.len() as u16;
             let mission_type = to_mav_mission_type(pending.mission_type);
@@ -378,6 +409,158 @@ mod tests {
             mission_type: dialect::MavMissionType::MAV_MISSION_TYPE_MISSION,
             ..dialect::MISSION_ITEM_INT_DATA::default()
         }
+    }
+
+    fn mission_count(
+        count: u16,
+        mission_type: dialect::MavMissionType,
+    ) -> dialect::MISSION_COUNT_DATA {
+        dialect::MISSION_COUNT_DATA {
+            count,
+            target_system: DEFAULT_SYSTEM_ID,
+            target_component: DEFAULT_COMPONENT_ID,
+            mission_type,
+            opaque_id: 0,
+        }
+    }
+
+    fn recv_mission_request(
+        outbound_rx: &mut mpsc::Receiver<(mavlink::MavHeader, dialect::MavMessage)>,
+    ) -> dialect::MISSION_REQUEST_INT_DATA {
+        match outbound_rx.try_recv().unwrap().1 {
+            dialect::MavMessage::MISSION_REQUEST_INT(data) => data,
+            message => panic!("expected MISSION_REQUEST_INT, got {message:?}"),
+        }
+    }
+
+    fn recv_mission_ack(
+        outbound_rx: &mut mpsc::Receiver<(mavlink::MavHeader, dialect::MavMessage)>,
+    ) -> dialect::MISSION_ACK_DATA {
+        match outbound_rx.try_recv().unwrap().1 {
+            dialect::MavMessage::MISSION_ACK(data) => data,
+            message => panic!("expected MISSION_ACK, got {message:?}"),
+        }
+    }
+
+    #[tokio::test]
+    async fn mission_upload_accepts_ordered_items() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+
+        sim.handle_mission_count(mission_count(
+            2,
+            dialect::MavMissionType::MAV_MISSION_TYPE_MISSION,
+        ))
+        .await
+        .unwrap();
+        let request = recv_mission_request(&mut outbound_rx);
+        assert_eq!(request.seq, 0);
+
+        sim.handle_mission_item_int(mission_item(0, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT))
+            .await
+            .unwrap();
+        let request = recv_mission_request(&mut outbound_rx);
+        assert_eq!(request.seq, 1);
+
+        sim.handle_mission_item_int(mission_item(1, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT))
+            .await
+            .unwrap();
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(ack.mavtype, dialect::MavMissionResult::MAV_MISSION_ACCEPTED);
+        assert!(sim.pending_upload.is_none());
+        assert_eq!(sim.missions.mission.len(), 2);
+        assert_eq!(sim.missions.mission[1].seq, 1);
+    }
+
+    #[tokio::test]
+    async fn mission_upload_rejects_invalid_seq_and_clears_pending() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+
+        sim.handle_mission_count(mission_count(
+            2,
+            dialect::MavMissionType::MAV_MISSION_TYPE_MISSION,
+        ))
+        .await
+        .unwrap();
+        let _ = recv_mission_request(&mut outbound_rx);
+
+        sim.handle_mission_item_int(mission_item(1, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT))
+            .await
+            .unwrap();
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(
+            ack.mavtype,
+            dialect::MavMissionResult::MAV_MISSION_INVALID_SEQUENCE
+        );
+        assert!(sim.pending_upload.is_none());
+        assert!(sim.missions.mission.is_empty());
+    }
+
+    #[tokio::test]
+    async fn mission_upload_rejects_wrong_mission_type_and_clears_pending() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+
+        sim.handle_mission_count(mission_count(
+            1,
+            dialect::MavMissionType::MAV_MISSION_TYPE_MISSION,
+        ))
+        .await
+        .unwrap();
+        let _ = recv_mission_request(&mut outbound_rx);
+
+        let mut item = mission_item(0, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT);
+        item.mission_type = dialect::MavMissionType::MAV_MISSION_TYPE_FENCE;
+        sim.handle_mission_item_int(item).await.unwrap();
+
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(ack.mavtype, dialect::MavMissionResult::MAV_MISSION_INVALID);
+        assert_eq!(
+            ack.mission_type,
+            dialect::MavMissionType::MAV_MISSION_TYPE_MISSION
+        );
+        assert!(sim.pending_upload.is_none());
+        assert!(sim.missions.mission.is_empty());
+    }
+
+    #[tokio::test]
+    async fn mission_upload_rejects_overrun_and_clears_pending() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+        sim.pending_upload = Some(PendingMissionUpload {
+            mission_type: MissionType::Mission,
+            expected_count: 1,
+            items: vec![mission_item(0, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT)],
+        });
+
+        sim.handle_mission_item_int(mission_item(1, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT))
+            .await
+            .unwrap();
+
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(ack.mavtype, dialect::MavMissionResult::MAV_MISSION_NO_SPACE);
+        assert!(sim.pending_upload.is_none());
+        assert!(sim.missions.mission.is_empty());
+    }
+
+    #[tokio::test]
+    async fn zero_count_upload_clears_pending_and_rejects_stray_item() {
+        let (mut sim, mut outbound_rx) = sim_core(DemoProfile::ArduCopter);
+
+        sim.handle_mission_count(mission_count(
+            0,
+            dialect::MavMissionType::MAV_MISSION_TYPE_MISSION,
+        ))
+        .await
+        .unwrap();
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(ack.mavtype, dialect::MavMissionResult::MAV_MISSION_ACCEPTED);
+        assert!(sim.pending_upload.is_none());
+
+        sim.handle_mission_item_int(mission_item(0, dialect::MavCmd::MAV_CMD_NAV_WAYPOINT))
+            .await
+            .unwrap();
+        let ack = recv_mission_ack(&mut outbound_rx);
+        assert_eq!(ack.mavtype, dialect::MavMissionResult::MAV_MISSION_ERROR);
+        assert!(sim.pending_upload.is_none());
+        assert!(sim.missions.mission.is_empty());
     }
 
     #[tokio::test]
