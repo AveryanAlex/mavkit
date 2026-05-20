@@ -1,3 +1,4 @@
+use crate::common::clock::sleep;
 use mavkit::Vehicle;
 use mavkit::mission::MissionState;
 use std::time::Duration;
@@ -12,7 +13,7 @@ pub async fn wait_for_mode(vehicle: &Vehicle, custom_mode: u32, timeout: Duratio
     }
 
     let mut subscription = current_mode.subscribe();
-    let deadline = tokio::time::sleep(timeout);
+    let deadline = sleep(timeout);
     tokio::pin!(deadline);
     loop {
         tokio::select! {
@@ -37,7 +38,7 @@ pub async fn wait_for_armed(vehicle: &Vehicle, armed: bool, timeout: Duration) {
     }
 
     let mut subscription = armed_metric.subscribe();
-    let deadline = tokio::time::sleep(timeout);
+    let deadline = sleep(timeout);
     tokio::pin!(deadline);
     loop {
         tokio::select! {
@@ -64,7 +65,7 @@ where
     }
 
     let mut subscription = mission.subscribe();
-    let deadline = tokio::time::sleep(timeout);
+    let deadline = sleep(timeout);
     tokio::pin!(deadline);
     loop {
         tokio::select! {
@@ -93,7 +94,7 @@ pub async fn wait_for_mode_name(
     }
 
     let mut subscription = current_mode.subscribe();
-    let deadline = tokio::time::sleep(timeout);
+    let deadline = sleep(timeout);
     tokio::pin!(deadline);
     loop {
         tokio::select! {
@@ -119,7 +120,7 @@ pub async fn wait_for_telemetry(vehicle: &Vehicle, timeout: Duration) -> Result<
     }
 
     let mut subscription = global_position.subscribe();
-    let deadline = tokio::time::sleep(timeout);
+    let deadline = sleep(timeout);
     tokio::pin!(deadline);
     let mut saw_non_finite = false;
     loop {

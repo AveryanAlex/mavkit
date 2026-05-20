@@ -1,4 +1,5 @@
 pub mod backend;
+pub mod clock;
 pub mod commands;
 pub mod fixtures;
 pub mod identity;

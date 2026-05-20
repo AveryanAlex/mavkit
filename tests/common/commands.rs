@@ -1,4 +1,5 @@
 use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::clock::{Instant, sleep};
 use crate::common::support::check_support_expectation;
 use crate::common::target::TestTarget;
 use crate::common::wait::{wait_for_armed, wait_for_mode};
@@ -19,10 +20,10 @@ pub async fn arm_with_retries(
     force: bool,
     timeout: Duration,
 ) -> Result<(), String> {
-    let deadline = tokio::time::Instant::now() + timeout;
+    let deadline = Instant::now() + timeout;
     let mut last_err = String::from("arm timed out");
     loop {
-        if tokio::time::Instant::now() > deadline {
+        if Instant::now() > deadline {
             return Err(last_err);
         }
         match if force {
@@ -33,7 +34,7 @@ pub async fn arm_with_retries(
             Ok(()) => return Ok(()),
             Err(err) => {
                 last_err = err.to_string();
-                tokio::time::sleep(Duration::from_secs(1)).await;
+                sleep(Duration::from_secs(1)).await;
             }
         }
     }
@@ -129,7 +130,7 @@ pub async fn set_home_current_updates_home_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(500)).await;
 
         let updated = vehicle
             .telemetry()

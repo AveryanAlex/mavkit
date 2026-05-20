@@ -103,6 +103,8 @@ jobs:
     needs: rust
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      MAVKIT_WASM_FEATURES: ardupilot,byte-connection,sim,stream,wasm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -120,13 +122,23 @@ jobs:
         with:
           tool: wasm-bindgen-cli@0.2.121
 
-      - name: Wasm feature build check
-        run: cargo check -p mavkit --target wasm32-unknown-unknown --no-default-features --features wasm
+      - name: Wasm supported feature build check
+        run: cargo check -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES"
 
-      - name: Wasm unit tests
+      - name: Wasm byte-connection test
         env:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
-        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features wasm --test wasm_byte_connection
+        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test wasm_byte_connection
+
+      - name: Wasm sim unit tests
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test wasm_sim
+
+      - name: Wasm demo suite
+        env:
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
+        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test demo
 
   wasm-sitl:
     needs: wasm
@@ -156,6 +168,8 @@ jobs:
         uses: nanasess/setup-chromedriver@v2
 
       - name: WASM SITL integration tests
+        env:
+          MAVKIT_WASM_SITL_RUST_FEATURES: ardupilot,byte-connection,sim,stream,wasm
         run: make test-wasm-sitl-strict
 
   sitl:

@@ -1,3 +1,5 @@
+#![cfg_attr(target_arch = "wasm32", allow(dead_code, unused_imports))]
+
 use std::env;
 use std::fs;
 use std::path::Path;
@@ -7,6 +9,11 @@ use mavkit::{Param, ParamType, Vehicle, VehicleConfig};
 use serde::Serialize;
 
 const SCHEMA_VERSION: u32 = 1;
+
+#[cfg(target_arch = "wasm32")]
+fn main() {
+    panic!("export_sim_params is a native-only helper");
+}
 
 #[derive(Debug)]
 struct Args {
@@ -47,6 +54,7 @@ struct FixtureParam {
     param_type: ParamType,
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let raw_args: Vec<String> = env::args().skip(1).collect();

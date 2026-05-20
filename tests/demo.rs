@@ -6,6 +6,8 @@ use common::backend::{disconnect, setup_backend_vehicle};
 use common::fixtures::sample_plan_mission;
 use common::target::TestTarget;
 use std::time::Duration;
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen_test::wasm_bindgen_test;
 
 async fn mode_catalog_names(target: TestTarget) -> Vec<String> {
     let backend = setup_backend_vehicle(target).await;
@@ -28,7 +30,8 @@ async fn mode_catalog_names(target: TestTarget) -> Vec<String> {
 
 macro_rules! demo_case {
     ($name:ident, $path:path $(, $arg:expr )* $(,)?) => {
-        #[tokio::test]
+        #[cfg_attr(not(target_arch = "wasm32"), tokio::test)]
+        #[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
         async fn $name() {
             $path($($arg),*).await;
         }
@@ -208,7 +211,8 @@ demo_case!(
     TestTarget::SIM_COPTER
 );
 
-#[tokio::test]
+#[cfg_attr(not(target_arch = "wasm32"), tokio::test)]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
 async fn demo_plane_and_quadplane_mode_catalogs_are_profile_specific() {
     let plane_modes = mode_catalog_names(TestTarget::SIM_PLANE).await;
     let quadplane_modes = mode_catalog_names(TestTarget::SIM_QUADPLANE).await;

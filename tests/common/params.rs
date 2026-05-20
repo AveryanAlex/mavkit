@@ -1,4 +1,5 @@
 use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::clock::sleep;
 use crate::common::target::TestTarget;
 use mavkit::{ParamOperationProgress, ParamStore, Vehicle};
 use std::time::Duration;
@@ -128,7 +129,7 @@ pub async fn param_progress_during_download_case(target: TestTarget) {
             .is_some_and(|progress| matches!(progress, ParamOperationProgress::Downloading { .. }))
         {
             let mut progress_stream = op.subscribe();
-            let deadline = tokio::time::sleep(Duration::from_secs(10));
+            let deadline = sleep(Duration::from_secs(10));
             tokio::pin!(deadline);
             loop {
                 tokio::select! {
@@ -290,7 +291,7 @@ pub async fn param_store_watch_updates_on_write_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        sleep(Duration::from_millis(200)).await;
         let store = vehicle
             .params()
             .latest()
@@ -402,7 +403,7 @@ pub async fn param_subscribe_emits_on_download_case(target: TestTarget) {
 
         let op = vehicle.params().download_all().map_err(|e| e.to_string())?;
 
-        let deadline = tokio::time::sleep(Duration::from_secs(15));
+        let deadline = sleep(Duration::from_secs(15));
         tokio::pin!(deadline);
 
         let received = tokio::select! {

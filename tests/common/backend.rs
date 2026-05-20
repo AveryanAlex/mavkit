@@ -1,3 +1,4 @@
+use crate::common::clock::{Instant, sleep};
 use crate::common::target::TestTarget;
 #[cfg(feature = "sim")]
 use crate::common::target::VehicleProfile;
@@ -146,12 +147,12 @@ where
         return Err(format!("timed out waiting for {description}"));
     }
 
-    let deadline = tokio::time::Instant::now() + timeout;
+    let deadline = Instant::now() + timeout;
     loop {
-        if tokio::time::Instant::now() >= deadline {
+        if Instant::now() >= deadline {
             return Err(format!("timed out waiting for {description}"));
         }
-        tokio::time::sleep(Duration::from_millis(200)).await;
+        sleep(Duration::from_millis(200)).await;
         if condition()? {
             return Ok(());
         }

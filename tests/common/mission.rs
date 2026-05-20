@@ -1,4 +1,5 @@
 use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::clock::sleep;
 use crate::common::fixtures::sample_plan_mission;
 use crate::common::target::TestTarget;
 use crate::common::wait::wait_for_mission_state;
@@ -31,7 +32,7 @@ pub async fn download_with_retries(vehicle: &Vehicle) -> Result<MissionPlan, Str
             Err(err) => {
                 last_error = Some(err.to_string());
                 if attempt < 3 {
-                    tokio::time::sleep(Duration::from_millis(600)).await;
+                    sleep(Duration::from_millis(600)).await;
                 }
                 continue;
             }
@@ -42,7 +43,7 @@ pub async fn download_with_retries(vehicle: &Vehicle) -> Result<MissionPlan, Str
             Err(err) => {
                 last_error = Some(err.to_string());
                 if attempt < 3 {
-                    tokio::time::sleep(Duration::from_millis(600)).await;
+                    sleep(Duration::from_millis(600)).await;
                 }
             }
         }
@@ -84,7 +85,7 @@ pub async fn roundtrip_case(target: TestTarget, plan: MissionPlan) {
             .await
             .map_err(|err| format!("failed to upload mission plan: {err}"))?;
 
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(500)).await;
 
         let downloaded = download_with_retries(vehicle).await;
         let downloaded = match downloaded {
@@ -136,7 +137,7 @@ pub async fn clear_then_download_empty_case(target: TestTarget) {
             .await
             .map_err(|err| err.to_string())?;
 
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(500)).await;
 
         let downloaded = download_with_retries(vehicle).await?;
         if !downloaded.items.is_empty() {
@@ -174,7 +175,7 @@ pub async fn set_current_updates_mission_state_case(target: TestTarget) {
             .await
             .map_err(|err| err.to_string())?;
 
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(500)).await;
 
         vehicle
             .mission()
@@ -230,7 +231,7 @@ pub async fn upload_overwrites_previous_mission_case(target: TestTarget) {
             .await
             .map_err(|err| err.to_string())?;
 
-        tokio::time::sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(500)).await;
 
         let downloaded = download_with_retries(vehicle).await?;
         if downloaded.items.len() != 5 {

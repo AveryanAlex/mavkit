@@ -1,4 +1,5 @@
 use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::clock::sleep;
 use crate::common::target::TestTarget;
 use std::time::Duration;
 use tokio_stream::StreamExt;
@@ -10,7 +11,7 @@ pub async fn raw_subscribe_receives_heartbeats_case(target: TestTarget) {
         let stream = vehicle.raw().subscribe_filtered(0);
         tokio::pin!(stream);
 
-        let deadline = tokio::time::sleep(Duration::from_secs(5));
+        let deadline = sleep(Duration::from_secs(5));
         tokio::pin!(deadline);
 
         tokio::select! {
@@ -66,7 +67,7 @@ pub async fn raw_subscribe_unfiltered_receives_multiple_types_case(target: TestT
         let stream = vehicle.raw().subscribe();
         tokio::pin!(stream);
         let mut seen_ids = std::collections::HashSet::new();
-        let deadline = tokio::time::sleep(Duration::from_secs(5));
+        let deadline = sleep(Duration::from_secs(5));
         tokio::pin!(deadline);
 
         loop {
@@ -111,7 +112,7 @@ pub async fn raw_subscribe_receives_power_and_output_messages_case(target: TestT
         let stream = vehicle.raw().subscribe();
         tokio::pin!(stream);
         let mut seen_ids = std::collections::HashSet::new();
-        let deadline = tokio::time::sleep(Duration::from_secs(5));
+        let deadline = sleep(Duration::from_secs(5));
         tokio::pin!(deadline);
 
         loop {
