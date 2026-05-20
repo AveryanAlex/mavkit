@@ -3,6 +3,8 @@ use std::time::Duration;
 use tokio::sync::{mpsc, watch};
 
 use crate::error::VehicleError;
+#[cfg(target_arch = "wasm32")]
+use crate::runtime;
 
 use super::api::{DemoClock, DemoVehicleSnapshot};
 use super::state::{ControlMessage, DemoVehicleConfig, SimulatorCore};
@@ -13,59 +15,32 @@ const MICROS_PER_MILLISECOND: u64 = 1_000;
 
 pub(crate) async fn run_simulator(
     config: DemoVehicleConfig,
-    mut endpoints: SimulatorEndpoints,
+    endpoints: SimulatorEndpoints,
     mut control_rx: mpsc::Receiver<ControlMessage>,
     snapshot_tx: watch::Sender<DemoVehicleSnapshot>,
     initial_snapshot: DemoVehicleSnapshot,
 ) {
-    let mut simulator = SimulatorCore::new(
-        config.clone(),
-        endpoints.to_sdk_tx,
-        snapshot_tx,
-        initial_snapshot,
-    );
+    let SimulatorEndpoints {
+        to_sdk_tx,
+        mut from_sdk_rx,
+    } = endpoints;
+    let mut simulator =
+        SimulatorCore::new(config.clone(), to_sdk_tx, snapshot_tx, initial_snapshot);
     let _ = simulator.emit_bootstrap().await;
 
     match config.clock {
         DemoClock::RealTime => {
-            let tick_period = Duration::from_secs_f64(1.0 / f64::from(config.tick_hz));
-            let mut interval = tokio::time::interval(tick_period);
-            interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            interval.tick().await;
-
-            loop {
-                tokio::select! {
-                    maybe_message = endpoints.from_sdk_rx.recv() => {
-                        match maybe_message {
-                            Some((header, message)) => {
-                                if simulator.handle_inbound_frame(header, message).await.is_err() {
-                                    break;
-                                }
-                            }
-                            None => break,
-                        }
-                    }
-                    maybe_control = control_rx.recv() => {
-                        match maybe_control {
-                            Some(control) => {
-                                if handle_control(&mut simulator, control).await {
-                                    break;
-                                }
-                            }
-                            None => break,
-                        }
-                    }
-                    _ = interval.tick() => {
-                        if simulator.advance_one_tick().await.is_err() {
-                            break;
-                        }
-                    }
-                }
-            }
+            run_realtime_loop(
+                &mut simulator,
+                &mut from_sdk_rx,
+                &mut control_rx,
+                config.tick_hz,
+            )
+            .await;
         }
         DemoClock::Manual => loop {
             tokio::select! {
-                maybe_message = endpoints.from_sdk_rx.recv() => {
+                maybe_message = from_sdk_rx.recv() => {
                     match maybe_message {
                         Some((header, message)) => {
                             if simulator.handle_inbound_frame(header, message).await.is_err() {
@@ -87,6 +62,89 @@ pub(crate) async fn run_simulator(
                 }
             }
         },
+    }
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+async fn run_realtime_loop(
+    simulator: &mut SimulatorCore,
+    from_sdk_rx: &mut mpsc::Receiver<(mavlink::MavHeader, crate::dialect::MavMessage)>,
+    control_rx: &mut mpsc::Receiver<ControlMessage>,
+    tick_hz: u32,
+) {
+    let tick_period = Duration::from_secs_f64(1.0 / f64::from(tick_hz));
+    let mut interval = tokio::time::interval(tick_period);
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
+    interval.tick().await;
+
+    loop {
+        tokio::select! {
+            maybe_message = from_sdk_rx.recv() => {
+                match maybe_message {
+                    Some((header, message)) => {
+                        if simulator.handle_inbound_frame(header, message).await.is_err() {
+                            break;
+                        }
+                    }
+                    None => break,
+                }
+            }
+            maybe_control = control_rx.recv() => {
+                match maybe_control {
+                    Some(control) => {
+                        if handle_control(simulator, control).await {
+                            break;
+                        }
+                    }
+                    None => break,
+                }
+            }
+            _ = interval.tick() => {
+                if simulator.advance_one_tick().await.is_err() {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+#[cfg(target_arch = "wasm32")]
+async fn run_realtime_loop(
+    simulator: &mut SimulatorCore,
+    from_sdk_rx: &mut mpsc::Receiver<(mavlink::MavHeader, crate::dialect::MavMessage)>,
+    control_rx: &mut mpsc::Receiver<ControlMessage>,
+    tick_hz: u32,
+) {
+    let tick_period = Duration::from_secs_f64(1.0 / f64::from(tick_hz));
+
+    loop {
+        tokio::select! {
+            maybe_message = from_sdk_rx.recv() => {
+                match maybe_message {
+                    Some((header, message)) => {
+                        if simulator.handle_inbound_frame(header, message).await.is_err() {
+                            break;
+                        }
+                    }
+                    None => break,
+                }
+            }
+            maybe_control = control_rx.recv() => {
+                match maybe_control {
+                    Some(control) => {
+                        if handle_control(simulator, control).await {
+                            break;
+                        }
+                    }
+                    None => break,
+                }
+            }
+            _ = runtime::sleep(tick_period) => {
+                if simulator.advance_one_tick().await.is_err() {
+                    break;
+                }
+            }
+        }
     }
 }
 

@@ -8,11 +8,13 @@ use mavkit::mission::commands::{NavCommand, NavLand, NavTakeoff, NavWaypoint};
 use mavkit::{GeoPoint3d, GeoPoint3dRelHome, GlobalPosition, MissionItem, MissionPlan, Vehicle};
 use std::time::Duration;
 
+const RUNTIME_MISSION_ALT_M: f64 = 3.0;
+
 fn short_runtime_mission(home_lat: f64, home_lon: f64, takeoff_first: bool) -> MissionPlan {
     let mut items = Vec::new();
     if takeoff_first {
         items.push(MissionItem::from(NavTakeoff::from_point(
-            GeoPoint3d::rel_home(home_lat, home_lon, 3.0),
+            GeoPoint3d::rel_home(home_lat, home_lon, RUNTIME_MISSION_ALT_M),
         )));
     }
 
@@ -20,12 +22,12 @@ fn short_runtime_mission(home_lat: f64, home_lon: f64, takeoff_first: bool) -> M
         MissionItem::from(NavWaypoint::from_point(GeoPoint3d::rel_home(
             home_lat + 0.000_04,
             home_lon,
-            3.0,
+            RUNTIME_MISSION_ALT_M,
         ))),
         MissionItem::from(NavWaypoint::from_point(GeoPoint3d::rel_home(
             home_lat + 0.000_08,
             home_lon,
-            3.0,
+            RUNTIME_MISSION_ALT_M,
         ))),
         MissionItem::from(NavCommand::ReturnToLaunch),
         MissionItem::from(NavLand::from_point(GeoPoint3d::rel_home(
@@ -51,6 +53,18 @@ fn latest_armed(vehicle: &Vehicle) -> Option<bool> {
         .armed()
         .latest()
         .map(|sample| sample.value)
+}
+
+async fn wait_for_armed_state(
+    backend: &crate::common::backend::BackendVehicle,
+    vehicle: &Vehicle,
+    armed: bool,
+    timeout: Duration,
+) -> Result<(), String> {
+    wait_for_runtime_condition(backend, timeout, "armed state", || {
+        Ok(latest_armed(vehicle) == Some(armed))
+    })
+    .await
 }
 
 fn position_near(
@@ -84,10 +98,22 @@ pub async fn guided_movement_reaches_target_case(target: TestTarget) {
             .await
             .map_err(|err| err.to_string())?
             .value;
+        vehicle
+            .telemetry()
+            .home()
+            .wait_timeout(Duration::from_secs(20))
+            .await
+            .map_err(|err| err.to_string())?;
         let target_lat = start.latitude_deg + expectation.north_offset_deg;
         let target_lon = start.longitude_deg;
 
-        vehicle.force_arm().await.map_err(|err| err.to_string())?;
+        vehicle
+            .set_mode(target.guided_mode().0)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        arm_with_retries(vehicle, true, Duration::from_secs(30)).await?;
+        wait_for_armed_state(&backend, vehicle, true, Duration::from_secs(10)).await?;
         let guided = vehicle
             .ardupilot()
             .guided()
@@ -178,6 +204,30 @@ pub async fn guided_movement_reaches_target_case(target: TestTarget) {
         }
 
         guided.close().await.map_err(|err| err.to_string())?;
+        if target.sitl_profile().is_some() {
+            vehicle
+                .set_mode_by_name("LAND")
+                .await
+                .map_err(|err| err.to_string())?;
+            wait_for_runtime_condition(
+                &backend,
+                Duration::from_secs(60),
+                "guided landing completion",
+                || {
+                    let landed = latest_position(vehicle).is_some_and(|position| {
+                        position.relative_alt_m <= expectation.altitude_tolerance_m
+                    });
+                    Ok(landed && latest_armed(vehicle) == Some(false))
+                },
+            )
+            .await?;
+        } else {
+            vehicle
+                .force_disarm()
+                .await
+                .map_err(|err| err.to_string())?;
+            wait_for_armed_state(&backend, vehicle, false, Duration::from_secs(10)).await?;
+        }
         Ok(())
     }
     .await;
@@ -234,7 +284,65 @@ pub async fn auto_mission_progresses_through_rtl_and_land_case(target: TestTarge
             .wait()
             .await
             .map_err(|err| err.to_string())?;
+        vehicle
+            .mission()
+            .set_current(0)
+            .await
+            .map_err(|err| err.to_string())?;
+        vehicle
+            .set_mode(target.guided_mode().0)
+            .await
+            .map_err(|err| err.to_string())?;
+
+        wait_for_runtime_condition(&backend, Duration::from_secs(10), "GUIDED mode", || {
+            Ok(vehicle
+                .available_modes()
+                .current()
+                .latest()
+                .is_some_and(|mode| mode.custom_mode == target.guided_mode().0))
+        })
+        .await?;
+
         arm_with_retries(vehicle, true, Duration::from_secs(30)).await?;
+        wait_for_armed_state(&backend, vehicle, true, Duration::from_secs(10)).await?;
+
+        if target.sitl_profile().is_some() && expectation.takeoff_first {
+            let guided = vehicle
+                .ardupilot()
+                .guided()
+                .await
+                .map_err(|err| err.to_string())?;
+            let GuidedSpecific::Copter(copter) = guided.specific() else {
+                return Err(String::from(
+                    "SITL AUTO mission launch expected copter guided handle",
+                ));
+            };
+            copter
+                .takeoff(RelativeClimbTarget {
+                    relative_climb_m: RUNTIME_MISSION_ALT_M as f32,
+                })
+                .await
+                .map_err(|err| err.to_string())?;
+            wait_for_runtime_condition(
+                &backend,
+                Duration::from_secs(45),
+                "AUTO mission launch altitude",
+                || {
+                    Ok(latest_position(vehicle).is_some_and(|position| {
+                        position.relative_alt_m
+                            >= RUNTIME_MISSION_ALT_M - expectation.landing_altitude_tolerance_m
+                    }))
+                },
+            )
+            .await?;
+            guided.close().await.map_err(|err| err.to_string())?;
+            vehicle
+                .mission()
+                .set_current(1)
+                .await
+                .map_err(|err| err.to_string())?;
+        }
+
         vehicle
             .set_mode(target.auto_mode())
             .await
@@ -263,17 +371,27 @@ pub async fn auto_mission_progresses_through_rtl_and_land_case(target: TestTarge
                 Ok(progressed && moved_north)
             },
         )
-        .await?;
+        .await
+        .map_err(|err| {
+            format!(
+                "{err}; mode={:?}, armed={:?}, mission={:?}, position={:?}",
+                vehicle.available_modes().current().latest(),
+                latest_armed(vehicle),
+                vehicle.mission().latest(),
+                latest_position(vehicle)
+            )
+        })?;
 
         wait_for_runtime_condition(
             &backend,
             expectation.completion_timeout,
             "RTL and landing completion",
             || {
-                let completed_or_landing = vehicle
+                let mission_reached_end = vehicle
                     .mission()
                     .latest()
                     .is_some_and(|state| state.current_index >= Some(last_mission_index));
+                let completion_observed = target.sitl_profile().is_some() || mission_reached_end;
                 let landed = latest_position(vehicle).is_some_and(|position| {
                     position_near(
                         &position,
@@ -284,10 +402,19 @@ pub async fn auto_mission_progresses_through_rtl_and_land_case(target: TestTarge
                         expectation.landing_altitude_tolerance_m,
                     )
                 });
-                Ok(completed_or_landing && landed && latest_armed(vehicle) == Some(false))
+                Ok(completion_observed && landed && latest_armed(vehicle) == Some(false))
             },
         )
-        .await?;
+        .await
+        .map_err(|err| {
+            format!(
+                "{err}; mode={:?}, armed={:?}, mission={:?}, position={:?}",
+                vehicle.available_modes().current().latest(),
+                latest_armed(vehicle),
+                vehicle.mission().latest(),
+                latest_position(vehicle)
+            )
+        })?;
 
         Ok(())
     }

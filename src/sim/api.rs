@@ -2,7 +2,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::error::VehicleError;
 use crate::mission::HomePosition;
-use crate::{Vehicle, VehicleConfig};
+use crate::{Vehicle, VehicleConfig, runtime};
 
 use super::runtime::run_simulator;
 use super::state::{
@@ -145,7 +145,7 @@ impl DemoVehicleBuilder {
         let (control_tx, control_rx) = mpsc::channel(16);
         let (snapshot_tx, snapshot_rx) = watch::channel(initial_snapshot.clone());
 
-        tokio::spawn(run_simulator(
+        runtime::spawn(run_simulator(
             sim_config,
             endpoints,
             control_rx,
