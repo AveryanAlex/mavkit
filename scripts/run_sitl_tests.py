@@ -12,10 +12,10 @@ import subprocess
 import sys
 import time
 import uuid
+from dataclasses import dataclass
 
 
 DEFAULT_SITL_IMAGE = "radarku/ardupilot-sitl:eff32c1f98152ac3d1dc09a1e475733b73ce569f"
-SITL_DEFAULTS = "/ardupilot/Tools/autotest/default_params/copter.parm"
 SITL_HOME = "42.3898,-71.1476,14.0,270.0"
 SITL_CONTAINER_PORT = 5760
 
@@ -28,6 +28,75 @@ def env_flag(name: str, default: bool) -> bool:
     if value is None:
         return default
     return value.strip().lower() not in {"0", "false", "no", "off"}
+
+
+@dataclass(frozen=True)
+class SitlProfile:
+    target: str
+    entrypoint: str
+    args: list[str]
+    probe_tcp: bool = True
+
+
+SITL_PROFILES: dict[str, SitlProfile] = {
+    "copter": SitlProfile(
+        target="copter",
+        entrypoint="/ardupilot/build/sitl/bin/arducopter",
+        args=[
+            "--model",
+            "+",
+            "--speedup",
+            "1",
+            "--defaults",
+            "/ardupilot/Tools/autotest/default_params/copter.parm",
+            "--home",
+            SITL_HOME,
+            "-w",
+        ],
+    ),
+    "plane": SitlProfile(
+        target="plane",
+        entrypoint="/bin/sh",
+        args=[
+            "-lc",
+            "cd /ardupilot/ArduPlane && ../Tools/autotest/sim_vehicle.py -v ArduPlane -f plane --no-rebuild --no-mavproxy --speedup 1 --custom-location "
+            f"{SITL_HOME} -I 0 -w",
+        ],
+        probe_tcp=False,
+    ),
+    "quadplane": SitlProfile(
+        target="quadplane",
+        entrypoint="/bin/sh",
+        args=[
+            "-lc",
+            "cd /ardupilot/ArduPlane && ../Tools/autotest/sim_vehicle.py -v ArduPlane -f quadplane --no-rebuild --no-mavproxy --speedup 1 --custom-location "
+            f"{SITL_HOME} -I 0 -w",
+        ],
+        probe_tcp=False,
+    ),
+}
+
+
+SITL_TARGET_ALIASES = {
+    "arducopter": "copter",
+    "sitl_copter": "copter",
+    "arduplane": "plane",
+    "sitl_plane": "plane",
+    "arduquadplane": "quadplane",
+    "sitl_quadplane": "quadplane",
+}
+
+
+def sitl_profile_from_env() -> SitlProfile:
+    value = os.environ.get("MAVKIT_SITL_TARGET", "copter").strip().lower()
+    target = SITL_TARGET_ALIASES.get(value, value)
+    try:
+        return SITL_PROFILES[target]
+    except KeyError as exc:
+        supported = ", ".join(SITL_PROFILES)
+        raise ValueError(
+            f"unsupported MAVKIT_SITL_TARGET={value!r}; expected one of: {supported}"
+        ) from exc
 
 
 def run_interactive(cmd: list[str], *, env: dict[str, str] | None = None) -> int:
@@ -49,6 +118,7 @@ def run_capture(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 class SitlTestRunner:
     def __init__(self, *, pull: bool, timeout_s: int) -> None:
         self.image = os.environ.get("MAVKIT_SITL_IMAGE", DEFAULT_SITL_IMAGE)
+        self.profile = sitl_profile_from_env()
         self.container = os.environ.get(
             "MAVKIT_SITL_CONTAINER", f"mavkit-sitl-{os.getpid()}-{uuid.uuid4().hex[:8]}"
         )
@@ -77,18 +147,10 @@ class SitlTestRunner:
             "-p",
             publish,
             "--entrypoint",
-            "/ardupilot/build/sitl/bin/arducopter",
+            self.profile.entrypoint,
             self.image,
-            "--model",
-            "+",
-            "--speedup",
-            "1",
-            "--defaults",
-            SITL_DEFAULTS,
-            "--home",
-            SITL_HOME,
-            "-w",
         ]
+        cmd.extend(self.profile.args)
         result = run_capture(cmd)
         if result.returncode != 0:
             sys.stderr.write(result.stderr)
@@ -96,8 +158,8 @@ class SitlTestRunner:
 
         self.started = True
         self.tcp_addr = self._resolve_tcp_addr()
-        self._wait_for_tcp()
-        print(f"SITL ready at tcp:{self.tcp_addr}", flush=True)
+        self._wait_for_ready()
+        print(f"SITL {self.profile.target} ready at tcp:{self.tcp_addr}", flush=True)
         return self.tcp_addr
 
     def stop(self) -> None:
@@ -158,6 +220,23 @@ class SitlTestRunner:
                 return f"{connect_host}:{port}"
 
         raise RuntimeError(f"could not parse docker port output: {result.stdout!r}")
+
+    def _wait_for_ready(self) -> None:
+        if self.profile.probe_tcp:
+            self._wait_for_tcp()
+            return
+
+        deadline = time.monotonic() + self.timeout_s
+        while time.monotonic() < deadline:
+            if self._is_running():
+                time.sleep(8)
+                if self._is_running():
+                    return
+                break
+            time.sleep(1)
+
+        self.dump_logs()
+        raise RuntimeError("SITL container exited before startup delay completed")
 
     def _wait_for_tcp(self) -> None:
         if self.tcp_addr is None:
@@ -251,6 +330,7 @@ def main() -> int:
         tcp_addr = _runner.start()
         test_env = os.environ.copy()
         test_env["MAVKIT_SITL_TCP_ADDR"] = tcp_addr
+        test_env["MAVKIT_SITL_TARGET"] = _runner.profile.target
         test_env.pop("MAVKIT_SITL_UDP_BIND", None)
         if args.strict:
             test_env["MAVKIT_SITL_STRICT"] = "1"

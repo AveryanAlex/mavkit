@@ -1,4 +1,5 @@
-use crate::{TestTarget, disconnect, setup_backend_vehicle};
+use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::target::TestTarget;
 use mavkit::{AutopilotType, LinkState};
 use std::time::Duration;
 

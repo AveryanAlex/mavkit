@@ -1,6 +1,18 @@
+use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::target::TestTarget;
 use crate::common::wait::{wait_for_mode, wait_for_mode_name};
-use crate::{TestTarget, disconnect, setup_backend_vehicle};
+#[cfg(feature = "sim")]
+use mavkit::{CommandResult, VehicleError, dialect};
 use std::time::Duration;
+
+#[cfg(feature = "sim")]
+#[allow(dead_code)]
+fn demo_snapshot_custom_mode(backend: &crate::common::backend::BackendVehicle) -> Option<u32> {
+    backend
+        .demo_handle
+        .as_ref()
+        .map(|demo_handle| demo_handle.snapshot().custom_mode)
+}
 
 pub async fn mode_catalog_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
@@ -151,6 +163,57 @@ pub async fn set_invalid_name_returns_error_case(target: TestTarget) {
             return Err(String::from(
                 "expected set_mode_by_name with invalid name to return Err, but got Ok",
             ));
+        }
+
+        Ok(())
+    }
+    .await;
+
+    disconnect(backend).await;
+    if let Err(err) = result {
+        panic!("{err}");
+    }
+}
+
+#[cfg(feature = "sim")]
+#[allow(dead_code)]
+pub async fn set_invalid_custom_mode_rejected_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
+
+    let result: Result<(), String> = async {
+        let expectation = target
+            .invalid_custom_mode_expectation()
+            .ok_or_else(|| format!("no invalid custom mode expectation for {target:?}"))?;
+        let before = demo_snapshot_custom_mode(&backend);
+        let err = vehicle
+            .set_mode(expectation.custom_mode)
+            .await
+            .expect_err("invalid custom mode should be rejected");
+
+        match err {
+            VehicleError::CommandRejected { command, result } => {
+                if command != dialect::MavCmd::MAV_CMD_DO_SET_MODE as u16 {
+                    return Err(format!(
+                        "expected DO_SET_MODE rejection, got command {command}"
+                    ));
+                }
+                if result != CommandResult::Denied {
+                    return Err(format!("expected denied result, got {result}"));
+                }
+            }
+            other => return Err(format!("expected command rejection, got {other}")),
+        }
+
+        if expectation.can_assert_unchanged_state {
+            let before = before.ok_or_else(|| String::from("demo custom mode unavailable"))?;
+            let after = demo_snapshot_custom_mode(&backend)
+                .ok_or_else(|| String::from("demo custom mode unavailable after rejection"))?;
+            if after != before {
+                return Err(format!(
+                    "invalid mode changed simulator custom_mode from {before} to {after}"
+                ));
+            }
         }
 
         Ok(())

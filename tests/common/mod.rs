@@ -6,5 +6,8 @@ pub mod mission;
 pub mod modes;
 pub mod params;
 pub mod raw;
+pub mod runtime;
+pub mod support;
+pub mod target;
 pub mod telemetry;
 pub mod wait;

@@ -1,152 +1,24 @@
 mod common;
 
-#[path = "common/support.rs"]
-mod support;
-
-use common::backend::BackendVehicle;
 use common::fixtures::sample_plan_mission;
-use common::wait::wait_for_telemetry;
-use mavkit::Vehicle;
-use std::time::Duration;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct TestTarget;
-
-impl TestTarget {
-    const SITL_COPTER: Self = Self;
-
-    fn expected_modes(self) -> &'static [(u32, &'static str)] {
-        &[(0, "STABILIZE"), (4, "GUIDED"), (5, "LOITER"), (6, "RTL")]
-    }
-
-    fn guided_mode(self) -> (u32, &'static str) {
-        (4, "GUIDED")
-    }
-
-    fn hold_mode(self) -> (u32, &'static str) {
-        (5, "LOITER")
-    }
-
-    fn mode_names(self) -> (&'static str, &'static str, &'static str) {
-        ("STABILIZE", "GUIDED", "LOITER")
-    }
-}
-
-async fn setup_backend_vehicle(_: TestTarget) -> BackendVehicle {
-    const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
-    #[cfg(feature = "tcp")]
-    const SITL_STREAM_RATE_HZ: f32 = 5.0;
-
-    enum SitlEndpoint {
-        Tcp(String),
-        Udp(String),
-    }
-
-    fn sitl_endpoint() -> SitlEndpoint {
-        if let Ok(addr) = std::env::var("MAVKIT_SITL_TCP_ADDR") {
-            return SitlEndpoint::Tcp(addr);
-        }
-
-        if let Ok(addr) = std::env::var("MAVKIT_SITL_UDP_BIND") {
-            return SitlEndpoint::Udp(addr);
-        }
-
-        SitlEndpoint::Tcp(String::from("127.0.0.1:5760"))
-    }
-
-    #[cfg(feature = "tcp")]
-    async fn connect_sitl_vehicle_tcp(addr: &str) -> Result<Vehicle, String> {
-        let vehicle = Vehicle::connect_tcp(addr)
-            .await
-            .map_err(|err| format!("failed to connect to SITL TCP endpoint {addr}: {err}"))?;
-        prime_sitl_tcp_streams(&vehicle).await?;
-        Ok(vehicle)
-    }
-
-    #[cfg(not(feature = "tcp"))]
-    async fn connect_sitl_vehicle_tcp(addr: &str) -> Result<Vehicle, String> {
-        Err(format!(
-            "SITL TCP endpoint {addr} requested, but mavkit was built without the `tcp` feature"
-        ))
-    }
-
-    #[cfg(feature = "udp")]
-    async fn connect_sitl_vehicle_udp(addr: &str) -> Result<Vehicle, String> {
-        Vehicle::connect_udp(addr)
-            .await
-            .map_err(|err| format!("failed to connect to SITL UDP bind {addr}: {err}"))
-    }
-
-    #[cfg(not(feature = "udp"))]
-    async fn connect_sitl_vehicle_udp(addr: &str) -> Result<Vehicle, String> {
-        Err(format!(
-            "SITL UDP bind {addr} requested, but mavkit was built without the `udp` feature"
-        ))
-    }
-
-    #[cfg(feature = "tcp")]
-    async fn prime_sitl_tcp_streams(vehicle: &Vehicle) -> Result<(), String> {
-        let telemetry = vehicle.telemetry();
-        let messages = telemetry.messages();
-
-        messages
-            .global_position_int()
-            .set_rate(SITL_STREAM_RATE_HZ)
-            .await
-            .map_err(|err| format!("failed to request GLOBAL_POSITION_INT stream: {err}"))?;
-        messages
-            .attitude()
-            .set_rate(SITL_STREAM_RATE_HZ)
-            .await
-            .map_err(|err| format!("failed to request ATTITUDE stream: {err}"))?;
-        messages
-            .gps_raw_int()
-            .set_rate(SITL_STREAM_RATE_HZ)
-            .await
-            .map_err(|err| format!("failed to request GPS_RAW_INT stream: {err}"))?;
-        messages
-            .sys_status()
-            .set_rate(SITL_STREAM_RATE_HZ)
-            .await
-            .map_err(|err| format!("failed to request SYS_STATUS stream: {err}"))?;
-        messages
-            .vfr_hud()
-            .set_rate(SITL_STREAM_RATE_HZ)
-            .await
-            .map_err(|err| format!("failed to request VFR_HUD stream: {err}"))?;
-
-        Ok(())
-    }
-
-    async fn connect_sitl_vehicle() -> Result<Vehicle, String> {
-        match sitl_endpoint() {
-            SitlEndpoint::Tcp(addr) => connect_sitl_vehicle_tcp(&addr).await,
-            SitlEndpoint::Udp(addr) => connect_sitl_vehicle_udp(&addr).await,
-        }
-    }
-
-    let vehicle = connect_sitl_vehicle().await.unwrap();
-    wait_for_telemetry(&vehicle, CONNECT_TIMEOUT)
-        .await
-        .expect("should receive telemetry from SITL");
-
-    BackendVehicle {
-        vehicle,
-        #[cfg(feature = "sim")]
-        demo_handle: None,
-    }
-}
-
-async fn disconnect(backend: BackendVehicle) {
-    common::backend::disconnect(backend).await;
-}
+use common::target::TestTarget;
 
 macro_rules! sitl_case {
-    ($name:ident, $path:path $(, $arg:expr )* $(,)?) => {
+    ($name:ident, $path:path, $target:expr $(, $arg:expr )* $(,)?) => {
         #[tokio::test]
         #[ignore = "requires ArduPilot SITL endpoint"]
         async fn $name() {
-            $path($($arg),*).await;
+            let target = $target;
+            match target.sitl_skip_reason_for_current_env() {
+                Ok(Some(reason)) => {
+                    eprintln!("Skipping {}: {reason}", stringify!($name));
+                    return;
+                }
+                Ok(None) => {}
+                Err(err) => panic!("{err}"),
+            }
+
+            $path(target $(, $arg)*).await;
         }
     };
 }
@@ -186,6 +58,18 @@ sitl_case!(
     sample_plan_mission(20)
 );
 sitl_case!(
+    sitl_plane_roundtrip_mission_no_home,
+    common::mission::roundtrip_case,
+    TestTarget::SITL_PLANE,
+    sample_plan_mission(3)
+);
+sitl_case!(
+    sitl_quadplane_roundtrip_mission_no_home,
+    common::mission::roundtrip_case,
+    TestTarget::SITL_QUADPLANE,
+    sample_plan_mission(3)
+);
+sitl_case!(
     sitl_upload_overwrites_previous_mission,
     common::mission::upload_overwrites_previous_mission_case,
     TestTarget::SITL_COPTER
@@ -203,6 +87,11 @@ sitl_case!(
 sitl_case!(
     sitl_roundtrip_mission_type_rally,
     common::mission::roundtrip_mission_type_rally_case,
+    TestTarget::SITL_COPTER
+);
+sitl_case!(
+    sitl_auto_mission_progresses_through_rtl_and_land,
+    common::runtime::auto_mission_progresses_through_rtl_and_land_case,
     TestTarget::SITL_COPTER
 );
 
@@ -248,6 +137,26 @@ sitl_case!(
     TestTarget::SITL_COPTER
 );
 sitl_case!(
+    sitl_plane_modes_catalog_entries_have_names_and_ids,
+    common::modes::mode_catalog_case,
+    TestTarget::SITL_PLANE
+);
+sitl_case!(
+    sitl_quadplane_modes_catalog_entries_have_names_and_ids,
+    common::modes::mode_catalog_case,
+    TestTarget::SITL_QUADPLANE
+);
+sitl_case!(
+    sitl_plane_modes_current_mode_stream_updates_on_switch,
+    common::modes::set_mode_by_name_case,
+    TestTarget::SITL_PLANE
+);
+sitl_case!(
+    sitl_quadplane_modes_current_mode_stream_updates_on_switch,
+    common::modes::set_mode_by_name_case,
+    TestTarget::SITL_QUADPLANE
+);
+sitl_case!(
     sitl_modes_set_invalid_name_returns_error,
     common::modes::set_invalid_name_returns_error_case,
     TestTarget::SITL_COPTER
@@ -262,11 +171,26 @@ sitl_case!(
     common::modes::set_flight_mode_case,
     TestTarget::SITL_COPTER
 );
+sitl_case!(
+    sitl_guided_movement_reaches_target,
+    common::runtime::guided_movement_reaches_target_case,
+    TestTarget::SITL_COPTER
+);
 
 sitl_case!(
     sitl_param_download_all,
     common::params::param_download_all_case,
     TestTarget::SITL_COPTER
+);
+sitl_case!(
+    sitl_plane_param_download_all,
+    common::params::param_download_all_case,
+    TestTarget::SITL_PLANE
+);
+sitl_case!(
+    sitl_quadplane_param_download_all,
+    common::params::param_download_all_case,
+    TestTarget::SITL_QUADPLANE
 );
 sitl_case!(
     sitl_param_write_and_readback,
@@ -349,22 +273,36 @@ sitl_case!(
     common::telemetry::telemetry_position_observation_available_case,
     TestTarget::SITL_COPTER
 );
+sitl_case!(
+    sitl_plane_telemetry_position_observation_available,
+    common::telemetry::telemetry_position_observation_available_case,
+    TestTarget::SITL_PLANE
+);
+sitl_case!(
+    sitl_quadplane_telemetry_position_observation_available,
+    common::telemetry::telemetry_position_observation_available_case,
+    TestTarget::SITL_QUADPLANE
+);
 
 sitl_case!(
     sitl_support_command_int_resolves,
-    support::sitl_support_command_int_resolves
+    common::support::support_command_int_case,
+    TestTarget::SITL_COPTER
 );
 sitl_case!(
     sitl_support_mission_fence_resolves,
-    support::sitl_support_mission_fence_resolves
+    common::support::support_mission_fence_case,
+    TestTarget::SITL_COPTER
 );
 sitl_case!(
     sitl_support_mission_rally_resolves,
-    support::sitl_support_mission_rally_resolves
+    common::support::support_mission_rally_case,
+    TestTarget::SITL_COPTER
 );
 sitl_case!(
     sitl_support_terrain_resolves,
-    support::sitl_support_terrain_resolves
+    common::support::support_terrain_case,
+    TestTarget::SITL_COPTER
 );
 
 sitl_case!(

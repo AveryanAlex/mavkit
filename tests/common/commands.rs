@@ -1,6 +1,8 @@
+use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::support::check_support_expectation;
+use crate::common::target::TestTarget;
 use crate::common::wait::{wait_for_armed, wait_for_mode};
-use crate::{TestTarget, disconnect, setup_backend_vehicle};
-use mavkit::{LinkState, SupportState, Vehicle};
+use mavkit::{LinkState, Vehicle};
 use std::time::Duration;
 
 async fn wait_for_home_position(vehicle: &Vehicle, timeout: Duration) {
@@ -79,6 +81,7 @@ pub async fn home_position_watch_populates_case(target: TestTarget) {
 pub async fn support_discovery_reports_ardupilot_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let expectations = target.support_expectations();
     let result: Result<(), String> = async {
         let ardupilot_support = vehicle
             .support()
@@ -87,11 +90,7 @@ pub async fn support_discovery_reports_ardupilot_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        if ardupilot_support != SupportState::Supported {
-            return Err(format!(
-                "expected ardupilot support discovery to be Supported, got {ardupilot_support:?}"
-            ));
-        }
+        check_support_expectation("ardupilot", ardupilot_support, expectations.ardupilot)?;
 
         let modes_support = vehicle
             .available_modes()
@@ -100,11 +99,7 @@ pub async fn support_discovery_reports_ardupilot_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        if modes_support == SupportState::Unknown {
-            return Err(String::from(
-                "expected mode support to resolve to a concrete state",
-            ));
-        }
+        check_support_expectation("modes", modes_support, expectations.modes)?;
 
         Ok(())
     }
@@ -119,6 +114,7 @@ pub async fn support_discovery_reports_ardupilot_case(target: TestTarget) {
 pub async fn set_home_current_updates_home_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let home_expectation = target.telemetry_expectations().home_position;
     let result: Result<(), String> = async {
         wait_for_home_position(vehicle, Duration::from_secs(20)).await;
 
@@ -147,9 +143,12 @@ pub async fn set_home_current_updates_home_case(target: TestTarget) {
 
         let lat_diff = (updated.value.latitude_deg - original.value.latitude_deg).abs();
         let lon_diff = (updated.value.longitude_deg - original.value.longitude_deg).abs();
-        if lat_diff >= 0.001 || lon_diff >= 0.001 {
+        if lat_diff >= home_expectation.set_current_max_drift_deg
+            || lon_diff >= home_expectation.set_current_max_drift_deg
+        {
             return Err(format!(
-                "home drifted too far: lat_diff={lat_diff}, lon_diff={lon_diff}"
+                "home drifted too far: lat_diff={lat_diff}, lon_diff={lon_diff}, max={}",
+                home_expectation.set_current_max_drift_deg
             ));
         }
 

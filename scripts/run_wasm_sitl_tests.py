@@ -211,6 +211,7 @@ def main() -> int:
         tcp_addr = _runner.start()
         _, ws_url = start_proxy(tcp_addr, args.timeout)
         env = test_environment(ws_url, no_headless=args.no_headless, strict=args.strict)
+        env["MAVKIT_SITL_TARGET"] = _runner.profile.target
 
         cmd = cargo_command()
         print(f"+ {shlex.join(cmd)}", flush=True)

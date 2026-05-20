@@ -1,10 +1,12 @@
-use crate::{TestTarget, disconnect, setup_backend_vehicle};
+use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::target::TestTarget;
 use mavkit::SensorHealthState;
 use std::time::Duration;
 
 pub async fn basic_telemetry_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let expectations = target.telemetry_expectations();
 
     let result: Result<(), String> = async {
         let position = vehicle
@@ -41,7 +43,9 @@ pub async fn basic_telemetry_case(target: TestTarget) {
             .wait_timeout(Duration::from_secs(10))
             .await
             .map_err(|err| err.to_string())?;
-        if !(5.0..=60.0).contains(&battery.value) {
+        if battery.value < expectations.battery_voltage_min_v
+            || battery.value > expectations.battery_voltage_max_v
+        {
             return Err(format!("battery voltage out of range: {} V", battery.value));
         }
 
@@ -52,8 +56,11 @@ pub async fn basic_telemetry_case(target: TestTarget) {
             .wait_timeout(Duration::from_secs(10))
             .await
             .map_err(|err| err.to_string())?;
-        if gps.value.satellites.unwrap_or(0) == 0 {
-            return Err(String::from("GPS reports 0 satellites"));
+        if gps.value.satellites.unwrap_or(0) < expectations.min_satellites {
+            return Err(format!(
+                "GPS reports fewer than {} satellites",
+                expectations.min_satellites
+            ));
         }
 
         let groundspeed = vehicle
@@ -74,7 +81,9 @@ pub async fn basic_telemetry_case(target: TestTarget) {
             .wait_timeout(Duration::from_secs(10))
             .await
             .map_err(|err| err.to_string())?;
-        if !(0.0..=360.0).contains(&heading.value) {
+        if heading.value < expectations.heading_min_deg
+            || heading.value > expectations.heading_max_deg
+        {
             return Err(format!("heading out of range: {}", heading.value));
         }
 
@@ -107,6 +116,7 @@ pub async fn basic_telemetry_case(target: TestTarget) {
 pub async fn telemetry_attitude_euler_available_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let expectations = target.telemetry_expectations();
     let result: Result<(), String> = async {
         let sample = vehicle
             .telemetry()
@@ -123,10 +133,14 @@ pub async fn telemetry_attitude_euler_available_case(target: TestTarget) {
             return Err(String::from("attitude contained non-finite values"));
         }
 
-        if sample.value.roll_deg.abs() > 17.0 || sample.value.pitch_deg.abs() > 17.0 {
+        if sample.value.roll_deg.abs() > expectations.max_stationary_roll_pitch_deg
+            || sample.value.pitch_deg.abs() > expectations.max_stationary_roll_pitch_deg
+        {
             return Err(format!(
-                "attitude roll/pitch unexpectedly large for stationary vehicle: roll={}, pitch={}",
-                sample.value.roll_deg, sample.value.pitch_deg
+                "attitude roll/pitch unexpectedly large for stationary vehicle: roll={}, pitch={}, max={}",
+                sample.value.roll_deg,
+                sample.value.pitch_deg,
+                expectations.max_stationary_roll_pitch_deg
             ));
         }
 
@@ -143,6 +157,7 @@ pub async fn telemetry_attitude_euler_available_case(target: TestTarget) {
 pub async fn telemetry_battery_voltage_available_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let expectations = target.telemetry_expectations();
     let result: Result<(), String> = async {
         let sample = vehicle
             .telemetry()
@@ -152,7 +167,9 @@ pub async fn telemetry_battery_voltage_available_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        if sample.value < 5.0 || sample.value > 60.0 {
+        if sample.value < expectations.battery_voltage_min_v
+            || sample.value > expectations.battery_voltage_max_v
+        {
             return Err(format!("battery voltage out of range: {} V", sample.value));
         }
 
@@ -169,6 +186,7 @@ pub async fn telemetry_battery_voltage_available_case(target: TestTarget) {
 pub async fn telemetry_gps_quality_available_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let expectations = target.telemetry_expectations();
     let result: Result<(), String> = async {
         let sample = vehicle
             .telemetry()
@@ -178,8 +196,11 @@ pub async fn telemetry_gps_quality_available_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        if sample.value.satellites.unwrap_or(0) == 0 {
-            return Err(String::from("GPS reports 0 satellites in SITL"));
+        if sample.value.satellites.unwrap_or(0) < expectations.min_satellites {
+            return Err(format!(
+                "GPS reports fewer than {} satellites",
+                expectations.min_satellites
+            ));
         }
 
         Ok(())
@@ -195,6 +216,7 @@ pub async fn telemetry_gps_quality_available_case(target: TestTarget) {
 pub async fn telemetry_groundspeed_available_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let expectations = target.telemetry_expectations();
     let result: Result<(), String> = async {
         let sample = vehicle
             .telemetry()
@@ -207,10 +229,10 @@ pub async fn telemetry_groundspeed_available_case(target: TestTarget) {
         if !sample.value.is_finite() {
             return Err(String::from("groundspeed is not finite"));
         }
-        if sample.value > 1.0 {
+        if sample.value > expectations.max_stationary_groundspeed_mps {
             return Err(format!(
-                "groundspeed unexpectedly high for stationary vehicle: {} m/s",
-                sample.value
+                "groundspeed unexpectedly high for stationary vehicle: {} m/s, max={} m/s",
+                sample.value, expectations.max_stationary_groundspeed_mps
             ));
         }
 
@@ -227,6 +249,7 @@ pub async fn telemetry_groundspeed_available_case(target: TestTarget) {
 pub async fn telemetry_heading_available_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let expectations = target.telemetry_expectations();
     let result: Result<(), String> = async {
         let sample = vehicle
             .telemetry()
@@ -236,7 +259,9 @@ pub async fn telemetry_heading_available_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        if sample.value < 0.0 || sample.value > 360.0 {
+        if sample.value < expectations.heading_min_deg
+            || sample.value > expectations.heading_max_deg
+        {
             return Err(format!("heading out of range: {}", sample.value));
         }
 
@@ -281,6 +306,7 @@ pub async fn telemetry_sensor_health_available_case(target: TestTarget) {
 pub async fn telemetry_position_near_home_case(target: TestTarget) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
+    let expectations = target.telemetry_expectations();
     let result: Result<(), String> = async {
         let sample = vehicle
             .telemetry()
@@ -290,12 +316,17 @@ pub async fn telemetry_position_near_home_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        let lat_diff = (sample.value.latitude_deg - 42.3898).abs();
-        let lon_diff = (sample.value.longitude_deg - (-71.1476)).abs();
-        if lat_diff > 0.01 || lon_diff > 0.01 {
+        let home = expectations.home_position;
+        let lat_diff = (sample.value.latitude_deg - home.latitude_deg).abs();
+        let lon_diff = (sample.value.longitude_deg - home.longitude_deg).abs();
+        if lat_diff > home.tolerance_deg || lon_diff > home.tolerance_deg {
             return Err(format!(
-                "position too far from SITL home: lat={}, lon={} (expected ~42.39, ~-71.15)",
-                sample.value.latitude_deg, sample.value.longitude_deg
+                "position too far from expected home: lat={}, lon={} (expected ~{}, ~{}, tolerance={})",
+                sample.value.latitude_deg,
+                sample.value.longitude_deg,
+                home.latitude_deg,
+                home.longitude_deg,
+                home.tolerance_deg
             ));
         }
 

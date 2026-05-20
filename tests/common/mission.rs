@@ -1,6 +1,7 @@
+use crate::common::backend::{disconnect, setup_backend_vehicle};
 use crate::common::fixtures::sample_plan_mission;
+use crate::common::target::TestTarget;
 use crate::common::wait::wait_for_mission_state;
-use crate::{TestTarget, disconnect, setup_backend_vehicle};
 use mavkit::{
     CompareTolerance, FencePlan, MissionPlan, MissionType, RallyPlan, Vehicle, VehicleError,
     normalize_for_compare, plans_equivalent,

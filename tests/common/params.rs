@@ -1,4 +1,5 @@
-use crate::{TestTarget, disconnect, setup_backend_vehicle};
+use crate::common::backend::{disconnect, setup_backend_vehicle};
+use crate::common::target::TestTarget;
 use mavkit::{ParamOperationProgress, ParamStore, Vehicle};
 use std::time::Duration;
 
@@ -413,6 +414,53 @@ pub async fn param_subscribe_emits_on_download_case(target: TestTarget) {
 
         if !received {
             return Err("subscription did not emit any update during param download".into());
+        }
+
+        Ok(())
+    }
+    .await;
+
+    disconnect(backend).await;
+    if let Err(err) = result {
+        panic!("{err}");
+    }
+}
+
+#[cfg(feature = "sim")]
+#[allow(dead_code)]
+pub async fn param_profile_specifics_case(target: TestTarget) {
+    let backend = setup_backend_vehicle(target).await;
+    let vehicle = &backend.vehicle;
+
+    let result: Result<(), String> = async {
+        let expectations = target
+            .param_profile_expectations()
+            .ok_or_else(|| format!("no profile-specific param expectations for {target:?}"))?;
+        let store = download_all_params(vehicle).await?;
+
+        for name in expectations.expected_present {
+            if !store.params.contains_key(*name) {
+                return Err(format!("expected profile param {name} to be present"));
+            }
+        }
+
+        for name in expectations.expected_absent {
+            if store.params.contains_key(*name) {
+                return Err(format!("expected profile param {name} to be absent"));
+            }
+        }
+
+        for (name, expected_value) in expectations.expected_values {
+            let param = store
+                .params
+                .get(*name)
+                .ok_or_else(|| format!("expected profile param {name} to be present"))?;
+            if (param.value - expected_value).abs() > f32::EPSILON {
+                return Err(format!(
+                    "expected profile param {name} to be {expected_value}, got {}",
+                    param.value
+                ));
+            }
         }
 
         Ok(())
