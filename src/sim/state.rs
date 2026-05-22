@@ -5,6 +5,7 @@ use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::dialect;
 use crate::error::VehicleError;
+use crate::geo::{GeoPoint3dMsl, try_latitude_e7, try_longitude_e7};
 use crate::mission::{HomePosition, MissionType};
 
 use super::api::{DemoClock, DemoProfile, DemoVehicleSnapshot};
@@ -45,6 +46,10 @@ pub(crate) struct DemoVehicleConfig {
 #[derive(Debug)]
 pub(crate) enum ControlMessage {
     Step {
+        reply: oneshot::Sender<Result<DemoVehicleSnapshot, VehicleError>>,
+    },
+    TeleportTo {
+        target: TeleportTarget,
         reply: oneshot::Sender<Result<DemoVehicleSnapshot, VehicleError>>,
     },
     Shutdown {
@@ -88,6 +93,42 @@ pub(crate) struct VelocityNed {
     pub(crate) north_mps: f64,
     pub(crate) east_mps: f64,
     pub(crate) down_mps: f64,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct TeleportTarget {
+    pub(crate) latitude_e7: i32,
+    pub(crate) longitude_e7: i32,
+    pub(crate) altitude_mm: i32,
+}
+
+impl TryFrom<GeoPoint3dMsl> for TeleportTarget {
+    type Error = VehicleError;
+
+    fn try_from(position: GeoPoint3dMsl) -> Result<Self, Self::Error> {
+        Ok(Self {
+            latitude_e7: try_latitude_e7(position.latitude_deg)?,
+            longitude_e7: try_longitude_e7(position.longitude_deg)?,
+            altitude_mm: altitude_msl_to_mm(position.altitude_msl_m)?,
+        })
+    }
+}
+
+fn altitude_msl_to_mm(value: f64) -> Result<i32, VehicleError> {
+    if !value.is_finite() {
+        return Err(VehicleError::InvalidParameter(format!(
+            "altitude_msl_m must be finite, got {value}"
+        )));
+    }
+
+    let scaled = (value * 1000.0).round();
+    if !(i32::MIN as f64..=i32::MAX as f64).contains(&scaled) {
+        return Err(VehicleError::InvalidParameter(format!(
+            "altitude_msl_m {value} m overflows i32 millimeter range"
+        )));
+    }
+
+    Ok(scaled as i32)
 }
 
 pub(crate) struct SimulatorCore {

@@ -7,7 +7,7 @@ use crate::error::VehicleError;
 use crate::runtime;
 
 use super::api::{DemoClock, DemoVehicleSnapshot};
-use super::state::{ControlMessage, DemoVehicleConfig, SimulatorCore};
+use super::state::{ControlMessage, DemoVehicleConfig, SimulatorCore, TeleportTarget, VelocityNed};
 use super::transport::SimulatorEndpoints;
 
 const MICROS_PER_SECOND: u64 = 1_000_000;
@@ -158,6 +158,14 @@ async fn handle_control(simulator: &mut SimulatorCore, control: ControlMessage) 
             let _ = reply.send(result);
             false
         }
+        ControlMessage::TeleportTo { target, reply } => {
+            let result = simulator
+                .teleport_to(target)
+                .await
+                .map(|_| simulator.snapshot.clone());
+            let _ = reply.send(result);
+            false
+        }
         ControlMessage::Shutdown { reply } => {
             let _ = reply.send(Ok(()));
             true
@@ -170,6 +178,21 @@ impl SimulatorCore {
         self.emit_heartbeat().await?;
         self.emit_current_mode().await?;
         self.emit_home_and_origin().await?;
+        self.emit_telemetry_burst().await
+    }
+
+    pub(crate) async fn teleport_to(&mut self, target: TeleportTarget) -> Result<(), VehicleError> {
+        self.snapshot.latitude_deg = f64::from(target.latitude_e7) / 1e7;
+        self.snapshot.longitude_deg = f64::from(target.longitude_e7) / 1e7;
+        self.snapshot.altitude_msl_m = f64::from(target.altitude_mm) / 1000.0;
+        self.snapshot.relative_alt_m = self.snapshot.altitude_msl_m - self.snapshot.home.altitude_m;
+        self.velocity = VelocityNed {
+            north_mps: 0.0,
+            east_mps: 0.0,
+            down_mps: 0.0,
+        };
+        self.publish_snapshot();
+
         self.emit_telemetry_burst().await
     }
 

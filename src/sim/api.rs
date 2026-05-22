@@ -1,13 +1,14 @@
 use tokio::sync::{mpsc, oneshot, watch};
 
 use crate::error::VehicleError;
+use crate::geo::GeoPoint3dMsl;
 use crate::mission::HomePosition;
 use crate::{Vehicle, VehicleConfig, runtime};
 
 use super::runtime::run_simulator;
 use super::state::{
     ControlMessage, DEFAULT_HOME_ALT_M, DEFAULT_HOME_LAT_DEG, DEFAULT_HOME_LON_DEG,
-    DEFAULT_TICK_HZ, DemoVehicleConfig, default_mode,
+    DEFAULT_TICK_HZ, DemoVehicleConfig, TeleportTarget, default_mode,
 };
 use super::transport::SimulatorConnection;
 
@@ -195,6 +196,28 @@ impl DemoVehicleHandle {
         self.snapshot_rx.borrow().clone()
     }
 
+    /// Move the demo simulator's vehicle state to an absolute MSL position immediately.
+    ///
+    /// This is a simulator control-plane operation rather than a MAVLink command: it updates the
+    /// in-process backend directly and emits a telemetry burst so connected [`Vehicle`] handles can
+    /// observe the new position without waiting for another tick. The active flight mode, armed
+    /// state, home position, mission progress, and guided/mission target intent are preserved.
+    pub async fn teleport_to(
+        &self,
+        position: GeoPoint3dMsl,
+    ) -> Result<DemoVehicleSnapshot, VehicleError> {
+        let target = TeleportTarget::try_from(position)?;
+        let (reply_tx, reply_rx) = oneshot::channel();
+        self.control_tx
+            .send(ControlMessage::TeleportTo {
+                target,
+                reply: reply_tx,
+            })
+            .await
+            .map_err(|_| VehicleError::Disconnected)?;
+        reply_rx.await.map_err(|_| VehicleError::Disconnected)?
+    }
+
     pub async fn step(&self) -> Result<DemoVehicleSnapshot, VehicleError> {
         let (reply_tx, reply_rx) = oneshot::channel();
         self.control_tx
@@ -224,6 +247,39 @@ mod tests {
             .tick_hz(0)
             .build_config()
             .unwrap_err();
+        assert!(matches!(error, VehicleError::InvalidParameter(_)));
+    }
+
+    #[test]
+    fn teleport_target_quantizes_position_to_wire_units() {
+        let target = TeleportTarget::try_from(GeoPoint3dMsl {
+            latitude_deg: 12.345_678_9,
+            longitude_deg: -98.765_432_1,
+            altitude_msl_m: 123.456_7,
+        })
+        .unwrap();
+
+        assert_eq!(target.latitude_e7, 123_456_789);
+        assert_eq!(target.longitude_e7, -987_654_321);
+        assert_eq!(target.altitude_mm, 123_457);
+    }
+
+    #[test]
+    fn teleport_target_rejects_invalid_position_values() {
+        let error = TeleportTarget::try_from(GeoPoint3dMsl {
+            latitude_deg: 91.0,
+            longitude_deg: 0.0,
+            altitude_msl_m: 0.0,
+        })
+        .unwrap_err();
+        assert!(matches!(error, VehicleError::InvalidParameter(_)));
+
+        let error = TeleportTarget::try_from(GeoPoint3dMsl {
+            latitude_deg: 0.0,
+            longitude_deg: 0.0,
+            altitude_msl_m: f64::INFINITY,
+        })
+        .unwrap_err();
         assert!(matches!(error, VehicleError::InvalidParameter(_)));
     }
 }

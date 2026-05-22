@@ -3,8 +3,10 @@
 mod common;
 
 use common::backend::{disconnect, setup_backend_vehicle};
+use common::clock::{Instant, sleep};
 use common::fixtures::sample_plan_mission;
 use common::target::TestTarget;
+use mavkit::{GeoPoint3dMsl, GlobalPosition};
 use std::time::Duration;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen_test::wasm_bindgen_test;
@@ -36,6 +38,12 @@ macro_rules! demo_case {
             $path($($arg),*).await;
         }
     };
+}
+
+fn global_position_matches_msl(position: &GlobalPosition, target: &GeoPoint3dMsl) -> bool {
+    (position.latitude_deg - target.latitude_deg).abs() <= 1e-7
+        && (position.longitude_deg - target.longitude_deg).abs() <= 1e-7
+        && (position.altitude_msl_m - target.altitude_msl_m).abs() <= 0.001
 }
 
 demo_case!(
@@ -204,6 +212,93 @@ demo_case!(
     common::runtime::guided_movement_reaches_target_case,
     TestTarget::SIM_QUADPLANE
 );
+
+#[cfg_attr(not(target_arch = "wasm32"), tokio::test)]
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen_test)]
+async fn demo_teleport_to_updates_snapshot_and_telemetry_without_step() {
+    let backend = common::backend::setup_manual_backend_vehicle(TestTarget::SIM_COPTER, 10).await;
+    let result: Result<(), String> = async {
+        let vehicle = &backend.vehicle;
+        let handle = backend
+            .demo_handle
+            .as_ref()
+            .ok_or_else(|| String::from("demo handle missing for simulator target"))?;
+        let target = GeoPoint3dMsl {
+            latitude_deg: 42.390_123_4,
+            longitude_deg: -71.148_765_4,
+            altitude_msl_m: 73.25,
+        };
+        let before = handle.snapshot();
+
+        let snapshot = handle
+            .teleport_to(target.clone())
+            .await
+            .map_err(|err| err.to_string())?;
+
+        if snapshot.time_boot_ms != before.time_boot_ms {
+            return Err(format!(
+                "teleport advanced manual clock from {} to {}",
+                before.time_boot_ms, snapshot.time_boot_ms
+            ));
+        }
+        if snapshot.home != before.home {
+            return Err(String::from("teleport unexpectedly changed home position"));
+        }
+        if !global_position_matches_msl(
+            &GlobalPosition {
+                latitude_deg: snapshot.latitude_deg,
+                longitude_deg: snapshot.longitude_deg,
+                altitude_msl_m: snapshot.altitude_msl_m,
+                relative_alt_m: snapshot.relative_alt_m,
+            },
+            &target,
+        ) {
+            return Err(format!(
+                "snapshot did not move to target: snapshot={snapshot:?}, target={target:?}"
+            ));
+        }
+
+        let expected_relative_alt_m = target.altitude_msl_m - before.home.altitude_m;
+        if (snapshot.relative_alt_m - expected_relative_alt_m).abs() > 0.001 {
+            return Err(format!(
+                "relative altitude not recomputed: got {}, expected {}",
+                snapshot.relative_alt_m, expected_relative_alt_m
+            ));
+        }
+
+        let deadline = Instant::now() + Duration::from_secs(2);
+        loop {
+            if let Some(sample) = vehicle.telemetry().position().global().latest()
+                && global_position_matches_msl(&sample.value, &target)
+            {
+                if (sample.value.relative_alt_m - expected_relative_alt_m).abs() > 0.001 {
+                    return Err(format!(
+                        "telemetry relative altitude not recomputed: got {}, expected {}",
+                        sample.value.relative_alt_m, expected_relative_alt_m
+                    ));
+                }
+                break;
+            }
+
+            if Instant::now() >= deadline {
+                return Err(format!(
+                    "timed out waiting for teleported telemetry; latest={:?}",
+                    vehicle.telemetry().position().global().latest()
+                ));
+            }
+
+            sleep(Duration::from_millis(20)).await;
+        }
+
+        Ok(())
+    }
+    .await;
+
+    disconnect(backend).await;
+    if let Err(err) = result {
+        panic!("{err}");
+    }
+}
 
 demo_case!(
     demo_set_invalid_custom_mode_rejected_without_state_change,
