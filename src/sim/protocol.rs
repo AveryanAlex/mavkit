@@ -98,11 +98,7 @@ impl SimulatorCore {
             dialect::MavCmd::MAV_CMD_COMPONENT_ARM_DISARM => {
                 self.snapshot.armed = data.param1 >= 0.5;
                 if !self.snapshot.armed {
-                    self.velocity = super::state::VelocityNed {
-                        north_mps: 0.0,
-                        east_mps: 0.0,
-                        down_mps: 0.0,
-                    };
+                    self.reset_motion_state();
                     self.mission_speed_override_mps = None;
                 }
                 self.publish_snapshot();
@@ -407,9 +403,9 @@ impl SimulatorCore {
             roll: self.snapshot.roll_rad,
             pitch: self.snapshot.pitch_rad,
             yaw: self.snapshot.yaw_rad,
-            rollspeed: 0.0,
-            pitchspeed: 0.0,
-            yawspeed: 0.02,
+            rollspeed: self.attitude_rates.roll_rad_per_sec,
+            pitchspeed: self.attitude_rates.pitch_rad_per_sec,
+            yawspeed: self.attitude_rates.yaw_rad_per_sec,
         }))
         .await
     }
@@ -707,7 +703,7 @@ mod tests {
     use super::*;
     use crate::mission::HomePosition;
     use crate::sim::state::{
-        COPTER_GUIDED_MODE, DemoVehicleConfig, QUADPLANE_QLOITER_MODE, default_mode,
+        AttitudeRates, COPTER_GUIDED_MODE, DemoVehicleConfig, QUADPLANE_QLOITER_MODE, default_mode,
     };
     use crate::sim::{DemoClock, DemoProfile, DemoVehicleSnapshot};
 
@@ -996,6 +992,26 @@ mod tests {
         assert_eq!(vfr_hud.alt, 125.0);
         assert_eq!(global_position.alt, 125_000);
         assert_eq!(global_position.relative_alt, 25_000);
+    }
+
+    #[tokio::test]
+    async fn attitude_message_uses_dynamic_attitude_rates() {
+        let (mut sim, mut outbound_rx) = sim_core();
+        sim.attitude_rates = AttitudeRates {
+            roll_rad_per_sec: 0.3,
+            pitch_rad_per_sec: -0.2,
+            yaw_rad_per_sec: 0.1,
+        };
+
+        sim.emit_message_by_id(30).await.unwrap();
+        let attitude = match outbound_rx.recv().await.unwrap().1 {
+            dialect::MavMessage::ATTITUDE(data) => data,
+            message => panic!("expected ATTITUDE, got {message:?}"),
+        };
+
+        assert_eq!(attitude.rollspeed, 0.3);
+        assert_eq!(attitude.pitchspeed, -0.2);
+        assert_eq!(attitude.yawspeed, 0.1);
     }
 
     #[tokio::test]

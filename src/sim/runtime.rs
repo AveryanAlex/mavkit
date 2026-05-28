@@ -7,7 +7,7 @@ use crate::error::VehicleError;
 use crate::runtime;
 
 use super::api::{DemoClock, DemoVehicleSnapshot};
-use super::state::{ControlMessage, DemoVehicleConfig, SimulatorCore, TeleportTarget, VelocityNed};
+use super::state::{ControlMessage, DemoVehicleConfig, SimulatorCore, TeleportTarget};
 use super::transport::SimulatorEndpoints;
 
 const MICROS_PER_SECOND: u64 = 1_000_000;
@@ -185,12 +185,7 @@ impl SimulatorCore {
         self.snapshot.latitude_deg = f64::from(target.latitude_e7) / 1e7;
         self.snapshot.longitude_deg = f64::from(target.longitude_e7) / 1e7;
         self.snapshot.altitude_msl_m = f64::from(target.altitude_mm) / 1000.0;
-        self.snapshot.relative_alt_m = self.snapshot.altitude_msl_m - self.snapshot.home.altitude_m;
-        self.velocity = VelocityNed {
-            north_mps: 0.0,
-            east_mps: 0.0,
-            down_mps: 0.0,
-        };
+        self.reset_motion_state();
         self.publish_snapshot();
 
         self.emit_telemetry_burst().await
@@ -201,8 +196,6 @@ impl SimulatorCore {
         self.drive_mission_state().await?;
         self.advance_navigation();
         self.advance_power_model();
-        self.snapshot.roll_rad = (self.snapshot.time_boot_ms as f32 / 3000.0).sin() * 0.03;
-        self.snapshot.pitch_rad = (self.snapshot.time_boot_ms as f32 / 5000.0).cos() * 0.02;
         self.publish_snapshot();
 
         self.emit_heartbeat().await?;

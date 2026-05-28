@@ -33,7 +33,10 @@ pub(crate) const PLANE_AUTO_MODE: u32 = 10;
 pub(crate) const PLANE_LOITER_MODE: u32 = 12;
 pub(crate) const PLANE_GUIDED_MODE: u32 = 15;
 pub(crate) const QUADPLANE_QSTABILIZE_MODE: u32 = 17;
+pub(crate) const QUADPLANE_QHOVER_MODE: u32 = 18;
 pub(crate) const QUADPLANE_QLOITER_MODE: u32 = 19;
+pub(crate) const QUADPLANE_QLAND_MODE: u32 = 20;
+pub(crate) const QUADPLANE_QRTL_MODE: u32 = 21;
 
 #[derive(Debug, Clone)]
 pub(crate) struct DemoVehicleConfig {
@@ -95,6 +98,13 @@ pub(crate) struct VelocityNed {
     pub(crate) down_mps: f64,
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+pub(crate) struct AttitudeRates {
+    pub(crate) roll_rad_per_sec: f32,
+    pub(crate) pitch_rad_per_sec: f32,
+    pub(crate) yaw_rad_per_sec: f32,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct TeleportTarget {
     pub(crate) latitude_e7: i32,
@@ -148,6 +158,7 @@ pub(crate) struct SimulatorCore {
     pub(crate) pending_upload: Option<PendingMissionUpload>,
     pub(crate) nav_target: Option<NavTarget>,
     pub(crate) velocity: VelocityNed,
+    pub(crate) attitude_rates: AttitudeRates,
     pub(crate) power: PowerState,
     pub(crate) mission_completed: bool,
     pub(crate) pending_reached_wire_seq: Option<u16>,
@@ -213,6 +224,7 @@ impl SimulatorCore {
                 east_mps: 0.0,
                 down_mps: 0.0,
             },
+            attitude_rates: AttitudeRates::default(),
             power: PowerState::default(),
             mission_completed: false,
             pending_reached_wire_seq: None,
@@ -373,13 +385,23 @@ pub(crate) fn is_hover_hold_mode(profile: DemoProfile, custom_mode: u32) -> bool
     match profile {
         DemoProfile::ArduCopter => custom_mode == COPTER_LOITER_MODE,
         DemoProfile::ArduPlane => false,
-        DemoProfile::ArduQuadPlane => {
-            matches!(
-                custom_mode,
-                QUADPLANE_QLOITER_MODE | QUADPLANE_QSTABILIZE_MODE
-            )
-        }
+        DemoProfile::ArduQuadPlane => matches!(
+            custom_mode,
+            QUADPLANE_QHOVER_MODE | QUADPLANE_QLOITER_MODE | QUADPLANE_QSTABILIZE_MODE
+        ),
     }
+}
+
+pub(crate) fn is_quadplane_vtol_mode(profile: DemoProfile, custom_mode: u32) -> bool {
+    profile == DemoProfile::ArduQuadPlane
+        && matches!(
+            custom_mode,
+            QUADPLANE_QHOVER_MODE
+                | QUADPLANE_QLAND_MODE
+                | QUADPLANE_QLOITER_MODE
+                | QUADPLANE_QRTL_MODE
+                | QUADPLANE_QSTABILIZE_MODE
+        )
 }
 
 pub(crate) fn health_sensors() -> dialect::MavSysStatusSensor {
