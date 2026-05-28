@@ -8,17 +8,19 @@ use super::state::{
 };
 
 const STANDARD_GRAVITY_MPS2: f32 = 9.806_65;
-const COPTER_HORIZONTAL_SPEED_MPS: f64 = 4.0;
+const COPTER_HORIZONTAL_SPEED_MPS: f64 = 10.0;
 const COPTER_CLIMB_SPEED_MPS: f64 = 2.0;
 const COPTER_DESCENT_SPEED_MPS: f64 = 1.5;
 const COPTER_POSITION_GAIN: f64 = 0.9;
 const COPTER_VELOCITY_TIME_CONSTANT_S: f64 = 0.7;
 const COPTER_MAX_HORIZONTAL_ACCEL_MPS2: f64 = 3.5;
+const COPTER_MAX_HORIZONTAL_THRUST_ACCEL_MPS2: f64 = 4.5;
 const COPTER_MAX_VERTICAL_ACCEL_MPS2: f64 = 2.5;
 const COPTER_MAX_TILT_RAD: f32 = 25.0_f32.to_radians();
 const COPTER_ATTITUDE_RATE_RAD_PER_SEC: f32 = 100.0_f32.to_radians();
 const COPTER_MAX_YAW_RATE_RAD_PER_SEC: f32 = 70.0_f32.to_radians();
 const COPTER_YAW_SPEED_THRESHOLD_MPS: f64 = 0.8;
+const COPTER_DRAG_ACCEL_PER_SPEED_SQUARED: f64 = 0.035_694_773;
 const PLANE_CRUISE_SPEED_MPS: f64 = 12.0;
 const QUADPLANE_CRUISE_SPEED_MPS: f64 = 10.0;
 const PLANE_CLIMB_SPEED_MPS: f64 = 2.5;
@@ -173,17 +175,30 @@ impl SimulatorCore {
             (0.0, 0.0)
         };
 
-        let accel_north_mps2 = ((desired_north_mps - self.velocity.north_mps)
+        let feedback_accel_north_mps2 = ((desired_north_mps - self.velocity.north_mps)
             / COPTER_VELOCITY_TIME_CONSTANT_S)
             .clamp(
                 -COPTER_MAX_HORIZONTAL_ACCEL_MPS2,
                 COPTER_MAX_HORIZONTAL_ACCEL_MPS2,
             );
-        let accel_east_mps2 =
+        let feedback_accel_east_mps2 =
             ((desired_east_mps - self.velocity.east_mps) / COPTER_VELOCITY_TIME_CONSTANT_S).clamp(
                 -COPTER_MAX_HORIZONTAL_ACCEL_MPS2,
                 COPTER_MAX_HORIZONTAL_ACCEL_MPS2,
             );
+
+        let (drag_accel_north_mps2, drag_accel_east_mps2) =
+            copter_horizontal_drag_accel(self.velocity.north_mps, self.velocity.east_mps);
+        let mut thrust_accel_north_mps2 = feedback_accel_north_mps2 - drag_accel_north_mps2;
+        let mut thrust_accel_east_mps2 = feedback_accel_east_mps2 - drag_accel_east_mps2;
+        limit_horizontal_accel(
+            &mut thrust_accel_north_mps2,
+            &mut thrust_accel_east_mps2,
+            COPTER_MAX_HORIZONTAL_THRUST_ACCEL_MPS2,
+        );
+
+        let accel_north_mps2 = thrust_accel_north_mps2 + drag_accel_north_mps2;
+        let accel_east_mps2 = thrust_accel_east_mps2 + drag_accel_east_mps2;
 
         let desired_up_mps = if up_m >= 0.0 {
             (up_m * COPTER_POSITION_GAIN).min(COPTER_CLIMB_SPEED_MPS)
@@ -225,9 +240,11 @@ impl SimulatorCore {
 
         let actual_accel_north_mps2 = (next_north_mps - self.velocity.north_mps) / dt_s;
         let actual_accel_east_mps2 = (next_east_mps - self.velocity.east_mps) / dt_s;
+        let actual_thrust_accel_north_mps2 = actual_accel_north_mps2 - drag_accel_north_mps2;
+        let actual_thrust_accel_east_mps2 = actual_accel_east_mps2 - drag_accel_east_mps2;
         self.update_copter_attitude(
-            actual_accel_north_mps2,
-            actual_accel_east_mps2,
+            actual_thrust_accel_north_mps2,
+            actual_thrust_accel_east_mps2,
             desired_north_mps,
             desired_east_mps,
             east_m.atan2(north_m) as f32,
@@ -447,8 +464,8 @@ impl SimulatorCore {
 
     fn update_copter_attitude(
         &mut self,
-        accel_north_mps2: f64,
-        accel_east_mps2: f64,
+        thrust_accel_north_mps2: f64,
+        thrust_accel_east_mps2: f64,
         desired_north_mps: f64,
         desired_east_mps: f64,
         target_bearing_rad: f32,
@@ -456,8 +473,8 @@ impl SimulatorCore {
     ) {
         let cy = f64::from(self.snapshot.yaw_rad.cos());
         let sy = f64::from(self.snapshot.yaw_rad.sin());
-        let accel_forward_mps2 = cy * accel_north_mps2 + sy * accel_east_mps2;
-        let accel_right_mps2 = -sy * accel_north_mps2 + cy * accel_east_mps2;
+        let accel_forward_mps2 = cy * thrust_accel_north_mps2 + sy * thrust_accel_east_mps2;
+        let accel_right_mps2 = -sy * thrust_accel_north_mps2 + cy * thrust_accel_east_mps2;
 
         let gravity = f64::from(STANDARD_GRAVITY_MPS2);
         let pitch_cmd = (-(accel_forward_mps2 / gravity).atan() as f32)
@@ -724,6 +741,27 @@ fn limit_horizontal_velocity(north_mps: &mut f64, east_mps: &mut f64, max_speed_
     *east_mps *= scale;
 }
 
+fn copter_horizontal_drag_accel(north_mps: f64, east_mps: f64) -> (f64, f64) {
+    let speed_mps = (north_mps * north_mps + east_mps * east_mps).sqrt();
+    if speed_mps <= f64::EPSILON {
+        return (0.0, 0.0);
+    }
+
+    let scale = -COPTER_DRAG_ACCEL_PER_SPEED_SQUARED * speed_mps;
+    (north_mps * scale, east_mps * scale)
+}
+
+fn limit_horizontal_accel(north_mps2: &mut f64, east_mps2: &mut f64, max_accel_mps2: f64) {
+    let accel_mps2 = (*north_mps2 * *north_mps2 + *east_mps2 * *east_mps2).sqrt();
+    if accel_mps2 <= max_accel_mps2 || accel_mps2 <= f64::EPSILON {
+        return;
+    }
+
+    let scale = max_accel_mps2 / accel_mps2;
+    *north_mps2 *= scale;
+    *east_mps2 *= scale;
+}
+
 fn limit_horizontal_step(
     step_north_m: &mut f64,
     step_east_m: &mut f64,
@@ -935,12 +973,44 @@ mod tests {
     }
 
     #[test]
+    fn copter_steady_ten_meter_per_second_forward_flight_pitches_down_for_drag() {
+        let mut sim = sim_core(DemoProfile::ArduCopter);
+        sim.snapshot.armed = true;
+        sim.snapshot.custom_mode = guided_mode(sim.config.profile);
+        sim.velocity = VelocityNed {
+            north_mps: 10.0,
+            east_mps: 0.0,
+            down_mps: 0.0,
+        };
+        sim.nav_target = Some(NavTarget {
+            source: NavSource::Guided,
+            latitude_deg: 42.01,
+            longitude_deg: -71.0,
+            altitude_msl_m: 100.0,
+            acceptance_radius_m: ACCEPTANCE_RADIUS_M,
+            wire_seq: None,
+            disarm_on_reach: false,
+        });
+
+        for _ in 0..3 {
+            sim.advance_navigation();
+        }
+
+        let pitch_deg = sim.snapshot.pitch_rad.to_degrees();
+        assert!(
+            (pitch_deg + 20.0).abs() < 0.25,
+            "expected about 20 deg pitch down at 10 m/s, got {pitch_deg} deg"
+        );
+        assert!((sim.velocity.north_mps - 10.0).abs() < 1e-6);
+    }
+
+    #[test]
     fn copter_direction_change_uses_roll_pitch_and_yaw() {
         let mut sim = sim_core(DemoProfile::ArduCopter);
         sim.snapshot.armed = true;
         sim.snapshot.custom_mode = guided_mode(sim.config.profile);
         sim.velocity = VelocityNed {
-            north_mps: COPTER_HORIZONTAL_SPEED_MPS,
+            north_mps: 4.0,
             east_mps: 0.0,
             down_mps: 0.0,
         };
