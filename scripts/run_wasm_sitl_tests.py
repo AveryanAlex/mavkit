@@ -108,6 +108,7 @@ def cargo_command() -> list[str]:
     cmd = [
         cargo,
         "test",
+        "--locked",
         "-p",
         "mavkit",
         "--target",

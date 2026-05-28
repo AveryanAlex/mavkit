@@ -117,33 +117,41 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Resolve wasm-bindgen version
+        id: wasm_bindgen_version
+        run: |
+          version="$(python3 scripts/resolve_wasm_bindgen_version.py --features "$MAVKIT_WASM_FEATURES")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Install wasm-bindgen test runner
         uses: taiki-e/install-action@v2
         with:
-          tool: wasm-bindgen-cli@0.2.121
+          tool: wasm-bindgen-cli@${{ steps.wasm_bindgen_version.outputs.version }}
 
       - name: Wasm supported feature build check
-        run: cargo check -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES"
+        run: cargo check --locked -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES"
 
       - name: Wasm byte-connection test
         env:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
-        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test wasm_byte_connection
+        run: cargo test --locked -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test wasm_byte_connection
 
       - name: Wasm sim unit tests
         env:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
-        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test wasm_sim
+        run: cargo test --locked -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test wasm_sim
 
       - name: Wasm demo suite
         env:
           CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUNNER: wasm-bindgen-test-runner
-        run: cargo test -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test demo
+        run: cargo test --locked -p mavkit --target wasm32-unknown-unknown --no-default-features --features "$MAVKIT_WASM_FEATURES" --test demo
 
   wasm-sitl:
     needs: wasm
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    env:
+      MAVKIT_WASM_FEATURES: ardupilot,byte-connection,sim,stream,wasm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -156,10 +164,16 @@ jobs:
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
 
+      - name: Resolve wasm-bindgen version
+        id: wasm_bindgen_version
+        run: |
+          version="$(python3 scripts/resolve_wasm_bindgen_version.py --features "$MAVKIT_WASM_FEATURES")"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
       - name: Install wasm-bindgen test runner
         uses: taiki-e/install-action@v2
         with:
-          tool: wasm-bindgen-cli@0.2.121
+          tool: wasm-bindgen-cli@${{ steps.wasm_bindgen_version.outputs.version }}
 
       - name: Setup Chrome
         uses: browser-actions/setup-chrome@v1
@@ -169,7 +183,7 @@ jobs:
 
       - name: WASM SITL integration tests
         env:
-          MAVKIT_WASM_SITL_RUST_FEATURES: ardupilot,byte-connection,sim,stream,wasm
+          MAVKIT_WASM_SITL_RUST_FEATURES: ${{ env.MAVKIT_WASM_FEATURES }}
         run: make test-wasm-sitl-strict
 
   sitl:
