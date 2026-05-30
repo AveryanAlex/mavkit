@@ -15,6 +15,7 @@ use crate::state::StateChannels;
 use crate::support::SupportDomain;
 use crate::telemetry::TelemetryMetricHandles;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU16;
 use tokio::sync::{mpsc, oneshot, watch};
 use tokio_util::sync::CancellationToken;
 
@@ -62,6 +63,8 @@ pub(crate) struct VehicleInner {
     pub(crate) cancel: CancellationToken,
     pub(crate) stores: StateChannels,
     pub(crate) mission_protocol: MissionProtocolScope,
+    pub(crate) ftp_protocol: MissionProtocolScope,
+    pub(crate) ftp_sequence: AtomicU16,
     pub(crate) mission: MissionDomain,
     pub(crate) params: ParamsDomain,
     pub(crate) fence: FenceDomain,
@@ -103,7 +106,9 @@ impl VehicleInner {
             command_tx,
             cancel: cancel.clone(),
             stores,
-            mission_protocol: MissionProtocolScope::new(cancel),
+            mission_protocol: MissionProtocolScope::new(cancel.clone()),
+            ftp_protocol: MissionProtocolScope::new(cancel),
+            ftp_sequence: AtomicU16::new(0),
             mission: MissionDomain::new(),
             params: ParamsDomain::new(),
             fence: FenceDomain::new(),

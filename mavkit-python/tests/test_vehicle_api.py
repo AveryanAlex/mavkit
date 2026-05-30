@@ -197,6 +197,7 @@ class TestVehicleApi:
             "fence",
             "rally",
             "params",
+            "ftp",
             "raw",
             "ardupilot",
         ):
@@ -214,6 +215,14 @@ class TestVehicleApi:
             "FenceHandle",
             "RallyHandle",
             "ParamsHandle",
+            "FtpHandle",
+            "FtpTarget",
+            "FtpEntryKind",
+            "FtpEntry",
+            "FtpOperationProgress",
+            "FtpProgressSubscription",
+            "FtpDownloadOp",
+            "FtpUploadOp",
             "RawHandle",
             "ArduPilotHandle",
         ):

@@ -30,6 +30,7 @@ pub fn to_py_err(e: mavkit::VehicleError) -> PyErr {
         mavkit::VehicleError::InvalidParameter(_) => InvalidParameterError::new_err(msg),
         mavkit::VehicleError::ModeNotAvailable(_) => ModeNotAvailableError::new_err(msg),
         mavkit::VehicleError::TransferFailed { .. } => TransferFailedError::new_err(msg),
+        mavkit::VehicleError::Ftp(_) => TransferFailedError::new_err(msg),
         mavkit::VehicleError::OperationConflict { .. } => OperationConflictError::new_err(msg),
         mavkit::VehicleError::Cancelled => CancelledError::new_err(msg),
         mavkit::VehicleError::InvalidMissionItem { .. }

@@ -4,6 +4,7 @@ use crate::ardupilot::PyArduPilotHandle;
 use crate::config::PyVehicleConfig;
 use crate::enums::{PyAutopilotType, PyVehicleType};
 use crate::error::to_py_err;
+use crate::ftp::PyFtpHandle;
 use crate::info::PyInfoHandle;
 use crate::link::PyLinkHandle;
 use crate::macros::py_async_unit;
@@ -171,6 +172,10 @@ impl PyVehicle {
 
     fn params(&self) -> PyParamsHandle {
         PyParamsHandle::new(self.inner.clone())
+    }
+
+    fn ftp(&self) -> PyFtpHandle {
+        PyFtpHandle::new(self.inner.clone())
     }
 
     fn raw(&self) -> PyRawHandle {

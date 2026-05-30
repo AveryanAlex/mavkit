@@ -149,6 +149,12 @@ pub enum VehicleError {
         detail: String,
     },
 
+    /// The vehicle rejected a MAVFTP request or returned an invalid MAVFTP response.
+    ///
+    /// Inspect the structured [`crate::FtpError`] for the protocol-level reason.
+    #[error("MAVFTP error: {0}")]
+    Ftp(#[from] crate::ftp::FtpError),
+
     /// A second concurrent operation was attempted on a domain that only allows one at a time.
     ///
     /// `conflicting_domain` names the affected domain and `conflicting_op` names the operation

@@ -1,4 +1,6 @@
 mod common;
+#[path = "sitl/ftp.rs"]
+mod ftp;
 
 use common::fixtures::sample_plan_mission;
 use common::target::TestTarget;
@@ -28,6 +30,11 @@ sitl_case!(
     common::mission::roundtrip_case,
     TestTarget::SITL_COPTER,
     sample_plan_mission(3)
+);
+sitl_case!(
+    sitl_ftp_roundtrip_file,
+    ftp::roundtrip_case,
+    TestTarget::SITL_COPTER
 );
 sitl_case!(
     sitl_roundtrip_mission_empty_items_with_home,

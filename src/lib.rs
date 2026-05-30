@@ -8,6 +8,7 @@ pub mod config;
 pub mod error;
 pub(crate) mod event_loop;
 pub mod fence;
+pub mod ftp;
 pub mod geo;
 pub mod info;
 pub mod link;
@@ -50,6 +51,10 @@ pub use error::{CommandResult, MissionValidationReason, VehicleError};
 pub use fence::{
     FenceClearOp, FenceDownloadOp, FenceExclusionCircle, FenceExclusionPolygon,
     FenceInclusionCircle, FenceInclusionPolygon, FencePlan, FenceRegion, FenceState, FenceUploadOp,
+};
+pub use ftp::{
+    FtpDownloadOp, FtpEntry, FtpEntryKind, FtpError, FtpHandle, FtpNakCode, FtpOperationHandle,
+    FtpOperationProgress, FtpTarget, FtpUploadOp,
 };
 pub use geo::{GeoPoint2d, GeoPoint3d, GeoPoint3dMsl, GeoPoint3dRelHome, GeoPoint3dTerrain};
 pub use info::{FirmwareInfo, HardwareInfo, InfoHandle, PersistentIdentity, UniqueIds};

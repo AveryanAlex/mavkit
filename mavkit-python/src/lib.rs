@@ -2,6 +2,7 @@ mod ardupilot;
 mod config;
 mod enums;
 mod error;
+mod ftp;
 mod geo;
 mod guided;
 mod info;
@@ -127,6 +128,7 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Raw message types
     m.add_class::<raw_message::PyRawMessage>()?;
     m.add_class::<raw_message::PyRawMessageStream>()?;
+    ftp::register(m)?;
     vehicle::register(m)?;
 
     // Vehicle

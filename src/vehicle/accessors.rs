@@ -1,4 +1,5 @@
 use crate::ardupilot::ArduPilotHandle;
+use crate::ftp::FtpHandle;
 use crate::info::InfoHandle;
 use crate::link::LinkHandle;
 use crate::mission::MissionHandle;
@@ -139,6 +140,11 @@ impl Vehicle {
     /// Access parameter fetch, upload, and typed read operations.
     pub fn params(&self) -> ParamsHandle<'_> {
         self.handle()
+    }
+
+    /// Access MAVFTP file and directory operations.
+    pub fn ftp(&self) -> FtpHandle<'_> {
+        FtpHandle::new(self)
     }
 
     /// Access raw MAVLink send/receive for operations not covered by the typed API.
