@@ -1,6 +1,6 @@
 use crate::common::backend::{disconnect, setup_backend_vehicle};
 use crate::common::target::TestTarget;
-use mavkit::{AutopilotType, LinkState};
+use mavkit::{AutopilotType, FirmwareInfo, LinkState};
 use std::time::Duration;
 
 pub async fn vehicle_identity_is_ardupilot_case(target: TestTarget) {
@@ -31,6 +31,39 @@ pub async fn vehicle_identity_is_ardupilot_case(target: TestTarget) {
 }
 
 pub async fn firmware_info_populates_case(target: TestTarget) {
+    firmware_info_case(target, |firmware| {
+        if firmware.version.is_none() && firmware.git_hash.is_none() {
+            return Err(String::from(
+                "firmware info has neither version nor git_hash",
+            ));
+        }
+
+        Ok(())
+    })
+    .await;
+}
+
+pub async fn firmware_version_populates_case(target: TestTarget) {
+    firmware_info_case(target, |firmware| {
+        if firmware
+            .version
+            .as_deref()
+            .is_some_and(|version| !version.trim().is_empty())
+        {
+            return Ok(());
+        }
+
+        Err(format!(
+            "firmware.version should be populated, got {firmware:?}"
+        ))
+    })
+    .await;
+}
+
+async fn firmware_info_case(
+    target: TestTarget,
+    check: impl FnOnce(&FirmwareInfo) -> Result<(), String>,
+) {
     let backend = setup_backend_vehicle(target).await;
     let vehicle = &backend.vehicle;
     let result: Result<(), String> = async {
@@ -41,13 +74,7 @@ pub async fn firmware_info_populates_case(target: TestTarget) {
             .await
             .map_err(|e| e.to_string())?;
 
-        if firmware.version.is_none() && firmware.git_hash.is_none() {
-            return Err(String::from(
-                "firmware info has neither version nor git_hash",
-            ));
-        }
-
-        Ok(())
+        check(&firmware)
     }
     .await;
 

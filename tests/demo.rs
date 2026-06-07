@@ -463,6 +463,11 @@ demo_case!(
     TestTarget::SIM_COPTER
 );
 demo_case!(
+    demo_firmware_version_populates,
+    common::identity::firmware_version_populates_case,
+    TestTarget::SIM_COPTER
+);
+demo_case!(
     demo_link_state_connected_after_setup,
     common::identity::link_state_connected_after_setup_case,
     TestTarget::SIM_COPTER

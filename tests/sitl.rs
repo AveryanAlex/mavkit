@@ -339,6 +339,11 @@ sitl_case!(
     TestTarget::SITL_COPTER
 );
 sitl_case!(
+    sitl_firmware_version_populates,
+    common::identity::firmware_version_populates_case,
+    TestTarget::SITL_COPTER
+);
+sitl_case!(
     sitl_link_state_connected_after_setup,
     common::identity::link_state_connected_after_setup_case,
     TestTarget::SITL_COPTER
