@@ -12,6 +12,7 @@ use super::wire::{fence_plan_from_mission_plan, mission_plan_from_fence_plan};
 ///
 /// The default value is published immediately and means no vehicle-confirmed fence plan is cached
 /// yet.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FenceState {
     pub plan: Option<FencePlan>,

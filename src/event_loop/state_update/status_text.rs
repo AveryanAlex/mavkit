@@ -14,7 +14,7 @@ pub(super) fn handle_status_text(context: &UpdateContext<'_>, data: &dialect::ST
             .statustext
             .send(Some(crate::state::StatusMessage {
                 text: status_text.text,
-                severity: crate::state::MavSeverity::from_mav(status_text.severity),
+                severity: status_text.severity,
             }));
     }
 }

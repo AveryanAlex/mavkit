@@ -3,7 +3,7 @@ use super::{EventMessageHandle, PeriodicMessageHandle};
 use crate::command::Command;
 use crate::dialect::{self, MavCmd};
 use crate::observation::MessageHandle;
-use crate::state::create_channels;
+use crate::state::{MavSeverity, create_channels};
 use crate::telemetry::TelemetryHandle;
 use crate::telemetry::status_text::StatusTextEvent;
 use std::time::Duration;
@@ -224,7 +224,7 @@ async fn status_text_is_push_only_future_stream() {
         .publish(
             StatusTextEvent {
                 text: "before".to_string(),
-                severity: dialect::MavSeverity::MAV_SEVERITY_INFO,
+                severity: MavSeverity::Info,
                 id: 0,
                 source_system: 1,
                 source_component: 1,
@@ -241,7 +241,7 @@ async fn status_text_is_push_only_future_stream() {
         .publish(
             StatusTextEvent {
                 text: "after".to_string(),
-                severity: dialect::MavSeverity::MAV_SEVERITY_INFO,
+                severity: MavSeverity::Info,
                 id: 0,
                 source_system: 1,
                 source_component: 1,
@@ -270,7 +270,7 @@ async fn status_text_subscribe_does_not_coalesce_repeated_events() {
         .publish(
             StatusTextEvent {
                 text: "repeat".to_string(),
-                severity: dialect::MavSeverity::MAV_SEVERITY_INFO,
+                severity: MavSeverity::Info,
                 id: 0,
                 source_system: 1,
                 source_component: 1,
@@ -284,7 +284,7 @@ async fn status_text_subscribe_does_not_coalesce_repeated_events() {
         .publish(
             StatusTextEvent {
                 text: "repeat".to_string(),
-                severity: dialect::MavSeverity::MAV_SEVERITY_INFO,
+                severity: MavSeverity::Info,
                 id: 0,
                 source_system: 1,
                 source_component: 1,

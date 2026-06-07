@@ -6,6 +6,7 @@ use crate::stored_plan::StoredPlanState;
 use crate::types::{MissionOperationKind, SyncState};
 
 /// MAVLink mission storage type.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MissionType {
@@ -15,6 +16,7 @@ pub enum MissionType {
 }
 
 /// Coordinate frame for a mission item.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MissionFrame {
@@ -38,6 +40,7 @@ impl MissionFrame {
 }
 
 /// A single mission item. Coordinates `x`/`y` are in degE7 for global frames.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MissionItem {
     pub command: MissionCommand,
@@ -45,6 +48,7 @@ pub struct MissionItem {
 }
 
 /// Home position in WGS84 coordinates.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct HomePosition {
     pub latitude_deg: f64,
@@ -88,6 +92,7 @@ impl HomePosition {
 }
 
 /// Ordered mission plan payload for upload/download/verify operations.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct MissionPlan {
     pub items: Vec<MissionItem>,
@@ -135,6 +140,7 @@ pub(crate) struct WireMissionPlan {
 ///
 /// The default value is published immediately and means no vehicle-confirmed mission plan is
 /// cached yet.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct MissionState {
     pub plan: Option<MissionPlan>,
@@ -202,6 +208,7 @@ mod tests {
 }
 
 /// Severity level of a mission validation issue.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum IssueSeverity {
@@ -210,6 +217,7 @@ pub enum IssueSeverity {
 }
 
 /// A validation issue found in a mission plan.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct MissionIssue {
     pub code: String,

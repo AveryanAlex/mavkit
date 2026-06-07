@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::collections::hash_map;
 
 /// MAVLink parameter value type.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ParamType {
@@ -17,6 +18,7 @@ pub enum ParamType {
 }
 
 /// A single vehicle parameter with name, value, type, and index.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Param {
     pub name: String,
@@ -26,6 +28,7 @@ pub struct Param {
 }
 
 /// In-memory store of all downloaded vehicle parameters.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct ParamStore {
     pub params: HashMap<String, Param>,
@@ -182,6 +185,7 @@ mod tests {
 }
 
 /// Result of a single parameter write, with requested and confirmed values.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ParamWriteResult {
     pub name: String,
@@ -194,6 +198,7 @@ pub struct ParamWriteResult {
 ///
 /// The default value is published immediately and means no vehicle-confirmed parameter store is
 /// cached yet.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct ParamState {
     pub store: Option<ParamStore>,

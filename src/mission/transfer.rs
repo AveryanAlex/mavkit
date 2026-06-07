@@ -2,6 +2,7 @@ use super::types::MissionType;
 use serde::{Deserialize, Serialize};
 
 /// Direction of a mission transfer operation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TransferDirection {
@@ -10,6 +11,7 @@ pub enum TransferDirection {
 }
 
 /// Current phase of a mission transfer state machine.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TransferPhase {
@@ -23,11 +25,14 @@ pub enum TransferPhase {
 }
 
 /// Timeout and retry configuration for mission transfers.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RetryPolicy {
     /// Timeout for request-level messages (count, ack) in milliseconds.
+    #[cfg_attr(feature = "typescript", specta(type = f64))]
     pub request_timeout_ms: u64,
     /// Timeout for individual item transfers in milliseconds.
+    #[cfg_attr(feature = "typescript", specta(type = f64))]
     pub item_timeout_ms: u64,
     /// Maximum number of retries before declaring failure.
     pub max_retries: u8,
@@ -44,6 +49,7 @@ impl Default for RetryPolicy {
 }
 
 /// Snapshot of mission transfer progress.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TransferProgress {
     pub direction: TransferDirection,
@@ -55,6 +61,7 @@ pub struct TransferProgress {
 }
 
 /// Error reported during a mission transfer.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct TransferError {
     pub code: String,
@@ -62,6 +69,7 @@ pub struct TransferError {
 }
 
 /// Transfer event emitted by the transfer machine.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(tag = "kind", rename_all = "snake_case")]
 pub enum TransferEvent {

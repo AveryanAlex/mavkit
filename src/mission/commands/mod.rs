@@ -11,6 +11,7 @@ pub use do_commands::*;
 pub use nav::*;
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MissionFrame {
@@ -48,6 +49,7 @@ impl From<MissionItemFrame> for MissionFrame {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq)]
 pub struct RawMissionCommand {
     pub command: u16,
@@ -115,6 +117,7 @@ macro_rules! mission_commands {
         }
     ) => {
         /// Typed mission command API item used by plan serialization and validation.
+        #[cfg_attr(feature = "typescript", derive(specta::Type))]
         #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
         pub enum NavCommand {
             $($nav_variant($nav_ty),)+
@@ -122,6 +125,7 @@ macro_rules! mission_commands {
         }
 
         /// Typed mission command API item used by plan serialization and validation.
+        #[cfg_attr(feature = "typescript", derive(specta::Type))]
         #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
         pub enum DoCommand {
             $($do_variant($do_ty),)*
@@ -129,12 +133,14 @@ macro_rules! mission_commands {
         }
 
         /// Typed mission command API item used by plan serialization and validation.
+        #[cfg_attr(feature = "typescript", derive(specta::Type))]
         #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
         pub enum ConditionCommand {
             $($condition_variant($condition_ty)),+
         }
 
         /// Typed mission command API item used by plan serialization and validation.
+        #[cfg_attr(feature = "typescript", derive(specta::Type))]
         #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
         pub enum MissionCommand {
             Nav(NavCommand),

@@ -1,6 +1,7 @@
 use crate::geo::GeoPoint2d;
 
 /// Full geofence plan with optional return point and region list.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FencePlan {
     pub return_point: Option<GeoPoint2d>,
@@ -8,6 +9,7 @@ pub struct FencePlan {
 }
 
 /// Polygon region that marks space where operation is allowed.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FenceInclusionPolygon {
     pub vertices: Vec<GeoPoint2d>,
@@ -15,12 +17,14 @@ pub struct FenceInclusionPolygon {
 }
 
 /// Polygon region that marks space where operation is forbidden.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FenceExclusionPolygon {
     pub vertices: Vec<GeoPoint2d>,
 }
 
 /// Circular inclusion region.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FenceInclusionCircle {
     pub center: GeoPoint2d,
@@ -29,6 +33,7 @@ pub struct FenceInclusionCircle {
 }
 
 /// Circular exclusion region.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct FenceExclusionCircle {
     pub center: GeoPoint2d,
@@ -36,6 +41,7 @@ pub struct FenceExclusionCircle {
 }
 
 /// Geofence region union used in upload and download plans.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum FenceRegion {

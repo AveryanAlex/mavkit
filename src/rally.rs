@@ -18,6 +18,7 @@ use crate::vehicle::VehicleInner;
 const MAV_CMD_NAV_RALLY_POINT: u16 = 5100;
 
 /// Rally-point plan used by ArduPilot rally storage.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RallyPlan {
     pub points: Vec<GeoPoint3d>,
@@ -27,6 +28,7 @@ pub struct RallyPlan {
 ///
 /// The default value is published immediately and means no vehicle-confirmed rally plan is cached
 /// yet.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RallyState {
     pub plan: Option<RallyPlan>,

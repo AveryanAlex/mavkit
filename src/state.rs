@@ -5,6 +5,7 @@ use crate::telemetry::{
 use serde::{Deserialize, Serialize};
 
 /// High-level vehicle state derived from MAVLink HEARTBEAT messages.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct VehicleState {
     pub armed: bool,
@@ -31,6 +32,7 @@ pub struct VehicleState {
 ///   exists, so wire values pass through unchanged.
 ///
 /// Construct via [`WireMissionState::from_wire`] to ensure correct normalization.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct WireMissionState {
     pub current_seq: Option<u16>,
@@ -84,6 +86,7 @@ impl WireMissionState {
 /// [`crate::VehicleError::Disconnected`].
 ///
 /// [`ObservationHandle::wait`]: crate::ObservationHandle::wait
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum LinkState {
@@ -95,6 +98,7 @@ pub enum LinkState {
 }
 
 /// A named flight mode with its numeric custom_mode value.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FlightMode {
     pub custom_mode: u32,
@@ -108,6 +112,7 @@ pub struct FlightMode {
 /// Transitions generally follow `Boot → Calibrating → Standby → Active`.
 /// `Critical` and `Emergency` indicate sensor or autopilot failures requiring
 /// immediate attention. `Poweroff` means the vehicle is shutting down.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SystemStatus {
@@ -139,6 +144,7 @@ impl SystemStatus {
 }
 
 /// MAVLink vehicle airframe type.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum VehicleType {
@@ -184,6 +190,7 @@ impl VehicleType {
 }
 
 /// MAVLink autopilot firmware type.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AutopilotType {
@@ -211,6 +218,7 @@ impl AutopilotType {
 /// `Emergency` is the most severe; `Debug` is the least. Most autopilot informational
 /// messages are `Info` or `Notice`. `Warning` and above typically indicate a condition
 /// that requires attention from the operator.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MavSeverity {
@@ -257,6 +265,7 @@ impl std::fmt::Display for MavSeverity {
 }
 
 /// A STATUSTEXT message received from the autopilot.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StatusMessage {
     pub text: String,
@@ -264,6 +273,7 @@ pub struct StatusMessage {
 }
 
 /// GPS fix quality level.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum GpsFixType {
@@ -294,6 +304,7 @@ impl GpsFixType {
 // ---------------------------------------------------------------------------
 
 /// Identifies a sensor subsystem reported in SYS_STATUS bitmasks.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SensorId {
@@ -338,6 +349,7 @@ impl SensorId {
 }
 
 /// Status of a single sensor subsystem.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SensorStatus {
@@ -352,6 +364,7 @@ pub enum SensorStatus {
 }
 
 /// Aggregated sensor health decoded from SYS_STATUS bitmasks.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct SensorHealth {
     pub sensors: Vec<(SensorId, SensorStatus)>,
@@ -401,6 +414,7 @@ impl SensorHealth {
 // ---------------------------------------------------------------------------
 
 /// Status of a magnetometer calibration.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MagCalStatus {
@@ -432,6 +446,7 @@ impl MagCalStatus {
 }
 
 /// Progress of a magnetometer calibration in progress.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct MagCalProgress {
     pub compass_id: u8,
@@ -441,6 +456,7 @@ pub struct MagCalProgress {
 }
 
 /// Final report from a magnetometer calibration.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
 pub struct MagCalReport {
     pub compass_id: u8,

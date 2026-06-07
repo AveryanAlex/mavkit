@@ -5,8 +5,10 @@ use crate::observation::{
 };
 use crate::runtime;
 use crate::shared_state::recover_lock;
+use crate::state::MavSeverity;
 use crate::time::Instant;
 use mavlink::MavHeader;
+use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, HashMap};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -16,10 +18,11 @@ pub(crate) const STATUS_TEXT_BROADCAST_CAPACITY: usize = 256;
 const STATUS_TEXT_FLUSH_TIMEOUT: Duration = Duration::from_secs(2);
 
 /// Reassembled `STATUSTEXT` event with source identity.
-#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct StatusTextEvent {
     pub text: String,
-    pub severity: dialect::MavSeverity,
+    pub severity: MavSeverity,
     pub id: u16,
     pub source_system: u8,
     pub source_component: u8,
@@ -35,7 +38,7 @@ struct PendingKey {
 #[derive(Clone, Debug)]
 struct PendingStatusText {
     chunks: BTreeMap<u8, String>,
-    severity: dialect::MavSeverity,
+    severity: MavSeverity,
     generation: u64,
     vehicle_time: Option<VehicleTimestamp>,
 }
@@ -103,7 +106,7 @@ impl StatusTextWriter {
         if data.id == 0 {
             let event = StatusTextEvent {
                 text: chunk_text,
-                severity: data.severity,
+                severity: MavSeverity::from_mav(data.severity),
                 id: 0,
                 source_system: header.system_id,
                 source_component: header.component_id,
@@ -129,11 +132,11 @@ impl StatusTextWriter {
             let mut pending = recover_lock(&self.pending);
             let entry = pending.entry(key).or_insert_with(|| PendingStatusText {
                 chunks: BTreeMap::new(),
-                severity: data.severity,
+                severity: MavSeverity::from_mav(data.severity),
                 generation: 0,
                 vehicle_time: vehicle_time.clone(),
             });
-            entry.severity = data.severity;
+            entry.severity = MavSeverity::from_mav(data.severity);
             entry.vehicle_time = vehicle_time.clone().or(entry.vehicle_time.clone());
             entry.chunks.insert(data.chunk_seq, chunk_text);
 

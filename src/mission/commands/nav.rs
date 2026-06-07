@@ -9,6 +9,7 @@ use mavkit_macros::mavkit_command;
 use serde::{Deserialize, Serialize};
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum LoiterDirection {
@@ -17,6 +18,7 @@ pub enum LoiterDirection {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum AltChangeAction {
@@ -106,6 +108,7 @@ pub struct NavSplineWaypoint {
 impl_position_from_point!(NavSplineWaypoint { hold_time_s: 0.0 });
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NavArcWaypoint {
     pub position: GeoPoint3d,
@@ -182,6 +185,7 @@ pub(super) fn return_to_launch_from_wire(
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NavLoiterUnlimited {
     pub position: GeoPoint3d,
@@ -217,6 +221,7 @@ impl NavLoiterUnlimited {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NavLoiterTurns {
     pub position: GeoPoint3d,
@@ -263,6 +268,7 @@ impl NavLoiterTurns {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NavLoiterTime {
     pub position: GeoPoint3d,
@@ -306,6 +312,7 @@ impl NavLoiterTime {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct NavLoiterToAlt {
     pub position: GeoPoint3d,

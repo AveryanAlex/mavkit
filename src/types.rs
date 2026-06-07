@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Capability support status for a feature family.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SupportState {
@@ -11,6 +12,7 @@ pub enum SupportState {
 }
 
 /// Freshness marker for cached domain state.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SyncState {
@@ -21,6 +23,7 @@ pub enum SyncState {
 }
 
 /// Operation kind used by stored-plan domains such as fence and rally.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum StoredPlanOperationKind {
@@ -30,6 +33,7 @@ pub enum StoredPlanOperationKind {
 }
 
 /// Operation kind used by mission-domain state and conflicts.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MissionOperationKind {
@@ -40,6 +44,7 @@ pub enum MissionOperationKind {
 }
 
 /// Operation kind used by parameter-domain state and conflicts.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ParamOperationKind {
@@ -48,6 +53,7 @@ pub enum ParamOperationKind {
 }
 
 /// Details about an operation rejected because another operation is active.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OperationConflict {
     pub conflicting_domain: String,
@@ -55,6 +61,7 @@ pub struct OperationConflict {
 }
 
 /// Health state of one sensor family derived from MAVLink bitmasks.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SensorHealthState {
@@ -66,6 +73,7 @@ pub enum SensorHealthState {
 }
 
 /// Fixed-shape sensor health snapshot for core pre-arm sensor families.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SensorHealthSummary {
     pub gyro: SensorHealthState,
@@ -81,6 +89,7 @@ pub struct SensorHealthSummary {
 }
 
 /// Lifecycle phases for one mission operation handle.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MissionOperationProgress {
@@ -95,6 +104,7 @@ pub enum MissionOperationProgress {
 }
 
 /// Lifecycle phases for one parameter operation handle.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ParamOperationProgress {

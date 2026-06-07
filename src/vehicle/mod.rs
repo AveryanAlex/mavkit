@@ -167,6 +167,7 @@ impl ConnectionScopedObservationClosers {
 ///
 /// Fields are stable for the lifetime of the connection — a reconnect produces a new
 /// [`Vehicle`] with a fresh `VehicleIdentity`. Obtained via [`Vehicle::identity`].
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct VehicleIdentity {
     /// MAVLink system ID of the connected vehicle (typically 1).

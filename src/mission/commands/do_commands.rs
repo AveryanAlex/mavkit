@@ -9,6 +9,7 @@ use mavkit_macros::mavkit_command;
 use serde::{Deserialize, Serialize};
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum SpeedType {
@@ -17,6 +18,7 @@ pub enum SpeedType {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum FenceAction {
@@ -26,6 +28,7 @@ pub enum FenceAction {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ParachuteAction {
@@ -35,6 +38,7 @@ pub enum ParachuteAction {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum GripperAction {
@@ -43,6 +47,7 @@ pub enum GripperAction {
 }
 
 /// Typed mission command API item used by plan serialization and validation.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum WinchAction {

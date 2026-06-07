@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// `altitude_msl_m` is the WGS-84 mean-sea-level altitude in metres.
 /// `relative_alt_m` is the altitude above the home position set at arming time.
 /// Both altitudes can be negative (e.g. flying below home elevation).
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GlobalPosition {
     pub latitude_deg: f64,
@@ -19,6 +20,7 @@ pub struct GlobalPosition {
 ///
 /// All angles are in degrees. `yaw_deg` is in the range `(-180, 180]`, where 0 is
 /// north. Positive roll is right-bank; positive pitch is nose-up.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct EulerAttitude {
     pub roll_deg: f64,
@@ -32,6 +34,7 @@ pub struct EulerAttitude {
 /// `255` (satellites unknown) or `65535` (HDOP unknown), respectively.
 /// Lower `hdop` values indicate better horizontal position accuracy (< 2.0 is good,
 /// > 5.0 is poor).
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GpsQuality {
     pub fix_type: GpsFixType,
@@ -44,6 +47,7 @@ pub struct GpsQuality {
 /// The vector length varies by vehicle; cells not physically present are omitted.
 /// Voltages are in volts. A typical LiPo cell ranges from ~3.0 V (empty) to ~4.2 V
 /// (fully charged).
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct CellVoltages {
     pub voltages_v: Vec<f64>,
@@ -54,6 +58,7 @@ pub struct CellVoltages {
 /// `bearing_deg` is the ground-track bearing to the waypoint in degrees `[0, 360)`.
 /// Only meaningful when a mission is active; values are unspecified when the vehicle
 /// is loitering or has no active waypoint.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct WaypointProgress {
     pub distance_m: f64,
@@ -65,6 +70,7 @@ pub struct WaypointProgress {
 /// `bearing_deg` is the desired heading the autopilot is commanding `[0, 360)`.
 /// `cross_track_error_m` is the signed perpendicular distance from the desired track
 /// line; positive values mean the vehicle is to the right of the track.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GuidanceState {
     pub bearing_deg: f64,
@@ -77,6 +83,7 @@ pub struct GuidanceState {
 /// current position. `height_above_terrain_m` is the vehicle's altitude above that
 /// terrain — the value the autopilot uses for terrain-following. Only available when
 /// the autopilot has terrain data loaded for the current location.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct TerrainClearance {
     pub terrain_height_m: f64,

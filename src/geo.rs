@@ -2,6 +2,7 @@ use crate::error::VehicleError;
 use serde::{Deserialize, Serialize};
 
 /// WGS84 latitude and longitude in decimal degrees.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GeoPoint2d {
     pub latitude_deg: f64,
@@ -9,6 +10,7 @@ pub struct GeoPoint2d {
 }
 
 /// WGS84 position with altitude above mean sea level.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GeoPoint3dMsl {
     pub latitude_deg: f64,
@@ -17,6 +19,7 @@ pub struct GeoPoint3dMsl {
 }
 
 /// WGS84 position with altitude relative to home.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GeoPoint3dRelHome {
     pub latitude_deg: f64,
@@ -25,6 +28,7 @@ pub struct GeoPoint3dRelHome {
 }
 
 /// WGS84 position with terrain-referenced altitude.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct GeoPoint3dTerrain {
     pub latitude_deg: f64,
@@ -33,6 +37,7 @@ pub struct GeoPoint3dTerrain {
 }
 
 /// Tagged 3D point that preserves the altitude reference frame.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum GeoPoint3d {
     Msl(GeoPoint3dMsl),

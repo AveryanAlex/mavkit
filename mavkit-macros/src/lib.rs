@@ -856,7 +856,7 @@ fn wire_z_from_wire_expr(field: &ParsedField, custom_decode: Option<&ExprPath>) 
 // --- Struct output with derives ---
 
 /// Emit the struct with `#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]`,
-/// merging with any existing derives from the input.
+/// merging with any existing derives from the input and adding the optional Specta derive.
 fn emit_struct_with_derives(input: &DeriveInput) -> TokenStream2 {
     let name = &input.ident;
     let vis = &input.vis;
@@ -927,6 +927,7 @@ fn emit_struct_with_derives(input: &DeriveInput) -> TokenStream2 {
 
     quote! {
         #(#other_attrs)*
+        #[cfg_attr(feature = "typescript", derive(specta::Type))]
         #[derive(#(#all_derives),*)]
         #vis struct #name #generics #fields
     }

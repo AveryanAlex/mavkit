@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Source used to build the current mode catalog.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum ModeCatalogSource {
@@ -9,6 +10,7 @@ pub enum ModeCatalogSource {
 }
 
 /// One flight mode entry users can inspect or request.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ModeDescriptor {
     pub custom_mode: u32,
@@ -18,6 +20,7 @@ pub struct ModeDescriptor {
 }
 
 /// Source used to determine the currently active mode.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CurrentModeSource {
@@ -26,6 +29,7 @@ pub enum CurrentModeSource {
 }
 
 /// Current mode snapshot, including optional pending target mode.
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CurrentMode {
     pub custom_mode: u32,

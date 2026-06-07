@@ -1,9 +1,21 @@
 use std::time::Duration;
 
+use serde::{Deserialize, Serialize};
+
 pub const TIME_USEC_EPOCH_CUTOFF: u64 = 1_000_000_000_000;
 
+#[cfg(feature = "typescript")]
+#[allow(dead_code)]
+#[derive(specta::Type)]
+struct VehicleTimestampBootTime {
+    secs: f64,
+    nanos: u32,
+}
+
 /// Message-family identifier used for metric provenance tagging.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum TelemetryMessageKind {
     Heartbeat,
     VfrHud,
@@ -43,9 +55,13 @@ impl TelemetryMessageKind {
 }
 
 /// Vehicle-provided timestamp, either boot-relative or Unix epoch.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "typescript", derive(specta::Type))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum VehicleTimestamp {
+    #[cfg_attr(feature = "typescript", specta(type = VehicleTimestampBootTime))]
     BootTime(Duration),
+    #[cfg_attr(feature = "typescript", specta(type = f64))]
     UnixEpochMicros(u64),
 }
 
