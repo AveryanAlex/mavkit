@@ -62,10 +62,12 @@ pub struct VehicleConfig {
     /// `set_mode` waiting for the mode to appear in heartbeats.
     pub command_completion_timeout: Duration,
 
-    /// How long a multi-message transfer (mission, params, fence, rally) may take in total. Default: 30 s.
+    /// Timeout for multi-message transfers. Default: 30 s.
     ///
-    /// Covers the entire exchange from first item request to final ACK. Increase for large
-    /// missions or high packet-loss links.
+    /// Mission, fence, and rally transfers use this as a total exchange budget.
+    /// Parameter downloads use it as the maximum time without a new parameter;
+    /// duplicate replies do not extend the deadline. Increase for high-latency
+    /// or high packet-loss links.
     pub transfer_timeout: Duration,
 
     /// Initialization policies applied once after the first heartbeat is received.

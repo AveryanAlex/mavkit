@@ -52,8 +52,14 @@ pub(super) fn handle_rc_channels(context: &UpdateContext<'_>, data: &dialect::RC
         );
     }
 
-    for index in count..RC_CHANNELS_MAX {
-        context.writers.telemetry_metrics.rc_channels_pwm_us[index].clear();
+    for channel in context
+        .writers
+        .telemetry_metrics
+        .rc_channels_pwm_us
+        .iter()
+        .skip(count)
+    {
+        channel.clear();
     }
 
     if let Some(rssi_pct) = rssi {

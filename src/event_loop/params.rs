@@ -78,9 +78,9 @@ pub(super) async fn handle_param_download_all(
     let max_retries = u32::from(ctx.config.retry_policy.max_retries);
     let mut retries = 0u32;
 
-    let overall_deadline = Instant::now() + ctx.config.transfer_timeout;
+    let mut progress_deadline = Instant::now() + ctx.config.transfer_timeout;
 
-    loop {
+    'download: loop {
         let mut round_deadline = Instant::now() + Duration::from_secs(2);
         let cancel = ctx.cancel.clone();
 
@@ -95,10 +95,10 @@ pub(super) async fn handle_param_download_all(
                         .send_replace(Some(ParamOperationProgress::Cancelled));
                     return Err(VehicleError::Cancelled);
                 }
-                _ = runtime::sleep_until(overall_deadline) => {
+                _ = runtime::sleep_until(progress_deadline) => {
                     let received = params.len() as u16;
                     warn!(
-                        "param download timed out after {:?}: received {}/{}",
+                        "param download made no progress for {:?}: received {}/{}",
                         ctx.config.transfer_timeout, received, expected_count
                     );
                     ctx.writers
@@ -133,6 +133,8 @@ pub(super) async fn handle_param_download_all(
                                 param_type: from_mav_param_type(data.param_type),
                                 index: data.param_index,
                             });
+                            progress_deadline = Instant::now() + ctx.config.transfer_timeout;
+                            round_deadline = Instant::now() + Duration::from_secs(2);
                         }
 
                         // Update progress every 50 params
@@ -147,8 +149,14 @@ pub(super) async fn handle_param_download_all(
                                 }));
                         }
 
-                        // Reset round deadline on new data
-                        round_deadline = Instant::now() + Duration::from_secs(2);
+                        // A complete index set needs no silence period or final ACK.
+                        // Duplicate PARAM_VALUE replies must not keep a full list in flight.
+                        if count_known
+                            && received >= expected_count
+                            && (0..expected_count).all(|idx| received_indices.contains(&idx))
+                        {
+                            break 'download;
+                        }
                     }
                 }
             }
