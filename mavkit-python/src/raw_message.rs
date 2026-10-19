@@ -81,6 +81,32 @@ impl PyRawMessage {
         &self.message_json
     }
 
+    /// Decode supported telemetry groups using the same conversions as live handles.
+    fn decoded_telemetry(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        use mavkit::telemetry::decode;
+        let message: MavMessage = serde_json::from_str(&self.message_json)
+            .map_err(|error| MavkitError::new_err(error.to_string()))?;
+        let value = match message {
+            MavMessage::SYS_STATUS(data) => serde_json::to_value(decode::system_power(&data)),
+            MavMessage::BATTERY_STATUS(data) => serde_json::to_value(decode::battery_status(&data)),
+            MavMessage::GPS_RAW_INT(data) => serde_json::to_value(decode::gps_quality(&data)),
+            MavMessage::GLOBAL_POSITION_INT(data) => {
+                serde_json::to_value(decode::global_position(&data))
+            }
+            MavMessage::ATTITUDE(data) => serde_json::to_value(decode::attitude(&data)),
+            MavMessage::RC_CHANNELS(data) => serde_json::to_value(decode::rc_channels(&data)),
+            MavMessage::SERVO_OUTPUT_RAW(data) => {
+                serde_json::to_value(decode::servo_outputs(&data))
+            }
+            _ => Ok(serde_json::Value::Null),
+        }
+        .map_err(|error| MavkitError::new_err(error.to_string()))?;
+        Ok(py
+            .import("json")?
+            .call_method1("loads", (value.to_string(),))?
+            .unbind())
+    }
+
     fn __repr__(&self) -> String {
         format!(
             "RawMessage(name={}, sys={}, comp={}, id={})",

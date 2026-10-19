@@ -2,21 +2,9 @@ use super::UpdateContext;
 use crate::dialect;
 use crate::geo::GeoPoint3dMsl;
 use crate::mission;
-use crate::state::GpsFixType;
-use crate::telemetry::{GpsQuality, TelemetryMessageKind, infer_timestamp_from_time_usec};
+use crate::telemetry::{TelemetryMessageKind, infer_timestamp_from_time_usec};
 
 pub(super) fn handle_gps_raw_int(context: &UpdateContext<'_>, data: &dialect::GPS_RAW_INT_DATA) {
-    let sats = if data.satellites_visible != u8::MAX {
-        Some(data.satellites_visible)
-    } else {
-        None
-    };
-    let hdop = if data.eph != u16::MAX {
-        Some(f64::from(data.eph) / 100.0)
-    } else {
-        None
-    };
-
     let vehicle_time =
         infer_timestamp_from_time_usec(TelemetryMessageKind::GpsRawInt, data.time_usec);
     context
@@ -26,11 +14,7 @@ pub(super) fn handle_gps_raw_int(context: &UpdateContext<'_>, data: &dialect::GP
         .gps_raw_int
         .publish(data.clone(), vehicle_time.clone());
     context.writers.telemetry_metrics.gps_quality.publish(
-        GpsQuality {
-            fix_type: GpsFixType::from_raw(data.fix_type as u8),
-            satellites: sats,
-            hdop,
-        },
+        crate::telemetry::decode::gps_quality(data),
         TelemetryMessageKind::GpsRawInt,
         vehicle_time.clone(),
     );

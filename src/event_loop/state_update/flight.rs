@@ -1,8 +1,8 @@
 use super::UpdateContext;
 use crate::dialect;
 use crate::telemetry::{
-    EulerAttitude, GlobalPosition, GuidanceState, TelemetryMessageKind, TerrainClearance,
-    WaypointProgress, infer_timestamp_from_time_boot_ms,
+    GuidanceState, TelemetryMessageKind, TerrainClearance, WaypointProgress,
+    infer_timestamp_from_time_boot_ms,
 };
 
 pub(super) fn handle_vfr_hud(context: &UpdateContext<'_>, data: &dialect::VFR_HUD_DATA) {
@@ -62,12 +62,7 @@ pub(super) fn handle_global_position_int(
         .global_position_int
         .publish(data.clone(), vehicle_time.clone());
     context.writers.telemetry_metrics.position_global.publish(
-        GlobalPosition {
-            latitude_deg: f64::from(data.lat) / 1e7,
-            longitude_deg: f64::from(data.lon) / 1e7,
-            altitude_msl_m: f64::from(data.alt) / 1000.0,
-            relative_alt_m: f64::from(data.relative_alt) / 1000.0,
-        },
+        crate::telemetry::decode::global_position(data),
         TelemetryMessageKind::GlobalPositionInt,
         vehicle_time.clone(),
     );
@@ -134,11 +129,7 @@ pub(super) fn handle_attitude(context: &UpdateContext<'_>, data: &dialect::ATTIT
         .attitude
         .publish(data.clone(), vehicle_time.clone());
     context.writers.telemetry_metrics.attitude_euler.publish(
-        EulerAttitude {
-            roll_deg: f64::from(data.roll.to_degrees()),
-            pitch_deg: f64::from(data.pitch.to_degrees()),
-            yaw_deg: f64::from(data.yaw.to_degrees()),
-        },
+        crate::telemetry::decode::attitude(data),
         TelemetryMessageKind::Attitude,
         vehicle_time,
     );

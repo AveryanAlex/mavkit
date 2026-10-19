@@ -1,3 +1,4 @@
+pub mod decode;
 pub mod handles;
 pub mod messages;
 pub mod sensor_health;
