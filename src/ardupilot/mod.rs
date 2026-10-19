@@ -3,6 +3,8 @@
 //! Public access remains rooted at [`ArduPilotHandle`] and the family-specific handles while
 //! domain state, handle behavior, and exact-path regressions live in smaller files.
 
+pub mod parameters;
+
 mod calibration;
 pub mod copter;
 mod domain;

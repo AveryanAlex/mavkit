@@ -10,6 +10,7 @@ mod link;
 mod macros;
 mod mission;
 mod modes;
+mod parameter_profiles;
 mod params;
 mod raw_message;
 mod support;
@@ -52,6 +53,11 @@ fn mavkit(py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?;
     m.add("CancelledError", py.get_type::<error::CancelledError>())?;
     m.add("ValidationError", py.get_type::<error::ValidationError>())?;
+
+    m.add_function(wrap_pyfunction!(
+        parameter_profiles::ardupilot_parameter_profiles,
+        m
+    )?)?;
 
     // Enums
     m.add_class::<enums::PySystemStatus>()?;
