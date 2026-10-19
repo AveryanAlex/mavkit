@@ -109,6 +109,14 @@ pub enum PyMavSeverity {
     Debug,
 }
 
+py_enum_convert!(
+    PyMavSeverity,
+    mavkit::MavSeverity,
+    [
+        Emergency, Alert, Critical, Error, Warning, Notice, Info, Debug
+    ]
+);
+
 // --- Mission enums ---
 
 #[pyclass(name = "MissionType", eq, frozen, from_py_object)]

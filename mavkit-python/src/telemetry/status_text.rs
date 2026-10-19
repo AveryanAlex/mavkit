@@ -1,4 +1,3 @@
-use mavkit::dialect;
 use pyo3::prelude::*;
 
 use crate::enums::PyMavSeverity;
@@ -17,16 +16,7 @@ impl From<mavkit::StatusTextEvent> for PyStatusTextEvent {
     fn from(value: mavkit::StatusTextEvent) -> Self {
         Self {
             text: value.text,
-            severity: match value.severity {
-                dialect::MavSeverity::MAV_SEVERITY_EMERGENCY => PyMavSeverity::Emergency,
-                dialect::MavSeverity::MAV_SEVERITY_ALERT => PyMavSeverity::Alert,
-                dialect::MavSeverity::MAV_SEVERITY_CRITICAL => PyMavSeverity::Critical,
-                dialect::MavSeverity::MAV_SEVERITY_ERROR => PyMavSeverity::Error,
-                dialect::MavSeverity::MAV_SEVERITY_WARNING => PyMavSeverity::Warning,
-                dialect::MavSeverity::MAV_SEVERITY_NOTICE => PyMavSeverity::Notice,
-                dialect::MavSeverity::MAV_SEVERITY_INFO => PyMavSeverity::Info,
-                dialect::MavSeverity::MAV_SEVERITY_DEBUG => PyMavSeverity::Debug,
-            },
+            severity: value.severity.into(),
             id: value.id,
             source_system: value.source_system,
             source_component: value.source_component,
