@@ -852,6 +852,10 @@ class RawMissionCommand:
     @property
     def param4(self) -> float: ...
 
+    def decode_lossless(self) -> MissionItem:
+        """Decode without coercing unknown wire values."""
+        ...
+
 @final
 class GeoPoint3d:
     @staticmethod

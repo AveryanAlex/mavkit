@@ -268,6 +268,20 @@ macro_rules! mission_commands {
                 }
             }
 
+            /// Decode typed semantics only when encoding them preserves every wire value.
+            /// Unknown enum values, frames and non-canonical unused fields remain raw.
+            pub fn from_wire_lossless(command: u16, frame: MissionFrame, params: [f32; 4], x: i32, y: i32, z: f32) -> Self {
+                let decoded = Self::from_wire(command, frame, params, x, y, z);
+                let (id, encoded_frame, encoded_params, encoded_x, encoded_y, encoded_z) = decoded.clone().into_wire();
+                let same = |a: f32, b: f32| a == b || (a.is_nan() && b.is_nan());
+                if id == command && encoded_frame == frame && encoded_x == x && encoded_y == y
+                    && same(encoded_z, z) && encoded_params.into_iter().zip(params).all(|(a, b)| same(a, b)) {
+                    decoded
+                } else {
+                    Self::Other(RawMissionCommand { command, frame, param1: params[0], param2: params[1], param3: params[2], param4: params[3], x, y, z })
+                }
+            }
+
             pub fn into_wire(self) -> (u16, MissionFrame, [f32; 4], i32, i32, f32) {
                 match self {
                     $(
@@ -408,3 +422,32 @@ mission_commands! {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod lossless_tests {
+    use super::*;
+    #[test]
+    fn unsupported_enum_values_and_unused_fields_survive_decode() {
+        for value in [-1.0, 0.5, 99.0] {
+            let decoded = MissionCommand::from_wire_lossless(
+                178,
+                MissionFrame::Mission,
+                [value, 12.0, 60.0, 0.0],
+                0,
+                0,
+                0.0,
+            );
+            assert!(matches!(decoded, MissionCommand::Other(_)));
+            assert_eq!(decoded.into_wire().2[0], value);
+        }
+        let decoded = MissionCommand::from_wire_lossless(
+            193,
+            MissionFrame::Mission,
+            [1.0, 0.0, 0.0, 0.0],
+            0,
+            0,
+            0.0,
+        );
+        assert!(!matches!(decoded, MissionCommand::Other(_)));
+    }
+}

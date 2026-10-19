@@ -42,6 +42,24 @@ impl PyRawMissionCommand {
         }
     }
 
+    /// Preserve unsupported wire values while exposing supported typed semantics.
+    fn decode_lossless(&self) -> crate::mission::PyMissionItem {
+        let raw = &self.inner;
+        crate::mission::PyMissionItem {
+            inner: mavkit::MissionItem {
+                command: mavkit::MissionCommand::from_wire_lossless(
+                    raw.command,
+                    raw.frame,
+                    [raw.param1, raw.param2, raw.param3, raw.param4],
+                    raw.x,
+                    raw.y,
+                    raw.z,
+                ),
+                autocontinue: true,
+            },
+        }
+    }
+
     #[getter]
     fn command(&self) -> u16 {
         self.inner.command
