@@ -85,7 +85,7 @@ impl TlogFile {
         limit: u64,
     ) -> Result<Option<(u64, u64)>, TlogError> {
         // MAVLink v1 magic = 0xFE, v2 magic = 0xFD
-        // TLOG entry = [8-byte LE timestamp][MAVLink frame starting with magic]
+        // TLOG entry = [8-byte big-endian timestamp][MAVLink frame starting with magic]
         // Strategy: scan for magic bytes, check if 8 bytes prior is a plausible timestamp.
         const CHUNK_SIZE: usize = 4096;
         let mut pos = start;
@@ -117,7 +117,7 @@ impl TlogFile {
                         Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => continue,
                         Err(e) => return Err(TlogError::Io(e)),
                     }
-                    let ts = u64::from_le_bytes(ts_buf);
+                    let ts = u64::from_be_bytes(ts_buf);
 
                     // Validate: try to parse the MAVLink frame at this position
                     reader.seek(SeekFrom::Start(magic_file_pos)).await?;
@@ -160,7 +160,7 @@ impl TlogFile {
                 }
                 Err(e) => return Err(TlogError::Io(e)),
             }
-            let ts = u64::from_le_bytes(ts_buf);
+            let ts = u64::from_be_bytes(ts_buf);
 
             if ts >= target_usec {
                 buf_reader.seek(SeekFrom::Start(pos)).await?;
@@ -203,7 +203,7 @@ impl TlogFile {
             Err(e) if e.kind() == std::io::ErrorKind::UnexpectedEof => return Ok(None),
             Err(e) => return Err(TlogError::Io(e)),
         }
-        let first_ts = u64::from_le_bytes(ts_buf);
+        let first_ts = u64::from_be_bytes(ts_buf);
 
         let file_len = buf_reader.seek(SeekFrom::End(0)).await?;
 
@@ -247,7 +247,7 @@ mod tests {
         let mut buf = Vec::new();
         let mut seq = 0u8;
         for (ts, msg) in entries {
-            buf.extend_from_slice(&ts.to_le_bytes());
+            buf.extend_from_slice(&ts.to_be_bytes());
             let header = MavHeader {
                 sequence: seq,
                 system_id: 1,

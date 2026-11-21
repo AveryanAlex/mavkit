@@ -8,7 +8,7 @@ use super::reader::TlogError;
 
 /// Synchronous writer that produces TLOG-formatted output.
 ///
-/// TLOG format: repeated `[8-byte LE u64 timestamp (μs)][MAVLink frame]` entries.
+/// TLOG format: repeated `[8-byte big-endian u64 timestamp (μs)][MAVLink frame]` entries.
 ///
 /// # Example
 ///
@@ -23,14 +23,17 @@ use super::reader::TlogError;
 /// writer.flush().unwrap();
 /// ```
 pub struct TlogWriter<W: Write> {
-    writer: W,
+    writer: mavlink_tlog::TlogWriter<W>,
     version: MavlinkVersion,
 }
 
 impl<W: Write> TlogWriter<W> {
     /// Create a new TLOG writer with the given MAVLink version.
     pub fn new(writer: W, version: MavlinkVersion) -> Self {
-        Self { writer, version }
+        Self {
+            writer: mavlink_tlog::TlogWriter::new(writer),
+            version,
+        }
     }
 
     /// Write a TLOG entry with an explicit timestamp.
@@ -42,14 +45,14 @@ impl<W: Write> TlogWriter<W> {
         header: &MavHeader,
         msg: &MavMessage,
     ) -> Result<usize, TlogError> {
-        let ts_bytes = timestamp_usec.to_le_bytes();
-        self.writer.write_all(&ts_bytes)?;
-        let msg_len = mavlink::write_versioned_msg(&mut self.writer, self.version, *header, msg)
+        let mut frame = Vec::with_capacity(280);
+        let msg_len = mavlink::write_versioned_msg(&mut frame, self.version, *header, msg)
             .map_err(|e| match e {
                 mavlink::error::MessageWriteError::Io(io) => TlogError::Io(io),
                 other => TlogError::Io(std::io::Error::other(other.to_string())),
             })?;
-        Ok(8 + msg_len)
+        self.writer.write_frame(timestamp_usec, &frame)?;
+        Ok(mavlink_tlog::TIMESTAMP_LEN + msg_len)
     }
 
     /// Write a TLOG entry timestamped with the current system time.
@@ -69,7 +72,7 @@ impl<W: Write> TlogWriter<W> {
 
     /// Consume the writer and return the inner writer.
     pub fn into_inner(self) -> W {
-        self.writer
+        self.writer.into_inner()
     }
 }
 
@@ -188,6 +191,20 @@ mod tests {
         let mut reader = tlog.seek_to_timestamp(10000).await.unwrap();
         let entry = reader.next().await.unwrap().unwrap();
         assert_eq!(entry.timestamp_usec, 10000);
+    }
+
+    #[test]
+    fn stamp_is_big_endian_like_qgc_and_pymavlink() {
+        let mut writer = TlogWriter::new(Vec::new(), MavlinkVersion::V2);
+        writer
+            .write_entry(1_700_000_000_000_000, &test_header(0), &heartbeat())
+            .unwrap();
+        let buf = writer.into_inner();
+        assert_eq!(buf[..8], 1_700_000_000_000_000u64.to_be_bytes());
+
+        let records: Vec<_> = mavlink_tlog::TlogSlice::new(&buf).collect();
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].timestamp_us, 1_700_000_000_000_000);
     }
 
     #[tokio::test]
