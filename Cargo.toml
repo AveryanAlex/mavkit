@@ -43,7 +43,7 @@ stream = ["async-trait"]
 byte-connection = ["async-trait"]
 sim = ["async-trait", "dep:serde_json"]
 wasm = ["byte-connection"]
-tlog = ["tokio/fs", "tokio/io-util"]
+tlog = ["tokio/fs", "tokio/io-util", "dep:mavlink-tlog"]
 typescript = ["dep:specta"]
 
 [dependencies]
@@ -60,6 +60,7 @@ async-trait = { version = "0.1", optional = true }
 futures = { version = "0.3", default-features = false, features = ["alloc"] }
 serde_json = { version = "1", optional = true }
 specta = { version = "2.0.0-rc.25", features = ["derive"], optional = true }
+mavlink-tlog = { version = "0.1.3", optional = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 tokio = { version = "1", default-features = false, features = ["sync", "time", "rt", "macros"] }

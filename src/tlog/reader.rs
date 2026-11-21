@@ -26,7 +26,7 @@ const MAX_RECOVERY_ATTEMPTS: usize = 256;
 
 /// Streaming reader that yields [`TlogEntry`] values from a TLOG byte source.
 ///
-/// TLOG format: repeated `[8-byte LE u64 timestamp (μs)][MAVLink frame]` entries.
+/// TLOG format: repeated `[8-byte big-endian u64 timestamp (μs)][MAVLink frame]` entries.
 pub struct TlogReader<R: AsyncRead + Unpin> {
     reader: AsyncPeekReader<R>,
 }
@@ -51,7 +51,7 @@ impl<R: AsyncRead + Unpin> TlogReader<R> {
             }
             Err(e) => return Err(TlogError::Parse(e)),
         };
-        let timestamp_usec = u64::from_le_bytes(ts_bytes);
+        let timestamp_usec = u64::from_be_bytes(ts_bytes);
 
         // Try to read a MAVLink message, with recovery on parse errors
         let mut attempts = 0;
@@ -105,7 +105,7 @@ mod tests {
         let mut buf = Vec::new();
         let mut seq = 0u8;
         for (ts, msg) in entries {
-            buf.extend_from_slice(&ts.to_le_bytes());
+            buf.extend_from_slice(&ts.to_be_bytes());
             let header = MavHeader {
                 sequence: seq,
                 system_id: 1,
@@ -166,6 +166,24 @@ mod tests {
         assert!(!entries.is_empty());
         // First entry should always parse
         assert_eq!(entries[0].timestamp_usec, 1000);
+    }
+
+    #[tokio::test]
+    async fn reads_big_endian_stamp_from_gcs_tlog() {
+        let mut frame = Vec::new();
+        let header = MavHeader {
+            sequence: 0,
+            system_id: 1,
+            component_id: 1,
+        };
+        mavlink::write_versioned_msg(&mut frame, MavlinkVersion::V2, header, &heartbeat()).unwrap();
+        let mut gcs = mavlink_tlog::TlogWriter::new(Vec::new());
+        gcs.write_frame(1_700_000_000_000_000, &frame).unwrap();
+        let data = gcs.into_inner();
+
+        let entries = TlogReader::new(data.as_slice()).collect().await.unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].timestamp_usec, 1_700_000_000_000_000);
     }
 
     #[tokio::test]
